@@ -109,54 +109,63 @@ fases y el artefacto— **todavía no existe**, en ningún repositorio.
 La capa visual es la pieza más grande del trabajo. La equivalente en el plugin
 de Web tomó meses.
 
-## Pendiente abierto: hasta dónde llega `nulo`
+## El core, y por qué no hay un cuarto camino
 
-Cristóbal levantó esto el mismo día que definió el cuarto camino, y tiene
-razón. En términos lógicos `nulo` es correcto; en términos prácticos hay un
-caso que no resuelve:
+Durante unas horas del 13 de septiembre hubo un cuarto camino de resolución,
+`nulo`: dejar una variable voluntariamente indefinida. Se descartó el mismo
+día, y el motivo vale más que la regla.
 
-> *«Si necesito mostrar algo en mi página, no puedo generar un valor por
-> defecto, no tengo definido el color, y quiero mostrar un texto o un recuadro.
-> ¿Qué hago con ese valor? Que no puede ser ni por defecto, y está, además,
-> voluntariamente no definido.»*
+### El supuesto falso
 
-### La distinción que lo ordena
+`nulo` daba por sentado que **todas las variables empiezan indefinidas** y el
+trabajo consiste en irlas cerrando una por una, con la opción de cerrar algunas
+diciendo «acá no va nada».
 
-Hay dos clases de propiedad, y `nulo` significa cosas distintas en cada una:
+No es así:
 
-- **Las que pueden no estar.** Sombra, borde, textura, animación. `nulo`
-  funciona limpio: no se dibuja, no hace falta ningún valor.
-- **Las que el medio resuelve siempre.** El color de un texto, el fondo de algo
-  que se pinta, el tamaño de la letra. Acá **no existe «no decidir»**: si el
-  set no decide, decide el navegador, o decide el destino. Para éstas `nulo` no
-  está prohibido — **es inalcanzable**. No hay un estado del mundo donde el
-  texto no tenga color.
+> *«Hay un paquete base de definiciones que es el mínimo, es el core. Por eso se
+> llama core, la aplicación me parece bien puesta por eso. Entonces, más bien,
+> lo que puede hacer el diseñador es aumentar el número de variables, es que hay
+> cosas nuevas que no están consideradas ahí. Entonces no tiene sentido poner
+> variables en null.»*
 
-### La salida propuesta
+El movimiento del diseñador sobre el core es **agregar**, no anular. Lo que no
+está en el core simplemente no se declara —y no hace falta un camino de
+resolución para decir que algo no existe—. Lo que sí está en el core no se
+puede dejar sin resolver, porque sin eso **no hay con qué construir**: queda una
+incógnita abierta.
 
-Un **mínimo irreducible** —el *core dentro del core* que Cristóbal intuyó—:
-un conjunto chico de requisitos donde `nulo` no es un camino legal.
+Con el core haciendo ese trabajo, el cuarto camino deja de tener sentido. Los
+caminos vuelven a ser tres: **insumo, diseñador, ContOpe.**
 
-No porque el sistema los rellene, sino porque **el sistema se niega a darse por
-completo hasta que alguien los defina.** Es lo contrario de un valor por
-defecto:
+### El core no es uno solo
 
-| | |
-|---|---|
-| **Valor por defecto** | el sistema rellena en silencio, nadie se entera |
-| **Mínimo irreducible** | el sistema no se completa, y lo dice |
+Depende del tipo de proyecto. No necesita las mismas definiciones un packaging
+que una revista, ni una campaña de marketing digital que un libro.
 
-La maquinaria ya existe: la completitud es binaria. Esos requisitos
-simplemente no admiten `nulo`.
+> *«Cada uno de esos mundos, que tal vez habría que simplificarlos en unos tres
+> o cuatro, tiene un paquete de definiciones que es el núcleo, que no puede no
+> estar.»*
 
-Y hay una tercera resolución que tampoco es un default y cubre muchos casos:
-**herencia declarada.** El fondo de un recuadro puede resolverse como «el rol
-superficie». Eso no inventa un valor: declara de dónde viene, y queda escrito.
+Hay además una segunda granularidad que Cristóbal mencionó y que conviene no
+confundir con la anterior: **el core por cada bloque.** Un bloque —un botón, una
+tabla, una galería— también tiene un mínimo sin el cual no se puede dibujar.
+Queda anotado; cómo se relacionan las dos escalas está por trabajarse.
+
+### Lo que falta: una investigación, no una implementación
+
+Determinar **cuál es el núcleo de cada mundo**. Es trabajo de taxonomía y de
+investigación de referencias, no de código. Cristóbal propuso hacerlo
+justamente como un research de definiciones por tipo de proyecto.
+
+Hasta que exista, el manifiesto no distingue entre un requisito que puede
+faltar y uno sin el cual no hay nada que construir. **Eso sigue abierto.**
 
 ### Por qué no es teórico
 
-Medido en el plugin el 2026-09-13: el destino ya aplica **seis** valores de
-respaldo por su cuenta, y tres son los colores del panel de WordPress.
+Medido en el plugin el 2026-09-13: el destino aplica **seis** valores de
+respaldo por su cuenta cuando el set calla, y tres son los colores del panel de
+WordPress.
 
 | variable | lo que pone el destino |
 |---|---|
@@ -164,11 +173,9 @@ respaldo por su cuenta, y tres son los colores del panel de WordPress.
 | `--cod-color-ink` | `#1d2327` |
 | `--cod-color-surface` | `#f0f0f1` |
 
-Si el set no define el acento, el sitio se pinta del azul de WordPress. Eso es
-exactamente el problema, ya ocurriendo, antes de que `nulo` existiera.
+Si el set no define el acento, el sitio se pinta del azul de WordPress, en
+silencio, y el resultado **se ve razonable** —que es lo peor que puede pasar—.
 
-### Qué falta
-
-Definir **cuáles** requisitos componen ese mínimo. Es trabajo de la taxonomía,
-no de la implementación. Hasta entonces el tipo acepta `nulo` en cualquier
-requisito y nada lo impide: está anotado como pendiente, no como decisión.
+Esas tres son justamente candidatas al core del mundo «web»: si pertenecen al
+núcleo, el respaldo no debería ser un color sino un **error que diga qué falta**.
+→ [`contope-publisher#9`](https://github.com/Cristobalconcha/contope-publisher/issues/9)

@@ -32,10 +32,9 @@ termina**.
 No termina cuando algo se ve bien. Termina cuando el sistema está completo
 contra lo que él declaró necesitar.
 
-## Los cuatro caminos
+## Los tres caminos
 
-Cada definición se resuelve por uno de cuatro caminos, y el camino queda
-escrito:
+Cada definición se resuelve por uno de tres caminos, y el camino queda escrito:
 
 - **Insumo** — se incorpora desde un referente, un manual, un IDML, una
   interfaz. Inspirarse en un referente nunca significa adoptar todo su
@@ -44,23 +43,6 @@ escrito:
 - **ContOpe** — tú la construyes y la defiendes, con la evidencia y las
   restricciones a la vista. Queda marcada como propuesta hasta que él la mire:
   no porque valga menos, sino porque el sistema registra quién decidió qué.
-
-- **Nulo** — una variable que el sistema incluye por defecto se deja
-  **voluntariamente indefinida**. No es «todavía no» ni un olvido: es una
-  decisión, y resuelve el requisito igual que las otras tres. Un requisito en
-  nulo **cuenta como resuelto** para la completitud.
-
-  Y no se emite nada al destino. Emitir una regla vacía sería peor que no
-  emitir: el destino le pondría su propio valor por defecto, que es justo lo
-  que este camino declara que no debe ocurrir. Nulo no es un hueco esperando
-  que alguien lo llene — **es la declaración de que ahí no va nada.**
-
-  Pero sólo vale donde la ausencia es un estado posible: una sombra que no
-  está, un borde que no se dibuja. **No vale donde el medio resuelve siempre**
-  —el color de un texto, el fondo de algo que se pinta—, porque ahí no existe
-  «no decidir»: si el set no decide, decide el navegador. Esas hay que
-  definirlas por alguno de los otros tres caminos, o declarar de dónde heredan.
-  Cuáles son exactamente, está por definirse.
 
 Una definición confirmada por una persona **no se cambia** porque un referente
 se vea distinto o porque se te ocurra algo más bonito. Los conflictos se

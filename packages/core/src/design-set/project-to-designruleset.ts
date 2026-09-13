@@ -108,9 +108,6 @@ function buildRule(
  * campos nuevos del compilador.
  */
 export function projectColorEntry(entry: DesignSetEntryV0): DesignRuleSetRule[] {
-  // Camino 'nulo': la variable se dejó indefinida a propósito. No se emite
-  // nada; una regla vacía haría que el destino aplicara su propio defecto.
-  if (entry.resolutionPath === 'nulo') return [];
   const rules: DesignRuleSetRule[] = [];
   const payload = isRecord(entry.payload) ? entry.payload : {};
 
@@ -186,9 +183,6 @@ export function projectSurfaceEntry(
   entry: DesignSetEntryV0,
   designSet: DesignSetV0,
 ): { rules: DesignRuleSetRule[]; errores: string[] } {
-  // Camino 'nulo': la variable se dejó indefinida a propósito. No se emite
-  // nada; una regla vacía haría que el destino aplicara su propio defecto.
-  if (entry.resolutionPath === 'nulo') return { rules: [], errores: [] };
   const rules: DesignRuleSetRule[] = [];
   const errores: string[] = [];
   const payload = isRecord(entry.payload) ? entry.payload : {};
@@ -239,9 +233,6 @@ export function projectTypographyEntry(
   entry: DesignSetEntryV0,
   designSet: DesignSetV0,
 ): { rules: DesignRuleSetRule[]; errores: string[] } {
-  // Camino 'nulo': la variable se dejó indefinida a propósito. No se emite
-  // nada; una regla vacía haría que el destino aplicara su propio defecto.
-  if (entry.resolutionPath === 'nulo') return { rules: [], errores: [] };
   const rules: DesignRuleSetRule[] = [];
   const errores: string[] = [];
   const payload = isRecord(entry.payload) ? entry.payload : {};
@@ -286,9 +277,6 @@ export function projectTypographyEntry(
  * diferencia de `projectTypographyEntry`).
  */
 export function projectReadingRulesEntry(entry: DesignSetEntryV0): DesignRuleSetRule[] {
-  // Camino 'nulo': la variable se dejó indefinida a propósito. No se emite
-  // nada; una regla vacía haría que el destino aplicara su propio defecto.
-  if (entry.resolutionPath === 'nulo') return [];
   const rules: DesignRuleSetRule[] = [];
   const payload = isRecord(entry.payload) ? entry.payload : {};
   const reglas = Array.isArray(payload['reglas']) ? payload['reglas'] : [];

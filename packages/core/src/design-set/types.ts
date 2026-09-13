@@ -14,34 +14,23 @@
 import type { DimensionId, MapsToKindsEntry } from '../requirement-manifest/types.js';
 
 /**
- * Los cuatro caminos de resolución de un requisito (taxonomía, spec §2).
+ * Los tres caminos de resolución de un requisito (taxonomía, spec `2).
  *
- * `nulo` es el que no estaba: significa que una variable que el sistema
- * incluye por defecto se dejó **voluntariamente indefinida**. No es «todavía
- * no», ni un olvido: es una decisión, y por eso resuelve el requisito y cuenta
- * para la completitud.
+ * Hubo un cuarto, `nulo` —dejar una variable voluntariamente indefinida—, y se
+ * descartó el mismo día, 2026-09-13. La razón es que partía de un supuesto
+ * falso: que todas las variables empiezan indefinidas y hay que ir cerrándolas
+ * una por una. No es así. Hay un paquete base de definiciones que no puede no
+ * estar —el CORE—, y lo que el diseñador hace sobre él es AGREGAR variables que
+ * no estaban consideradas, no anular las que están.
  *
- * Su consecuencia operativa es que NO SE EMITE NADA al destino. Emitir una
- * regla vacía sería peor que no emitir: el destino le pondría su propio valor
- * por defecto, que es exactamente lo que este camino declara que no debe
- * ocurrir. Las cuatro funciones de proyección lo cortan antes de empezar.
+ * Con el core cumpliendo ese papel, `nulo` deja de tener sentido: lo que no
+ * está en el core simplemente no se declara, y lo que está en el core no se
+ * puede dejar sin resolver.
  *
- * ABIERTO, y hay que resolverlo antes de confiar en este camino. Cristóbal lo
- * levantó el mismo día que lo definió: hay propiedades que el medio resuelve
- * SIEMPRE — el color de un texto, el fondo de algo que se pinta. Ahí no existe
- * «no decidir»: si el set no decide, decide el navegador, o decide el destino.
- * Para esas, `nulo` no está prohibido: es INALCANZABLE.
- *
- * La salida propuesta es un «mínimo irreducible»: un conjunto chico de
- * requisitos donde `nulo` no es un camino legal, y que por eso impiden que el
- * set se dé por completo hasta que alguien los defina. Es lo contrario de un
- * valor por defecto: el sistema no rellena, se niega a completarse.
- *
- * Cuáles son esos requisitos es trabajo de la taxonomía, no de este archivo.
- * Hasta que exista esa lista, el tipo acepta `nulo` en cualquier requisito y
- * NADA lo impide. Queda anotado como pendiente, no como decisión.
+ * Cuál es el core depende del tipo de proyecto (editorial, packaging, web,
+ * campaña…). Ver ARQUITECTURA.md, «El core, y por qué no hay un cuarto camino».
  */
-export type ResolutionPath = 'insumo' | 'diseñador' | 'contope' | 'nulo';
+export type ResolutionPath = 'insumo' | 'diseñador' | 'contope';
 
 /** Eje "fuerza" de la taxonomía (spec §2). */
 export type Fuerza = 'inamovible' | 'prioritaria' | 'explorable';
