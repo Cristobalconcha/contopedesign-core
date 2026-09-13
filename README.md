@@ -98,5 +98,20 @@ pnpm install && pnpm test && pnpm typecheck
 
 ## Licencia
 
-Sin definir todavía. Es decisión de Cristóbal Concha, y hasta que la tome este
-repositorio no declara ninguna.
+Copyright © 2026 Cristóbal Diego Concha Mathiesen.
+
+Software libre bajo la **Licencia Pública General de GNU, versión 3** o
+posterior. El texto completo está en [`LICENSE`](LICENSE).
+
+Esto significa que cualquiera puede usar, estudiar, modificar y redistribuir
+este programa —y que quien construya algo sobre él está obligado a publicar su
+trabajo bajo la misma licencia. Lo que es abierto sigue siendo abierto.
+
+Se eligió la versión 3 por ser la vigente. El plugin
+[ContOpe Publisher](https://github.com/Cristobalconcha/contope-publisher) usa
+la versión 2 porque WordPress lo exige, no porque se haya elegido.
+
+Este programa se distribuye con la esperanza de que sea útil, pero **SIN
+NINGUNA GARANTÍA**; ni siquiera la garantía implícita de COMERCIABILIDAD o
+APTITUD PARA UN PROPÓSITO PARTICULAR. Véase la Licencia Pública General de GNU
+para más detalles.
