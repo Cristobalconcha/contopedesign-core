@@ -108,3 +108,67 @@ fases y el artefacto— **todavía no existe**, en ningún repositorio.
 
 La capa visual es la pieza más grande del trabajo. La equivalente en el plugin
 de Web tomó meses.
+
+## Pendiente abierto: hasta dónde llega `nulo`
+
+Cristóbal levantó esto el mismo día que definió el cuarto camino, y tiene
+razón. En términos lógicos `nulo` es correcto; en términos prácticos hay un
+caso que no resuelve:
+
+> *«Si necesito mostrar algo en mi página, no puedo generar un valor por
+> defecto, no tengo definido el color, y quiero mostrar un texto o un recuadro.
+> ¿Qué hago con ese valor? Que no puede ser ni por defecto, y está, además,
+> voluntariamente no definido.»*
+
+### La distinción que lo ordena
+
+Hay dos clases de propiedad, y `nulo` significa cosas distintas en cada una:
+
+- **Las que pueden no estar.** Sombra, borde, textura, animación. `nulo`
+  funciona limpio: no se dibuja, no hace falta ningún valor.
+- **Las que el medio resuelve siempre.** El color de un texto, el fondo de algo
+  que se pinta, el tamaño de la letra. Acá **no existe «no decidir»**: si el
+  set no decide, decide el navegador, o decide el destino. Para éstas `nulo` no
+  está prohibido — **es inalcanzable**. No hay un estado del mundo donde el
+  texto no tenga color.
+
+### La salida propuesta
+
+Un **mínimo irreducible** —el *core dentro del core* que Cristóbal intuyó—:
+un conjunto chico de requisitos donde `nulo` no es un camino legal.
+
+No porque el sistema los rellene, sino porque **el sistema se niega a darse por
+completo hasta que alguien los defina.** Es lo contrario de un valor por
+defecto:
+
+| | |
+|---|---|
+| **Valor por defecto** | el sistema rellena en silencio, nadie se entera |
+| **Mínimo irreducible** | el sistema no se completa, y lo dice |
+
+La maquinaria ya existe: la completitud es binaria. Esos requisitos
+simplemente no admiten `nulo`.
+
+Y hay una tercera resolución que tampoco es un default y cubre muchos casos:
+**herencia declarada.** El fondo de un recuadro puede resolverse como «el rol
+superficie». Eso no inventa un valor: declara de dónde viene, y queda escrito.
+
+### Por qué no es teórico
+
+Medido en el plugin el 2026-09-13: el destino ya aplica **seis** valores de
+respaldo por su cuenta, y tres son los colores del panel de WordPress.
+
+| variable | lo que pone el destino |
+|---|---|
+| `--cod-color-accent` | `#2271b1` |
+| `--cod-color-ink` | `#1d2327` |
+| `--cod-color-surface` | `#f0f0f1` |
+
+Si el set no define el acento, el sitio se pinta del azul de WordPress. Eso es
+exactamente el problema, ya ocurriendo, antes de que `nulo` existiera.
+
+### Qué falta
+
+Definir **cuáles** requisitos componen ese mínimo. Es trabajo de la taxonomía,
+no de la implementación. Hasta entonces el tipo acepta `nulo` en cualquier
+requisito y nada lo impide: está anotado como pendiente, no como decisión.

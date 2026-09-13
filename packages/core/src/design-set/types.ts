@@ -25,6 +25,21 @@ import type { DimensionId, MapsToKindsEntry } from '../requirement-manifest/type
  * regla vacía sería peor que no emitir: el destino le pondría su propio valor
  * por defecto, que es exactamente lo que este camino declara que no debe
  * ocurrir. Las cuatro funciones de proyección lo cortan antes de empezar.
+ *
+ * ABIERTO, y hay que resolverlo antes de confiar en este camino. Cristóbal lo
+ * levantó el mismo día que lo definió: hay propiedades que el medio resuelve
+ * SIEMPRE — el color de un texto, el fondo de algo que se pinta. Ahí no existe
+ * «no decidir»: si el set no decide, decide el navegador, o decide el destino.
+ * Para esas, `nulo` no está prohibido: es INALCANZABLE.
+ *
+ * La salida propuesta es un «mínimo irreducible»: un conjunto chico de
+ * requisitos donde `nulo` no es un camino legal, y que por eso impiden que el
+ * set se dé por completo hasta que alguien los defina. Es lo contrario de un
+ * valor por defecto: el sistema no rellena, se niega a completarse.
+ *
+ * Cuáles son esos requisitos es trabajo de la taxonomía, no de este archivo.
+ * Hasta que exista esa lista, el tipo acepta `nulo` en cualquier requisito y
+ * NADA lo impide. Queda anotado como pendiente, no como decisión.
  */
 export type ResolutionPath = 'insumo' | 'diseñador' | 'contope' | 'nulo';
 

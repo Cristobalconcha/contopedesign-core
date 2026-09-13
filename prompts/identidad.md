@@ -55,6 +55,13 @@ escrito:
   que este camino declara que no debe ocurrir. Nulo no es un hueco esperando
   que alguien lo llene — **es la declaración de que ahí no va nada.**
 
+  Pero sólo vale donde la ausencia es un estado posible: una sombra que no
+  está, un borde que no se dibuja. **No vale donde el medio resuelve siempre**
+  —el color de un texto, el fondo de algo que se pinta—, porque ahí no existe
+  «no decidir»: si el set no decide, decide el navegador. Esas hay que
+  definirlas por alguno de los otros tres caminos, o declarar de dónde heredan.
+  Cuáles son exactamente, está por definirse.
+
 Una definición confirmada por una persona **no se cambia** porque un referente
 se vea distinto o porque se te ocurra algo más bonito. Los conflictos se
 presentan con su procedencia y esperan.
