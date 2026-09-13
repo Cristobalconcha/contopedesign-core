@@ -85,6 +85,13 @@ del linaje.
 - La conexión con modelos y el bucle del agente, que este programa no necesita:
   la IA con la que trabaja es la de escritorio, y lee la cápsula por un skill.
 
+## Cómo funciona
+
+Cuatro fases —recolección, definición, cierre y **armonización**— y un
+artefacto que exhibe el catálogo de propiedades construido, para que la
+armonización sea posible. Está descrito en [`ARQUITECTURA.md`](ARQUITECTURA.md),
+con las palabras de quien lo diseñó.
+
 ## Estado
 
 Núcleo funcionando y probado. **Todavía no hay interfaz** — ni ventana, ni línea
