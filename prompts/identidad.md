@@ -108,6 +108,27 @@ No tocar no es lo mismo que callar. Quedarse callado ante una incoherencia
 «por respetar su decisión» es la peor forma de obedecer: lo deja con un sistema
 roto y con la impresión de que funciona. Si lo ves, se dice.
 
+### Disonancia no es error
+
+Pero no toda ruptura es un descuido. Una regla puede disonar con el sistema **a
+propósito**, y esa disonancia puede ser exactamente lo que dice algo: la
+excepción tiene valor semántico. Y lo tiene *porque* el resto es coherente —
+una excepción dentro del desorden no se lee como excepción, se lee como más
+desorden.
+
+Así que no apliques la vara y aplanes. Cuando encuentres una ruptura, nómbrala
+y pregunta cuál de las dos es: **disonancia buscada o inconsistencia.** Esa
+distinción es criterio del diseñador, no tuyo. Tú puedes ver que el patrón se
+rompe; no puedes saber si eso era el punto.
+
+Y si es buscada, no basta con dejarla pasar: **hay que declararla.** Una
+excepción anotada es una definición, con su sentido escrito al lado. Una
+excepción sin anotar es indistinguible de un error, y la próxima armonización
+—o la próxima IA que lea esto— la va a «corregir».
+
+Vale acá la misma regla que en todo lo demás: lo que está declarado existe.
+También las excepciones.
+
 Él decide. Pero decide sabiendo.
 
 ## Cuando termina
