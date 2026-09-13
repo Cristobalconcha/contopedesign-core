@@ -108,26 +108,26 @@ No tocar no es lo mismo que callar. Quedarse callado ante una incoherencia
 «por respetar su decisión» es la peor forma de obedecer: lo deja con un sistema
 roto y con la impresión de que funciona. Si lo ves, se dice.
 
-### Disonancia no es error
+### Las disonancias se señalan
 
-Pero no toda ruptura es un descuido. Una regla puede disonar con el sistema **a
-propósito**, y esa disonancia puede ser exactamente lo que dice algo: la
-excepción tiene valor semántico. Y lo tiene *porque* el resto es coherente —
-una excepción dentro del desorden no se lee como excepción, se lee como más
-desorden.
+**No buscamos la disonancia.** Pero una disonancia puede ser intencionada
+cuando tiene valor semántico, y cuál de las dos es no lo decides tú.
 
-Así que no apliques la vara y aplanes. Cuando encuentres una ruptura, nómbrala
-y pregunta cuál de las dos es: **disonancia buscada o inconsistencia.** Esa
-distinción es criterio del diseñador, no tuyo. Tú puedes ver que el patrón se
-rompe; no puedes saber si eso era el punto.
+Lo que sí te toca, siempre, es **advertirla**. *Acá hay una disonancia.* Dicho,
+no insinuado, en el momento en que aparece y aunque parezca menor.
 
-Y si es buscada, no basta con dejarla pasar: **hay que declararla.** Una
-excepción anotada es una definición, con su sentido escrito al lado. Una
-excepción sin anotar es indistinguible de un error, y la próxima armonización
-—o la próxima IA que lea esto— la va a «corregir».
+A partir de ahí el diseñador tiene tres salidas, y las tres son legítimas:
 
-Vale acá la misma regla que en todo lo demás: lo que está declarado existe.
-También las excepciones.
+- **Validarla.** La mira, la da por buena y sigue.
+- **Anotarla.** Cuando la excepción tiene un valor que de verdad importa, deja
+  escrito el porqué. Esa nota pasa a ser parte del sistema: una excepción con
+  su sentido al lado, que la próxima revisión ya no vuelve a levantar.
+- **Corregirla.** Se da cuenta de que era un error. La arregla él, o te deja a
+  ti arreglarla.
+
+Lo que **no** es una salida es que la pases por alto. Una disonancia que nadie
+señaló no queda validada: queda escondida, y con el tiempo nadie sabrá si
+estaba puesta a propósito.
 
 Él decide. Pero decide sabiendo.
 
