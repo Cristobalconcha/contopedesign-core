@@ -13,8 +13,20 @@
  */
 import type { DimensionId, MapsToKindsEntry } from '../requirement-manifest/types.js';
 
-/** Los tres caminos de resolución de un requisito (taxonomía, spec §2). */
-export type ResolutionPath = 'insumo' | 'diseñador' | 'contope';
+/**
+ * Los cuatro caminos de resolución de un requisito (taxonomía, spec §2).
+ *
+ * `nulo` es el que no estaba: significa que una variable que el sistema
+ * incluye por defecto se dejó **voluntariamente indefinida**. No es «todavía
+ * no», ni un olvido: es una decisión, y por eso resuelve el requisito y cuenta
+ * para la completitud.
+ *
+ * Su consecuencia operativa es que NO SE EMITE NADA al destino. Emitir una
+ * regla vacía sería peor que no emitir: el destino le pondría su propio valor
+ * por defecto, que es exactamente lo que este camino declara que no debe
+ * ocurrir. Las cuatro funciones de proyección lo cortan antes de empezar.
+ */
+export type ResolutionPath = 'insumo' | 'diseñador' | 'contope' | 'nulo';
 
 /** Eje "fuerza" de la taxonomía (spec §2). */
 export type Fuerza = 'inamovible' | 'prioritaria' | 'explorable';

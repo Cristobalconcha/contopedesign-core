@@ -87,9 +87,11 @@ entonces se genera desde lo declarado, y hereda las reglas del set:
   para que la lámina se vea llena.
 - **Tiene que exhibirlo todo.** Una propiedad declarada que el artefacto no
   muestra es una propiedad que nadie va a armonizar.
-- **La ausencia también se exhibe.** Una dimensión sin definiciones no es una
-  lámina en blanco: es la información de que ahí falta trabajo. La completitud
-  es binaria y el artefacto debería dejarla ver.
+- **La ausencia se exhibe, y hay dos ausencias distintas.** Una dimensión sin
+  definiciones es trabajo pendiente. Una variable resuelta como **nulo** es una
+  decisión tomada: el diseñador dijo que ahí no va nada. El artefacto tiene que
+  distinguirlas, porque si las muestra igual, la primera parece resuelta y la
+  segunda parece olvidada.
 - **Las excepciones declaradas se muestran como excepciones**, con su nota al
   lado. Si el artefacto las aplana, la próxima revisión las «corrige».
 
