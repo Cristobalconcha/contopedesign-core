@@ -92,17 +92,24 @@ artefacto que exhibe el catálogo de propiedades construido, para que la
 armonización sea posible. Está descrito en [`ARQUITECTURA.md`](ARQUITECTURA.md),
 con las palabras de quien lo diseñó.
 
-## La interfaz
+## La interfaz: diseñada, todavía no construida
 
-Primera pasada descrita y prototipada el 13 de septiembre: el inicio por mundos,
-el ciclo de insumos, la asignación del núcleo y el selector de tipografía sobre
-las 1.946 familias de Google Fonts. Está en [`INTERFAZ.md`](INTERFAZ.md), con
-lo aprobado marcado aparte de lo que espera revisión.
+Conviene separar las dos cosas, porque son estados distintos del mismo trabajo.
+
+**Diseñada y prototipada** el 13 de septiembre: el inicio por mundos, el ciclo
+de incorporación de insumos, la asignación del núcleo con los 43 requisitos
+reales, las primitivas por tipo de parámetro y el selector de tipografías sobre
+las 1.946 familias de Google Fonts. Está en [`INTERFAZ.md`](INTERFAZ.md), con lo
+aprobado marcado aparte de lo que espera revisión.
+
+**No construida:** nada de eso vive todavía en este repositorio. No hay ventana
+ni línea de comandos; los únicos guiones son `test` y `typecheck`. El prototipo
+sirve para mirar y corregir, no se ejecuta como programa.
 
 ## Estado
 
-Núcleo funcionando y probado. **Todavía no hay interfaz** — ni ventana, ni línea
-de comandos. Es lo que sigue.
+Núcleo funcionando y probado. La interfaz es lo que sigue, y es la pieza más
+grande: la equivalente en el plugin de Web tomó meses.
 
 ```bash
 pnpm install && pnpm test && pnpm typecheck

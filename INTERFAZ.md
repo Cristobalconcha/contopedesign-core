@@ -6,6 +6,37 @@ revisada mirándola. Lo que está aprobado se marca; lo que no, también.
 Prototipo navegable:
 <https://claude.ai/code/artifact/aadcd1ef-9673-4fea-9036-651aae455220>
 
+## El principio: primitiva e instrumento, por tipo de parámetro
+
+Salió de una corrección de Cristóbal sobre la primera versión, y ordena el resto
+de la interfaz:
+
+> *«No puede ser que repitamos la misma primitiva para todos los parámetros,
+> porque no aplica… En el caso del color serán parchecitos de color, en el caso
+> de la tipografía será un fragmento de texto, en el caso de la punta redondeada
+> será un recuadro.»*
+
+**Cada tipo de parámetro tiene dos cosas propias:**
+
+| | |
+|---|---|
+| **Su primitiva** | cómo se muestra. Un color en parches, una familia en un fragmento de texto, una holgura en una caja con su aire visible, una retícula en columnas. |
+| **Su instrumento** | cómo se define. Y se define **mirando**: el selector de tipografías para una familia, el lienzo con texto sobre un fondo para una holgura. |
+
+Y de ahí la segunda mitad de la corrección: **los instrumentos no son etapas del
+flujo, son ventanas que se abren desde el parámetro.**
+
+> *«Si traigo una tipografía en PDF, ya la tengo, está, no necesito ir a la
+> librería de tipografías. Si llego con una tipografía en un impreso, en una
+> imagen, ahí sí necesito ir.»*
+
+O sea: no existe una «pantalla de definición» genérica. Existe una lista de
+parámetros, y cada uno abre lo suyo cuando hace falta.
+
+Hay una novena primitiva que importa tanto como las ocho: **`sin definir`**, en
+línea punteada. Un parámetro sin resolver tampoco puede parecerse a un color
+gris.
+
 ## 1. Inicio — *pendiente de revisión*
 
 No es una galería de trabajos previos. Es la pregunta **¿en qué vas a trabajar?**,
@@ -34,6 +65,12 @@ El ciclo, tal como lo describió:
 3. Se registra, y cada extracción queda trazada al requisito que resuelve.
 4. **El sistema pregunta:** ¿seguir incorporando insumos, o avanzar?
 
+Arriba de la lista va la zona para **incorporar**, que acepta clic o arrastrar y
+soltar. Un detalle que parece menor y no lo es: en la primera versión ese botón
+decía «incorporar» y en realidad sólo pasaba al siguiente insumo de la lista. Un
+control que dice una cosa y hace otra es peor que no tenerlo, sobre todo en un
+prototipo, porque quien lo mira da por construido algo que no existe.
+
 ## 3. Definición — *pendiente de revisión*
 
 El listado de lo que debería haber —el núcleo— mostrando cuáles ya vienen
@@ -45,6 +82,16 @@ armonización.
 
 En el prototipo son los **43 requisitos reales** del manifiesto, en cinco
 dimensiones.
+
+**Cada requisito lleva su explicación.** Cristóbal la pidió mirando la pantalla:
+*«¿qué quiere decir que cuenta con un fundamento de color efectivo? Eso necesita
+ser explicado. Por lo menos, para mí no está claro.»* Están escritas las 43, en
+castellano llano y con el ejemplo concreto cuando ayuda. Se abren con un `?` en
+cada fila.
+
+**Y un requisito puede venir de dos insumos a la vez.** Cuando pasa, quedan las
+dos fuentes registradas y sale un aviso: cuál manda lo decide la armonización,
+no la recolección.
 
 ## 4. Construcción y armonización — *sin dibujar*
 
