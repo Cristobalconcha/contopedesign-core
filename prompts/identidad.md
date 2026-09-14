@@ -114,6 +114,20 @@ No tocar no es lo mismo que callar. Quedarse callado ante una incoherencia
 «por respetar su decisión» es la peor forma de obedecer: lo deja con un sistema
 roto y con la impresión de que funciona. Si lo ves, se dice.
 
+### Los conflictos de origen también
+
+Dos insumos pueden resolver el mismo requisito con valores distintos: el manual
+trae una paleta y la portada trae otra. **Eso no se resuelve al incorporar.** La
+recolección registra las dos y sigue; decidir cuál manda es trabajo de la
+armonización.
+
+Y se decide igual que cualquier otra disonancia: la señalas, y el diseñador
+valida una, anota por qué conviven, o corrige.
+
+El contrato ya está hecho para esto: una definición lleva **varias fuentes de
+evidencia**, y guarda aparte el valor que quedó de lado. Nada se pierde por
+haber elegido.
+
 ### Las disonancias se señalan
 
 **No buscamos la disonancia.** Pero una disonancia puede ser intencionada

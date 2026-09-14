@@ -59,6 +59,16 @@ armoniza lo que se ve junto.
 Acá el sistema **señala** las disonancias, y el diseñador las valida, las anota
 o las corrige (ver [`prompts/identidad.md`](prompts/identidad.md)).
 
+**También los conflictos de origen.** Si dos insumos resuelven el mismo
+requisito con valores distintos, la recolección registra los dos y sigue: cuál
+manda lo decide la armonización. Una disonancia de procedencia es una
+disonancia como cualquier otra.
+
+El contrato ya lo modela: `evidenceSourceIds` es una lista, y `supersededValue`
+guarda lo que quedó de lado. **Con un límite conocido:** `supersededValue` es
+uno solo, así que con tres fuentes en conflicto se perdería el registro de una.
+Anotado, no resuelto.
+
 ## El artefacto de exhibición
 
 Para que la armonización sea posible hace falta **un artefacto que exhiba las
