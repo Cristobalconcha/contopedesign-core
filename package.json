@@ -4,6 +4,13 @@
   "packageManager": "pnpm@10.33.4",
   "scripts": {
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "dev": "pnpm --filter @contope/desktop dev",
+    "dev:web": "pnpm --filter @contope/desktop dev:web",
+    "build": "pnpm --filter @contope/desktop build",
+    "start": "pnpm --filter @contope/desktop start"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron", "esbuild"]
   }
 }
