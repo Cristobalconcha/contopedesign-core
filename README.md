@@ -52,6 +52,15 @@ packages/core/src/
   design-contract*.ts     el contrato: procedencia, autoridad y ciclo de
                           vida de cada definición, y su forma portable
   memoria-de-construccion.ts   el estado del set mientras se arma
+packages/desktop/
+  electron/               la ventana y el acceso al disco (proceso principal)
+  src/dominio/            el documento del taller, su reductor, la evaluación
+                          con el núcleo, la cápsula, los extractores de
+                          insumos y el catálogo tipográfico
+  src/pantallas/          inicio, recolección, definición, construcción
+  src/instrumentos/       tipografía, parches de color, escala espacial y
+                          el editor estructurado
+  datos/                  el catálogo de Google Fonts, con fecha
 skills/
   leer-contrato-de-diseno/     cómo una IA lee la cápsula y la honra
 ```
@@ -92,30 +101,40 @@ artefacto que exhibe el catálogo de propiedades construido, para que la
 armonización sea posible. Está descrito en [`ARQUITECTURA.md`](ARQUITECTURA.md),
 con las palabras de quien lo diseñó.
 
-## La interfaz: diseñada, todavía no construida
+## La interfaz: primera pasada construida
 
-Conviene separar las dos cosas, porque son estados distintos del mismo trabajo.
+**Diseñada y prototipada** el 13 de septiembre; **construida** el 14, en
+`packages/desktop`, sobre el núcleo real. Inicio por mundos, recolección de
+insumos reales (CSS, tokens W3C, imágenes, IDML), definición con los 43
+requisitos evaluados por el núcleo, el selector de tipografías aprobado sobre
+las 1.946 familias de Google Fonts, dos instrumentos visuales más y un editor
+estructurado para el resto. La pantalla de construcción y armonización sigue
+sin dibujar, a propósito. Todo está en [`INTERFAZ.md`](INTERFAZ.md): lo
+aprobado, lo que espera revisión, y las decisiones que se tomaron sin
+preguntar para poder revertirlas sabiendo por qué existían.
 
-**Diseñada y prototipada** el 13 de septiembre: el inicio por mundos, el ciclo
-de incorporación de insumos, la asignación del núcleo con los 43 requisitos
-reales, las primitivas por tipo de parámetro y el selector de tipografías sobre
-las 1.946 familias de Google Fonts. Está en [`INTERFAZ.md`](INTERFAZ.md), con lo
-aprobado marcado aparte de lo que espera revisión.
+```bash
+pnpm dev        # la ventana de escritorio (Electron)
+pnpm dev:web    # lo mismo, en el navegador, para revisar sin instalar nada
+pnpm build      # compila el renderizador y el proceso principal a dist/
+pnpm start      # abre lo compilado
+```
 
-**No construida:** nada de eso vive todavía en este repositorio. No hay ventana
-ni línea de comandos; los únicos guiones son `test` y `typecheck`. El prototipo
-sirve para mirar y corregir, no se ejecuta como programa.
+El programa guarda archivos `*.contope.json` y exporta la cápsula
+(`design-contract.json` + `DESIGN.md`) a una carpeta. No hay instalador
+todavía: se corre desde el repositorio.
 
 ## Estado
 
-Núcleo funcionando y probado. La interfaz es lo que sigue, y es la pieza más
-grande: la equivalente en el plugin de Web tomó meses.
+Núcleo funcionando y probado; interfaz en primera pasada, funcionando y
+probada en su capa de dominio. Falta lo grande: el editor visual y el
+artefacto de exhibición para armonizar.
 
 ```bash
 pnpm install && pnpm test && pnpm typecheck
 ```
 
-17 archivos de prueba, 207 pruebas.
+25 archivos de prueba, 262 pruebas (207 del núcleo, 55 del escritorio).
 
 ## Licencia
 

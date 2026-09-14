@@ -114,12 +114,15 @@ color.
 
 ## Qué falta construir
 
-Lo que está hecho es el núcleo: el manifiesto de requisitos, el set, el
-contrato y su forma portable. Todo lo de arriba que sea interfaz —las cuatro
-fases y el artefacto— **todavía no existe**, en ningún repositorio.
+Lo que está hecho es el núcleo —el manifiesto de requisitos, el set, el
+contrato y su forma portable— y, desde el 14 de septiembre, la primera pasada
+de la interfaz en `packages/desktop`: recolección, definición y los primeros
+instrumentos (ver [`INTERFAZ.md`](INTERFAZ.md)).
 
-La capa visual es la pieza más grande del trabajo. La equivalente en el plugin
-de Web tomó meses.
+Lo que **todavía no existe** es lo que este documento dice que más importa: el
+cierre de definición con la IA construyendo lo encargado, y la armonización
+con su artefacto de exhibición. Eso es la capa visual grande, y no se dibuja
+sin conversarla. La equivalente en el plugin de Web tomó meses.
 
 ## El core, y por qué no hay un cuarto camino
 
