@@ -92,6 +92,13 @@ artefacto que exhibe el catálogo de propiedades construido, para que la
 armonización sea posible. Está descrito en [`ARQUITECTURA.md`](ARQUITECTURA.md),
 con las palabras de quien lo diseñó.
 
+## La interfaz
+
+Primera pasada descrita y prototipada el 13 de septiembre: el inicio por mundos,
+el ciclo de insumos, la asignación del núcleo y el selector de tipografía sobre
+las 1.946 familias de Google Fonts. Está en [`INTERFAZ.md`](INTERFAZ.md), con
+lo aprobado marcado aparte de lo que espera revisión.
+
 ## Estado
 
 Núcleo funcionando y probado. **Todavía no hay interfaz** — ni ventana, ni línea
