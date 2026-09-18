@@ -10,6 +10,7 @@ import { Primitiva } from '../componentes/Primitiva.js';
 import { EXPLICACIONES } from '../dominio/explicaciones.js';
 import { DIMENSIONES, NOMBRE_DIMENSION, REQUISITOS, dependientesDe } from '../dominio/manifiesto.js';
 import { mundo as mundoDe } from '../dominio/mundos.js';
+import { enNucleo } from '../dominio/nucleos.js';
 import { muestraDePayload } from '../dominio/primitivas.js';
 import { instrumentoPara } from '../instrumentos/index.js';
 import { useTaller } from '../taller.js';
@@ -55,6 +56,15 @@ export function Definicion() {
             <h2 className="tit">El núcleo, y quién resuelve lo que falta</h2>
             <p className="desde" style={{ margin: '.2rem 0 0' }}>
               Mundo {mundoDe(sistema.mundo).nombre.toLowerCase()} · {evaluacion.total} requisitos · la completitud es binaria ·{' '}
+              {evaluacion.nucleo ? (
+                <>
+                  núcleo del mundo: {evaluacion.nucleo.contador.cubiertos} de {evaluacion.nucleo.contador.total} preguntas y{' '}
+                  {evaluacion.nucleo.contador.reglasCumplidas} de {evaluacion.nucleo.contador.reglasTotal} reglas ·{' '}
+                  <b style={{ color: evaluacion.nucleo.resultado === 'cubierto' ? 'var(--ok)' : undefined }}>{evaluacion.nucleo.resultado}</b> ·{' '}
+                </>
+              ) : (
+                <>este mundo no tiene núcleo medido todavía · </>
+              )}
               <a className="enlace" onClick={alternarTodas}>
                 {todasAbiertas ? 'ocultar las explicaciones' : 'explicar todas'}
               </a>
@@ -117,6 +127,7 @@ export function Definicion() {
                       <span className="id">
                         {r.id} · {r.packageId.replace(/^pkg\./, '')} · {r.eje}
                         {r.dependsOn.length ? ` · depende de ${r.dependsOn.join(', ')}` : ''}
+                        {enNucleo(sistema.mundo, r.id) ? <i className="et" title="El mundo elegido no puede dejar esta pregunta sin responder"> núcleo</i> : null}
                       </span>
                       {r.pregunta}
                       {entrada ? (

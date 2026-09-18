@@ -10,15 +10,19 @@
  * (fail-closed del núcleo), por eso no se puede omitirlas.
  */
 import {
+  evaluarNucleo,
   evaluateManifest,
+  toFullPayloadsMap,
   toPayloadsMap,
   type DimensionEvaluationV0,
+  type NucleoEvaluationV0,
   type DimensionId,
   type RectoraV0,
   type RequirementResultV0,
   type VerificationRecordV0,
 } from '@contope/core';
 import { MANIFIESTOS, REQUISITOS } from './manifiesto.js';
+import { nucleoDeMundo } from './nucleos.js';
 import type { Sistema } from './sistema.js';
 
 export interface Evaluacion {
@@ -28,6 +32,8 @@ export interface Evaluacion {
   total: number;
   /** Todos los requisitos activos del manifiesto están resueltos. */
   completo: boolean;
+  /** El núcleo del mundo elegido, si ese mundo tiene uno medido (preguntas y reglas). */
+  nucleo: NucleoEvaluationV0 | undefined;
 }
 
 export function rectorasSinRestricciones(): Map<string, RectoraV0> {
@@ -56,7 +62,20 @@ export function evaluar(sistema: Sistema): Evaluacion {
     for (const r of evaluacion.resultados) porRequisito.set(r.requisitoId, r);
   }
   const resueltos = [...porRequisito.values()].filter((r) => r.resultado === 'resuelto').length;
+  const n = nucleoDeMundo(sistema.mundo);
+  const nucleo =
+    n === undefined
+      ? undefined
+      : evaluarNucleo({
+          nucleo: n,
+          resultados: porRequisito,
+          payloads: toFullPayloadsMap(sistema.designSet),
+          manifests: MANIFIESTOS,
+          rectoras: rectorasSinRestricciones(),
+          verifications,
+        });
   return {
+    nucleo,
     porRequisito,
     porDimension,
     resueltos,

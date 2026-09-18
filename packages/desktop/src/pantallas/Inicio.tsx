@@ -49,9 +49,10 @@ export function Inicio({ recientes, entorno, onNuevo, onAbrir, onAbrirReciente }
         <div className="inicio-main">
           <h1 className="pregunta-grande">¿En qué vas a trabajar?</h1>
           <p className="sub">
-            Cada mundo debería traer su propio núcleo de definiciones: lo que no puede faltar para poder construir.
-            Ese núcleo por mundo todavía no se investigó: hoy los cuatro usan el mismo manifiesto de 43 requisitos, y los
-            cuatro mundos son una propuesta sin confirmar.
+            Cada mundo trae su propio núcleo de definiciones: lo que no puede faltar para poder construir. Dos están
+            medidos —el digital sobre el sitio real, el editorial sobre el folleto real, Claude Design e InDesign— y dos
+            no todavía. Los cuatro comparten el mismo manifiesto de 79 preguntas; los cuatro mundos siguen siendo una
+            propuesta sin confirmar.
           </p>
           <div className="mundos">
             {MUNDOS.map((m) => (

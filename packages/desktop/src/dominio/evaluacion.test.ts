@@ -92,4 +92,15 @@ describe('evaluar', () => {
     expect(r?.resultado).toBe('no-resuelto');
     expect(r?.motivos.some((m) => m.codigo === 'dependencia-no-resuelta')).toBe(true);
   });
+  it('el mundo editorial tiene núcleo medido y arranca no-cubierto; marca no tiene núcleo todavía', () => {
+    const editorial = evaluar(nuevoSistema('editorial', 'Folleto', AHORA));
+    expect(editorial.nucleo?.mundoId).toBe('editorial-impreso');
+    expect(editorial.nucleo?.resultado).toBe('no-cubierto');
+    expect(editorial.nucleo?.contador.total).toBe(40);
+    expect(editorial.nucleo?.faltantes).toHaveLength(40);
+    const digital = evaluar(nuevoSistema('digital', 'Sitio', AHORA));
+    expect(digital.nucleo?.mundoId).toBe('web');
+    expect(digital.nucleo?.contador.total).toBe(5);
+    expect(evaluar(nuevoSistema('marca', 'Marca', AHORA)).nucleo).toBeUndefined();
+  });
 });
