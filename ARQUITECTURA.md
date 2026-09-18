@@ -69,6 +69,133 @@ guarda lo que quedó de lado. **Con un límite conocido:** `supersededValue` es
 uno solo, así que con tres fuentes en conflicto se perdería el registro de una.
 Anotado, no resuelto.
 
+## El flujo completo, paso a paso
+
+Precisado por Cristóbal el 18 de septiembre de 2026, después de medir lo que
+Claude Design define para impreso. Las cuatro fases de arriba siguen valiendo;
+esto las ordena en seis pasos y agrega los dos que faltaban: el **alcance** al
+principio y los **árbitros** al final. Dos ideas atraviesan todo el flujo:
+
+- **ContOpe produce sistemas de diseño, no piezas.** En el core no hay encargo;
+  el encargo es trabajo de la aplicación de destino, que arma la pieza con el
+  ADN que el sistema declaró.
+- **Lo que el diseñador declara al principio sirve para una sola cosa:** acotar
+  qué se le va a exigir al sistema. No dirige la definición ni la reemplaza.
+
+### 0. Alcance: qué sistema se va a definir
+
+El diseñador elige el mundo, o describe en pocas palabras el trabajo al que va
+el sistema: una línea de cartelería, un sitio, una revista. No es un brief de
+pieza. Es la forma de saber qué dimensiones importan.
+
+Con eso, el programa **desglosa las dimensiones del mundo**: el catálogo entero
+de ese mundo, con las del núcleo marcadas como irrenunciables. El diseñador
+marca con casillas cuáles más quiere que queden definidas. El resultado es el
+**paquete de definiciones** del sistema:
+
+> *«Una personalización del universo de dimensiones establecido por el core
+> para un tipo de trabajo.»*
+
+Desde ahí, la completitud se mide contra ese paquete y no contra el manifiesto
+entero (decisión del 13 de septiembre). Lo que no está en el paquete no es una
+ausencia: es algo que este sistema no declara.
+
+*Estado:* el catálogo existe (79 preguntas en nueve dimensiones) y los núcleos
+de dos mundos también (`packages/core/src/nucleo/`). **La pantalla no existe:**
+Inicio elige el mundo y salta directo a Recolección, sin desglose ni casillas.
+
+### 1. Insumos, en dos carriles
+
+**Carril de referentes.** Piezas o sistemas de los que se toma algo. De cada
+uno se marca, sobre el mismo desglose de dimensiones, **qué se toma**: la
+paleta de este, la retícula de aquel. Inspirarse en un referente nunca es
+adoptarlo entero.
+
+**Carril de cortapisas.** El manual de estilo, el logotipo, la paleta
+institucional; o el sistema anterior, cuando lo nuevo es una variante suya. Lo
+que traen no se discute: entra como restricción, y en el core es una rectora.
+También acá se marca qué se toma y qué queda abierto para cambiar.
+
+Los dos carriles reciben lo mismo (IDML, PDF, tokens, CSS, imágenes, páginas
+web); lo que cambia es la fuerza con que entra lo que traen.
+
+*Estado:* Recolección lee CSS, tokens W3C, imágenes e IDML; PDF y páginas web
+sólo se registran. La pantalla tenía diseñado «qué se toma de este insumo»
+desde el 13 de septiembre, pero **no se construyó**: todo candidato entra como
+propuesta explorable. **No hay dos carriles**, y las rectoras se pasan vacías al
+evaluador.
+
+### 2. Rieles: quién resuelve cada vacío
+
+Restando lo que trajeron los insumos del paquete declarado, quedan los vacíos.
+Cada uno se asigna: lo define el diseñador o lo define la IA. Son los tres
+rieles de la taxonomía (insumo, diseñador, ContOpe). Recién con todos los
+vacíos asignados empieza la definición.
+
+*Estado:* existe. Cada pregunta pendiente ofrece los tres caminos, y un encargo
+a ContOpe queda como definición declarada y vacía en la cápsula.
+
+### 3. Definición: el manifiesto con sus primitivas, y el editor
+
+Se muestra el manifiesto con todo lo que ya se tomó, **exhibido con la
+primitiva de cada dimensión** (color en parches, tipografía en texto, holgura
+en una caja con su aire). Para lo asignado al diseñador, «nuevo» **abre el
+editor en el apartado de la variable que toca**: si es la paleta, el apartado
+de color. Lo definido ahí se guarda en el set, por variable.
+
+El editor puede ser GrapesJS, el mismo del plugin web. No es obligatorio, es
+una opción ya construida; pero tiene una virtud que no tiene ningún otro: amarra
+la definición con el universo web, donde ya hay un destino real que lee esas
+mismas variables. Es compatible con el principio de INTERFAZ.md: un instrumento
+por tipo de parámetro, que se abre desde el parámetro.
+
+*Estado:* Definición muestra las 79 preguntas con su explicación; hay tres
+instrumentos visuales y un editor estructurado por campo para el resto. Las
+primitivas de las cuatro dimensiones nuevas se muestran como texto. **GrapesJS
+no está en el escritorio.**
+
+### 4. La IA construye lo suyo
+
+Una instancia, previa o final, en la que la IA construye sus propuestas para
+lo que le quedó asignado, usando como referencia los sistemas conocidos.
+
+*Estado:* el encargo existe; **traer de vuelta lo que la IA proponga no está
+construido**.
+
+### 5. Armonización, con árbitros por universo
+
+Cuando todas las casillas del paquete están llenas viene la etapa más
+importante. Ahí entran los sistemas de diseño de referencia, y la precisión
+nueva es que **cada uno arbitra un universo**: hay sistemas que sirven para el
+diseño editorial, otros para el web, otros para marketing o para interfaces.
+Ninguno sirve para todo.
+
+Esto se midió el mismo día: las reglas de impreso de Claude Design describen un
+documento de oficina, y el folleto real de Santa Luisa, que es imprenta, las
+contradice en cuerpo, notas y filetes, y se imprimió bien (vault,
+`nucleo-mundo-editorial-medicion-2026-09-18.md`). Un árbitro aplicado fuera de
+su universo no armoniza: corrige lo que estaba bien. Por eso cada regla por
+mundo lleva cita de su base de conocimiento y condición sobre lo que el sistema
+declara soportar, y por eso los árbitros se eligen por universo.
+
+*Estado:* la armonización no existe (`constraintDefinitionIds` sigue reservado
+y vacío). Lo que sí existe es la forma de un árbitro: reglas con umbral, cita y
+condición en `nucleo/`, y la constatación de que hacen falta varios (oficina e
+imprenta no son el mismo árbitro).
+
+### Qué cambia respecto de las cuatro fases
+
+| fase (13-09) | pasos (18-09) | lo nuevo |
+|---|---|---|
+| — | 0. Alcance | el paquete de definiciones, por casillas, antes de recolectar |
+| 1. Recolección | 1. Insumos | dos carriles: referentes y cortapisas; marca de «qué tomo» |
+| 2. Definición | 2. Rieles · 3. Definición | los rieles se asignan antes de definir; el editor abre en la variable |
+| 3. Cierre | 4. La IA construye | sin cambio |
+| 4. Armonización | 5. Armonización | árbitros específicos por universo, con cita y condición |
+
+Lo que esto cambia en cada pantalla está en [`INTERFAZ.md`](INTERFAZ.md),
+«Lo que el flujo del 18 de septiembre cambia».
+
 ## El artefacto de exhibición
 
 Para que la armonización sea posible hace falta **un artefacto que exhiba las
@@ -146,6 +273,11 @@ Lo que **todavía no existe** es lo que este documento dice que más importa: el
 cierre de definición con la IA construyendo lo encargado, y la armonización
 con su artefacto de exhibición. Eso es la capa visual grande, y no se dibuja
 sin conversarla. La equivalente en el plugin de Web tomó meses.
+
+Y desde el 18 de septiembre hay dos piezas más chicas que van **antes** que
+esa, porque sin ellas el resto mide mal: la pantalla de alcance (el paquete de
+definiciones por casillas) y los dos carriles de insumos con la marca de «qué
+tomo». Están en «El flujo completo, paso a paso», más arriba.
 
 ## El core, y por qué no hay un cuarto camino
 

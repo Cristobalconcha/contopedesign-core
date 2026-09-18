@@ -188,6 +188,24 @@ punto de partida, no una respuesta cerrada. La decisión final es del diseñador
 
 El selector aparece en los casos 2, 3 y 4. En el 2 y el 3 llega prefiltrado.
 
+## Lo que el flujo del 18 de septiembre cambia
+
+Cristóbal describió el flujo completo el 18 de septiembre (ver
+[`ARQUITECTURA.md`](ARQUITECTURA.md), «El flujo completo, paso a paso»). Contra
+las pantallas de arriba, esto es lo que cambia y lo que no:
+
+| pantalla | qué cambia |
+|---|---|
+| 1. Inicio | Se queda como está (elegir mundo, abrir, recientes). Pero **ya no salta a Recolección**: pasa a una pantalla nueva. |
+| **1b. Alcance** (nueva) | Una línea para describir el trabajo al que va el sistema, y el desglose de las dimensiones del mundo con casillas: las del núcleo marcadas y fijas, las demás a elección. Lo marcado es el paquete de definiciones, y Definición mide contra él. |
+| 2. Recolección | El paso 2 del ciclo («qué se toma de este insumo») **estaba diseñado y no se construyó**; pasa a ser obligatorio y se hace sobre el mismo desglose de dimensiones. Y la zona de incorporar se parte en **dos carriles**: referentes (entran como propuesta) y cortapisas (entran como rectora, con qué se toma y qué queda abierto). |
+| 3. Definición | Se ordena en dos momentos: primero **asignar los rieles** a todos los vacíos, después **definir**. Lo asignado al diseñador abre el instrumento del parámetro; GrapesJS entra como instrumento opcional que abre en el apartado de la variable. Sólo se exigen las preguntas del paquete. |
+| 4. Armonización | Sigue sin dibujar. Lo que sí quedó definido es quién arbitra: **sistemas de referencia por universo**, con cita y condición, nunca uno para todo. |
+
+Con esto, el orden de «Lo que falta» de abajo cambia: la pantalla de alcance y
+los dos carriles van antes que los instrumentos visuales, porque sin ellos la
+completitud se mide contra el manifiesto entero y las cortapisas no existen.
+
 ## Lo construido (14 de septiembre)
 
 Vive en `packages/desktop`. Corre de dos maneras: como ventana de escritorio
@@ -256,6 +274,10 @@ se puedan revertir sabiendo por qué existían.
 
 ### Lo que falta, en orden de lo que más pesa
 
+0. La pantalla de alcance (el paquete de definiciones por casillas) y los dos
+   carriles de recolección con la marca de «qué tomo de este insumo». Son del
+   flujo del 18 de septiembre y van primero porque sin ellos la completitud se
+   mide contra el manifiesto entero y las cortapisas no existen.
 1. La pantalla 4: el editor visual y el artefacto de exhibición para la
    armonización. Sin conversarla, no.
 2. Instrumentos visuales para el resto de los parámetros (roles de color,
