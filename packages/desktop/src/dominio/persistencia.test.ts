@@ -38,3 +38,51 @@ describe('persistencia · alcance', () => {
     expect(() => parsearSistema(JSON.stringify(roto))).toThrow(/dimensión desconocida/);
   });
 });
+
+
+describe('persistencia · carril y tomar de los insumos', () => {
+  function insumoPlano(extra: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: 'insumo-viejo',
+      nombre: 'viejo.css',
+      extension: 'css',
+      tipo: 'css',
+      tamanoBytes: 10,
+      incorporadoEn: '2026-09-14T12:00:00.000Z',
+      resumen: 'viejo',
+      candidatos: [],
+      ...extra,
+    };
+  }
+
+  function conInsumos(insumos: unknown[]): string {
+    const plano = JSON.parse(serializarSistema(nuevoSistema('digital', 'Viejo'))) as Record<string, unknown>;
+    plano['insumos'] = insumos;
+    return JSON.stringify(plano);
+  }
+
+  it('un insumo sin carril ni tomar se abre como referente, con tomar null', () => {
+    const s = parsearSistema(conInsumos([insumoPlano()]));
+    expect(s.insumos[0]?.carril).toBe('referente');
+    expect(s.insumos[0]?.tomar).toBeNull();
+  });
+
+  it('un carril que no es ninguno de los dos se rechaza entero', () => {
+    expect(() => parsearSistema(conInsumos([insumoPlano({ carril: 'otro' })]))).toThrow(/carril desconocido/);
+  });
+
+  it('un tomar que no es lista ni null se rechaza', () => {
+    expect(() => parsearSistema(conInsumos([insumoPlano({ tomar: 'dim1' })]))).toThrow(/'tomar'/);
+  });
+
+  it('un tomar con una dimensión desconocida se rechaza', () => {
+    expect(() => parsearSistema(conInsumos([insumoPlano({ tomar: ['dim99'] })]))).toThrow(/dimensión desconocida/);
+  });
+
+  it('ida y vuelta de una cortapisa que toma sólo dos dimensiones', () => {
+    const s = parsearSistema(conInsumos([insumoPlano({ carril: 'cortapisa', tomar: ['dim2', 'dim3'] })]));
+    expect(s.insumos[0]?.carril).toBe('cortapisa');
+    expect(s.insumos[0]?.tomar).toEqual(['dim2', 'dim3']);
+    expect(parsearSistema(serializarSistema(s))).toEqual(s);
+  });
+});

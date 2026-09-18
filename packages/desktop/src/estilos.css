@@ -2031,3 +2031,30 @@ select.sel.corto {
 .rq.fuera {
   opacity: 0.55;
 }
+
+/* Los dos carriles de insumos (Recolección) y la etiqueta de cortapisa. */
+.et-cortapisa {
+  color: var(--bronce);
+  border-color: var(--bronce);
+}
+.carril {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.35rem;
+}
+.carril .chip2 {
+  flex: 1;
+  text-align: center;
+}
+.carril-ayuda {
+  margin: 0 0 0.8rem;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--apagado);
+}
+.tomar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.2rem 0 0.8rem;
+}

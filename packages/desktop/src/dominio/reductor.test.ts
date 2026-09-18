@@ -14,6 +14,8 @@ function insumo(id: string, candidatos: Candidato[]): Insumo {
     tamanoBytes: 10,
     incorporadoEn: AHORA,
     resumen: 'prueba',
+    carril: 'referente',
+    tomar: null,
     candidatos,
   };
 }
@@ -225,5 +227,99 @@ describe('reducir · declarar-alcance', () => {
     );
     expect(s2.alcance?.dimensiones).toEqual(['dim2', 'dim3']);
     expect(s2.alcance?.proposito).toBe('');
+  });
+});
+
+
+function cortapisa(id: string, candidatos: Candidato[]): Insumo {
+  return { ...insumo(id, candidatos), carril: 'cortapisa' };
+}
+
+describe('reducir · los dos carriles de insumos', () => {
+  it('un candidato de un insumo cortapisa entra aprobado e inamovible', () => {
+    let s = nuevoSistema('digital', 'Prueba', AHORA);
+    s = reducir(s, { tipo: 'agregar-insumo', insumo: cortapisa('k', [candidatoColores('k1', ['#70745e'])]) }, AHORA);
+    s = reducir(s, { tipo: 'incorporar', insumoId: 'k', candidatoIds: ['k1'] }, AHORA);
+
+    const e = findEntry(s.designSet, 'dim1.req01');
+    expect(e).toBeDefined();
+    expect(e?.cicloDeVida).toBe('aprobada');
+    expect(e?.fuerza).toBe('inamovible');
+    expect(e?.resolutionPath).toBe('insumo');
+    expect(e?.provenance).toEqual({ fuente: 'referente', referenciaId: 'k' });
+    expect(s.conflictos).toHaveLength(0);
+    expect(s.insumos[0]?.candidatos[0]?.estado).toBe('incorporado');
+  });
+
+  it('una cortapisa sobre lo que trajo un referente lo desplaza, sube la revisión y deja el rastro', () => {
+    let s = nuevoSistema('digital', 'Prueba', AHORA);
+    s = reducir(s, { tipo: 'agregar-insumo', insumo: insumo('a', [candidatoColores('a1', ['#111111'])]) }, AHORA);
+    s = reducir(s, { tipo: 'incorporar', insumoId: 'a', candidatoIds: ['a1'] }, AHORA);
+    s = reducir(s, { tipo: 'agregar-insumo', insumo: cortapisa('k', [candidatoColores('k1', ['#999999'])]) }, AHORA);
+    s = reducir(s, { tipo: 'incorporar', insumoId: 'k', candidatoIds: ['k1'] }, AHORA);
+
+    const e = findEntry(s.designSet, 'dim1.req01');
+    expect(s.designSet.entries).toHaveLength(1);
+    expect(e?.revision).toBe(2);
+    expect(e?.effectiveDefinitionId).toBe('dim1.req01.def2');
+    expect(e?.fuerza).toBe('inamovible');
+    expect(e?.cicloDeVida).toBe('aprobada');
+    expect(e?.provenance).toEqual({ fuente: 'referente', referenciaId: 'k' });
+    const payload = e?.payload as { institucionales: Array<{ value: string }> };
+    expect(payload.institucionales.map((c) => c.value)).toEqual(['#999999']);
+
+    expect(s.conflictos).toHaveLength(1);
+    expect(s.conflictos[0]).toMatchObject({
+      requirementId: 'dim1.req01',
+      insumoId: 'a',
+      candidatoId: '',
+      desplazada: true,
+    });
+    const desplazado = s.conflictos[0]?.fragmento as { institucionales: Array<{ value: string }> };
+    expect(desplazado.institucionales.map((c) => c.value)).toEqual(['#111111']);
+  });
+
+  it('si lo desplazado lo había definido el diseñador, el conflicto lo dice', () => {
+    let s = nuevoSistema('digital', 'Prueba', AHORA);
+    s = reducir(s, { tipo: 'definir', requirementId: 'dim1.req01', payload: { institucionales: [] }, camino: 'diseñador', fuerza: 'explorable' }, AHORA);
+    s = reducir(s, { tipo: 'agregar-insumo', insumo: cortapisa('k', [candidatoColores('k1', ['#999999'])]) }, AHORA);
+    s = reducir(s, { tipo: 'incorporar', insumoId: 'k', candidatoIds: ['k1'] }, AHORA);
+
+    expect(findEntry(s.designSet, 'dim1.req01')?.fuerza).toBe('inamovible');
+    expect(s.conflictos[0]).toMatchObject({ insumoId: 'diseñador', candidatoId: '', desplazada: true });
+  });
+
+  it('dos cortapisas sobre el mismo requisito dejan un conflicto normal: lo decide la armonización', () => {
+    let s = nuevoSistema('digital', 'Prueba', AHORA);
+    s = reducir(s, { tipo: 'agregar-insumo', insumo: cortapisa('k1', [candidatoColores('k11', ['#111111'])]) }, AHORA);
+    s = reducir(s, { tipo: 'incorporar', insumoId: 'k1', candidatoIds: ['k11'] }, AHORA);
+    s = reducir(s, { tipo: 'agregar-insumo', insumo: cortapisa('k2', [candidatoColores('k21', ['#999999'])]) }, AHORA);
+    s = reducir(s, { tipo: 'incorporar', insumoId: 'k2', candidatoIds: ['k21'] }, AHORA);
+
+    const e = findEntry(s.designSet, 'dim1.req01');
+    expect(s.designSet.entries).toHaveLength(1);
+    expect(e?.revision).toBe(1);
+    expect(e?.provenance).toEqual({ fuente: 'referente', referenciaId: 'k1' });
+    const payload = e?.payload as { institucionales: Array<{ value: string }> };
+    expect(payload.institucionales.map((c) => c.value)).toEqual(['#111111']);
+    expect(s.conflictos).toHaveLength(1);
+    expect(s.conflictos[0]).toMatchObject({ requirementId: 'dim1.req01', insumoId: 'k2', candidatoId: 'k21' });
+    expect(s.conflictos[0]?.desplazada).toBeUndefined();
+  });
+
+  it('tomar-de-insumo guarda la lista marcada; null vuelve a decir «todas»', () => {
+    let s = nuevoSistema('digital', 'Prueba', AHORA);
+    s = reducir(s, { tipo: 'agregar-insumo', insumo: insumo('a', [candidatoColores('a1', ['#111111'])]) }, AHORA);
+    expect(s.insumos[0]?.tomar).toBeNull();
+
+    s = reducir(s, { tipo: 'tomar-de-insumo', insumoId: 'a', dimensiones: ['dim2', 'dim3'] }, AHORA);
+    expect(s.insumos[0]?.tomar).toEqual(['dim2', 'dim3']);
+    expect(s.actualizadoEn).toBe(AHORA);
+
+    const igual = reducir(s, { tipo: 'tomar-de-insumo', insumoId: 'no-existe', dimensiones: null }, '2026-09-18T00:00:00.000Z');
+    expect(igual).toBe(s);
+
+    s = reducir(s, { tipo: 'tomar-de-insumo', insumoId: 'a', dimensiones: null }, AHORA);
+    expect(s.insumos[0]?.tomar).toBeNull();
   });
 });

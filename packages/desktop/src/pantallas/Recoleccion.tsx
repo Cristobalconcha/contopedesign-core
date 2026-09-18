@@ -3,15 +3,24 @@
  * insumo, se elige QUÉ se quiere tomar de él, se registra con trazabilidad
  * al requisito que resuelve, y el sistema pregunta si seguir o avanzar.
  *
+ * Desde el 18-09-2026 los insumos entran por DOS CARRILES: como referente (lo
+ * que se toma entra como propuesta, para decidir después) o como cortapisa (el
+ * manual de estilo, el logotipo, la paleta institucional, el sistema anterior
+ * cuando lo nuevo es una variante: lo que trae entra aprobado e inamovible). En
+ * los dos carriles el diseñador marca, sobre el desglose de dimensiones, qué se
+ * toma de ese insumo; lo no marcado no se ofrece: sus candidatos quedan
+ * ocultos hasta que se vuelvan a marcar, sin descartarse.
+ *
  * Todo lo que hay acá es real: los archivos entran por el selector del
  * sistema o arrastrados, los candidatos salen de leerlos, y el medidor lo
  * calcula el evaluador del núcleo.
  */
+import type { DimensionId } from '@contope/core';
 import { useEffect, useMemo, useState } from 'react';
 import { Primitiva } from '../componentes/Primitiva.js';
 import { extraer } from '../dominio/extractores/index.js';
-import { requisito } from '../dominio/manifiesto.js';
-import type { Insumo } from '../dominio/sistema.js';
+import { NOMBRE_DIMENSION, dimensionDe, requisito } from '../dominio/manifiesto.js';
+import type { Carril, Insumo } from '../dominio/sistema.js';
 import { decodificarImagen } from '../navegador/imagen.js';
 import type { ArchivoDeInsumo } from '../puente/index.js';
 import { useTaller } from '../taller.js';
@@ -32,6 +41,11 @@ const NOMBRE_TIPO: Record<Insumo['tipo'], string> = {
   otro: 'Archivo',
 };
 
+const AYUDA_CARRIL: Record<Carril, string> = {
+  referente: 'Se toma lo que marques; entra como propuesta, para decidir después.',
+  cortapisa: 'Manual, logotipo, paleta institucional o el sistema anterior: lo que tomes entra aprobado e inamovible.',
+};
+
 export function Recoleccion() {
   const { sistema, evaluacion, puente, despachar, ir, avisar } = useTaller();
   const [activo, setActivo] = useState<string | null>(sistema.insumos[0]?.id ?? null);
@@ -39,6 +53,7 @@ export function Recoleccion() {
   const [recienRegistrado, setRecienRegistrado] = useState(false);
   const [leyendo, setLeyendo] = useState(false);
   const [encima, setEncima] = useState(false);
+  const [carril, setCarril] = useState<Carril>('referente');
 
   useEffect(() => {
     if (activo === null || !sistema.insumos.some((i) => i.id === activo)) setActivo(sistema.insumos[0]?.id ?? null);
@@ -46,6 +61,16 @@ export function Recoleccion() {
 
   const insumo = sistema.insumos.find((i) => i.id === activo) ?? null;
   const pendientes = insumo?.candidatos.filter((c) => c.estado === 'pendiente') ?? [];
+
+  // Qué dimensiones tiene este insumo (las que traen algún candidato) y cuáles
+  // se toman: `tomar` en null quiere decir «todas».
+  const dimensionesDelInsumo: DimensionId[] = [];
+  for (const c of insumo?.candidatos ?? []) {
+    const d = dimensionDe(c.requirementId);
+    if (!dimensionesDelInsumo.includes(d)) dimensionesDelInsumo.push(d);
+  }
+  const marcadas: DimensionId[] = insumo?.tomar ?? dimensionesDelInsumo;
+  const visibles = pendientes.filter((c) => marcadas.includes(dimensionDe(c.requirementId)));
 
   const registro = useMemo(
     () =>
@@ -62,7 +87,9 @@ export function Recoleccion() {
       let ultimo: string | null = null;
       for (const a of archivos) {
         const nuevo = await extraer({ nombre: a.nombre, extension: a.extension, bytes: a.bytes }, { decodificarImagen });
-        despachar({ tipo: 'agregar-insumo', insumo: nuevo });
+        // El carril lo pone acá quien incorpora, no el extractor: los archivos
+        // que entran —por el selector o arrastrados— llevan el del conmutador.
+        despachar({ tipo: 'agregar-insumo', insumo: { ...nuevo, carril } });
         ultimo = nuevo.id;
       }
       if (ultimo !== null) setActivo(ultimo);
@@ -92,9 +119,28 @@ export function Recoleccion() {
     ).then(incorporarArchivos);
   };
 
+  const alternarDimension = (dim: DimensionId): void => {
+    if (!insumo) return;
+    const nuevas = marcadas.includes(dim) ? marcadas.filter((d) => d !== dim) : [...marcadas, dim];
+    despachar({ tipo: 'tomar-de-insumo', insumoId: insumo.id, dimensiones: nuevas });
+    if (!nuevas.includes(dim)) {
+      // Lo que se oculta se destilda: lo oculto no se registra.
+      const ocultos = new Set(
+        insumo.candidatos.filter((c) => dimensionDe(c.requirementId) === dim).map((c) => c.id),
+      );
+      setSeleccion(new Set([...seleccion].filter((id) => !ocultos.has(id))));
+    }
+  };
+
   const registrar = (): void => {
     if (!insumo || seleccion.size === 0) return;
-    despachar({ tipo: 'incorporar', insumoId: insumo.id, candidatoIds: [...seleccion] });
+    // Sólo se registra lo que está a la vista: candidatos de dimensiones marcadas.
+    const ids = [...seleccion].filter((id) => {
+      const c = insumo.candidatos.find((x) => x.id === id);
+      return c !== undefined && marcadas.includes(dimensionDe(c.requirementId));
+    });
+    if (ids.length === 0) return;
+    despachar({ tipo: 'incorporar', insumoId: insumo.id, candidatoIds: ids });
     setSeleccion(new Set());
     setRecienRegistrado(true);
   };
@@ -110,6 +156,15 @@ export function Recoleccion() {
   return (
     <section className="tres">
       <div className="col col-lat">
+        <div className="carril" role="group" aria-label="Carril del insumo que entra">
+          <button className="chip2" aria-pressed={carril === 'referente'} onClick={() => setCarril('referente')}>
+            Entra como referente
+          </button>
+          <button className="chip2" aria-pressed={carril === 'cortapisa'} onClick={() => setCarril('cortapisa')}>
+            Entra como cortapisa
+          </button>
+        </div>
+        <p className="carril-ayuda">{AYUDA_CARRIL[carril]}</p>
         <button
           className={`agregar ${encima ? 'encima' : ''}`}
           onClick={elegirArchivos}
@@ -144,6 +199,7 @@ export function Recoleccion() {
               <span>
                 {NOMBRE_TIPO[i.tipo]} · {tamano(i.tamanoBytes)}
               </span>
+              {i.carril === 'cortapisa' ? <i className="et et-cortapisa">cortapisa</i> : null}
               {hechos ? <span className="cuenta">✓ {hechos} incorporada{hechos === 1 ? '' : 's'}</span> : null}
             </div>
           );
@@ -157,12 +213,36 @@ export function Recoleccion() {
             <p className="desde">
               Desde {insumo.nombre} · {insumo.resumen}
             </p>
+            {dimensionesDelInsumo.length ? (
+              <>
+                <p className="rot" style={{ marginBottom: '.3rem' }}>
+                  ¿Qué tomas de este insumo?
+                </p>
+                <div className="tomar">
+                  {dimensionesDelInsumo.map((d) => (
+                    <button
+                      key={d}
+                      className="chip2"
+                      aria-pressed={marcadas.includes(d)}
+                      onClick={() => alternarDimension(d)}
+                    >
+                      {NOMBRE_DIMENSION[d] ?? d}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
             {pendientes.length === 0 ? (
               <p className="tenue">
-                {insumo.candidatos.length === 0 ? 'De este insumo no se extrajo nada: queda registrado como referente.' : 'Todo lo de este insumo ya se incorporó o se descartó.'}
+                {insumo.candidatos.length === 0
+                  ? 'De este insumo no se extrajo nada: queda registrado igual, con su carril.'
+                  : 'Todo lo de este insumo ya se incorporó o se descartó.'}
               </p>
             ) : null}
-            {pendientes.map((c) => {
+            {pendientes.length > 0 && visibles.length === 0 ? (
+              <p className="tenue">No hay dimensiones marcadas arriba: marca alguna para ver sus candidatos.</p>
+            ) : null}
+            {visibles.map((c) => {
               const req = requisito(c.requirementId);
               const sel = seleccion.has(c.id);
               const soloInforma = Object.keys(c.fragmento).length === 0;
@@ -270,7 +350,10 @@ export function Recoleccion() {
                 <div key={c.id} className="r">
                   <div>
                     <b>{c.requirementId}</b>
-                    <span>{sistema.insumos.find((i) => i.id === c.insumoId)?.nombre ?? c.insumoId} · lo decide la armonización</span>
+                    <span>
+                      {sistema.insumos.find((i) => i.id === c.insumoId)?.nombre ?? c.insumoId} ·{' '}
+                      {c.desplazada ? 'lo desplazó una cortapisa; quedó de lado' : 'lo decide la armonización'}
+                    </span>
                   </div>
                 </div>
               ))}

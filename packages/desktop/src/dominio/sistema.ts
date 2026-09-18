@@ -15,8 +15,14 @@
  * del manifiesto este sistema declara necesitar. Es opcional en el archivo
  * (`alcance` ausente se lee como `null`, que significa «todas»), así que un
  * archivo viejo sigue abriendo igual.
+ *
+ * Desde la misma fecha cada insumo guarda su CARRIL (`referente` o
+ * `cortapisa`) y qué DIMENSIONES se toman de él (`tomar`, `null` = todas).
+ * Los dos campos también son opcionales en el archivo: un archivo viejo abre
+ * como referente que toma todo (ver persistencia.ts). El carril lo pone quien
+ * incorpora el insumo, no el extractor.
  */
-import type { DesignContractV1, DesignSetV0, EditContextDevelopmentTask, VerificationRecordV0 } from '@contope/core';
+import type { DesignContractV1, DesignSetV0, DimensionId, EditContextDevelopmentTask, VerificationRecordV0 } from '@contope/core';
 import type { Alcance } from './alcance.js';
 import type { MundoId } from './mundos.js';
 import type { Muestra } from './primitivas.js';
@@ -26,6 +32,14 @@ export const SCHEMA_SISTEMA = 1;
 
 /** Qué clase de archivo entró; decide qué extractor lo lee. */
 export type TipoInsumo = 'css' | 'tokens-w3c' | 'imagen' | 'idml' | 'pdf' | 'texto' | 'otro';
+
+/**
+ * Los dos carriles de un insumo. El referente es lo normal: se toma y se
+ * decide después. La cortapisa (manual de estilo, logotipo, paleta
+ * institucional, el sistema anterior cuando lo nuevo es una variante) trae
+ * algo que no se discute (Decisión 21).
+ */
+export type Carril = 'referente' | 'cortapisa';
 
 /**
  * Algo que un insumo ofrece incorporar, dirigido a un requisito concreto.
@@ -55,6 +69,17 @@ export interface Insumo {
   miniatura?: string;
   /** Resumen de lo que el extractor encontró (o por qué no leyó nada). */
   resumen: string;
+  /**
+   * Cómo entró: como referente (lo que se toma queda como propuesta, para
+   * decidir después) o como cortapisa (lo que trae no se discute). El
+   * extractor no lo decide: lo pone quien incorpora el insumo.
+   */
+  carril: Carril;
+  /**
+   * Qué dimensiones se toman de este insumo; `null` = todas. Lo no marcado no
+   * se ofrece: sus candidatos quedan ocultos, sin descartarse.
+   */
+  tomar: DimensionId[] | null;
   candidatos: Candidato[];
 }
 
@@ -70,6 +95,13 @@ export interface Conflicto {
   candidatoId: string;
   fragmento: Record<string, unknown>;
   registradoEn: string;
+  /**
+   * Cuando una cortapisa desplaza una entrada anterior, acá queda el rastro de
+   * lo que se dejó de lado: `fragmento` es el payload anterior y este campo lo
+   * marca. Ausente, el conflicto es el de siempre (dos orígenes que la
+   * armonización decide).
+   */
+  desplazada?: boolean;
 }
 
 export interface Sistema {

@@ -9,6 +9,16 @@
  *   mezcla con ella: queda como conflicto, para la armonización.
  * - Una definición que viene de insumo entra como `propuesta` y `explorable`
  *   —lo más débil— hasta que la persona la apruebe y le dé fuerza.
+ * - La excepción son las CORTAPISAS (Decisión 21): el manual de estilo, el
+ *   logotipo, la paleta institucional, el sistema anterior cuando lo nuevo es
+ *   una variante. Lo que traen no se discute, así que entran ya `aprobada` e
+ *   `inamovible`; y si llegan sobre algo que no venía de una cortapisa, la
+ *   reemplazan, dejando el rastro de lo desplazado en `conflictos`. Dos
+ *   cortapisas sobre el mismo requisito sí se tratan como dos orígenes: las
+ *   decide la armonización.
+ * - Una cortapisa se expresa por FUERZA y CICLO DE VIDA, no por tags. Las
+ *   rectoras del núcleo (descriptor, mood wall) siguen pasándose sin
+ *   restricciones: acá no se filtran.
  * - Aprobar no cambia el valor; reabrir no lo borra.
  * - Declarar el alcance reemplaza el anterior entero: es una decisión de
  *   contorno (qué preguntas exige el sistema), no un ajuste parcial.
@@ -16,6 +26,7 @@
 import type {
   DesignSetEntryV0,
   DesignSetV0,
+  DimensionId,
   Fuerza,
   ProvenanceV0,
   RequirementV0,
@@ -32,6 +43,7 @@ export type Accion =
   | { tipo: 'declarar-alcance'; alcance: Alcance }
   | { tipo: 'agregar-insumo'; insumo: Insumo }
   | { tipo: 'quitar-insumo'; insumoId: string }
+  | { tipo: 'tomar-de-insumo'; insumoId: string; dimensiones: DimensionId[] | null }
   | { tipo: 'incorporar'; insumoId: string; candidatoIds: string[] }
   | { tipo: 'descartar-candidato'; insumoId: string; candidatoId: string }
   | { tipo: 'asignar-camino'; requirementId: string; camino: ResolutionPath | null }
@@ -122,6 +134,31 @@ function provenanceDe(camino: ResolutionPath, insumoId?: string): ProvenanceV0 {
   return { fuente: 'usuario' };
 }
 
+/**
+ * Una entrada «viene de una cortapisa» cuando su camino es el insumo y ese
+ * insumo entró como cortapisa. Nada más: una cortapisa se expresa por fuerza
+ * y ciclo de vida, no por tags; las rectoras del núcleo (descriptor, mood
+ * wall) siguen pasándose sin restricciones.
+ */
+export function esCortapisa(sistema: Sistema, entrada: DesignSetEntryV0): boolean {
+  if (entrada.resolutionPath !== 'insumo') return false;
+  const referenciaId = entrada.provenance.referenciaId;
+  if (referenciaId === undefined) return false;
+  return sistema.insumos.some((i) => i.id === referenciaId && i.carril === 'cortapisa');
+}
+
+/**
+ * De dónde venía una entrada, para dejar constancia en el conflicto cuando una
+ * cortapisa la desplaza: el id del insumo que la trajo, o el camino que la
+ * resolvió ('diseñador' / 'contope') cuando no vino de un insumo.
+ */
+function origenDeEntrada(entrada: DesignSetEntryV0): string {
+  if (entrada.resolutionPath === 'insumo' && entrada.provenance.referenciaId !== undefined) {
+    return entrada.provenance.referenciaId;
+  }
+  return entrada.resolutionPath;
+}
+
 function sinCamino(caminos: Sistema['caminos'], requirementId: string): Sistema['caminos'] {
   if (!(requirementId in caminos)) return caminos;
   const copia = { ...caminos };
@@ -139,15 +176,17 @@ function incorporarCandidato(
   if (!req) return sistema;
   const set = conManifestRef(sistema.designSet, req.id);
   const existente = set.entries.find((e) => e.requirementId === req.id);
+  const cortapisa = insumo.carril === 'cortapisa';
 
   if (!existente) {
+    // Lo que trae una cortapisa no se discute: entra aprobado e inamovible.
     const entrada = crearEntrada(
       req,
       candidato.fragmento,
       'insumo',
       provenanceDe('insumo', insumo.id),
-      'explorable',
-      'propuesta',
+      cortapisa ? 'inamovible' : 'explorable',
+      cortapisa ? 'aprobada' : 'propuesta',
     );
     return {
       ...sistema,
@@ -165,6 +204,39 @@ function incorporarCandidato(
     return { ...sistema, designSet: { ...set, entries: entradas } };
   }
 
+  // Una cortapisa sobre algo que NO viene de una cortapisa manda: reemplaza la
+  // entrada entera, y lo desplazado queda registrado para la armonización
+  // (Decisión 21: gana la cortapisa y se redefine el resto).
+  if (cortapisa && !esCortapisa(sistema, existente)) {
+    const reemplazo: DesignSetEntryV0 = {
+      ...existente,
+      effectiveDefinitionId: idDefinicion(req.id, existente.revision + 1),
+      resolutionPath: 'insumo',
+      payload: candidato.fragmento,
+      provenance: provenanceDe('insumo', insumo.id),
+      fuerza: 'inamovible',
+      cicloDeVida: 'aprobada',
+      revision: existente.revision + 1,
+    };
+    const desplazado: Conflicto = {
+      id: nuevoId('conflicto'),
+      requirementId: req.id,
+      insumoId: origenDeEntrada(existente),
+      candidatoId: '',
+      fragmento: esRecord(existente.payload) ? existente.payload : {},
+      registradoEn: ahora,
+      desplazada: true,
+    };
+    return {
+      ...sistema,
+      designSet: { ...set, entries: set.entries.map((e) => (e === existente ? reemplazo : e)) },
+      caminos: sinCamino(sistema.caminos, req.id),
+      conflictos: [...sistema.conflictos, desplazado],
+    };
+  }
+
+  // Dos cortapisas (o una cortapisa sobre otra cortapisa) son dos orígenes:
+  // se registran y las decide la armonización, igual que hoy.
   const conflicto: Conflicto = {
     id: nuevoId('conflicto'),
     requirementId: req.id,
@@ -209,6 +281,17 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
       // Quitar el archivo no quita lo que ya se incorporó de él: eso ya es
       // parte del set, con su procedencia. Sólo deja de ofrecer candidatos.
       return { ...sistema, insumos: sistema.insumos.filter((i) => i.id !== accion.insumoId) };
+    }
+
+    case 'tomar-de-insumo': {
+      // Qué se toma de este insumo: las dimensiones marcadas (o `null`, que
+      // quiere decir «todas»). Lo no marcado no se ofrece —Recolección oculta
+      // sus candidatos— pero nada se descarta: volver a marcar lo devuelve.
+      if (!sistema.insumos.some((i) => i.id === accion.insumoId)) return sistema;
+      const insumos = sistema.insumos.map((i) =>
+        i.id === accion.insumoId ? { ...i, tomar: accion.dimensiones } : i,
+      );
+      return { ...sistema, insumos };
     }
 
     case 'incorporar': {

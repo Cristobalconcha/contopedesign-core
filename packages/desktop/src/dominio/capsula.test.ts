@@ -16,6 +16,8 @@ function sistemaDePrueba() {
     tamanoBytes: 1,
     incorporadoEn: AHORA,
     resumen: 'r',
+    carril: 'referente',
+    tomar: null,
     candidatos: [
       {
         id: 'c1',

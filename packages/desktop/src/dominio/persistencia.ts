@@ -6,11 +6,17 @@
  * `alcance` es lo único que se normaliza al leer: si falta (archivo viejo) se
  * pone `null`, que significa «sin acotar: todas las preguntas del manifiesto».
  * No se sube `SCHEMA_SISTEMA` por eso: un archivo sin el campo abre igual.
+ *
+ * Desde el 18-09-2026 cada insumo lleva además su CARRIL (`referente` o
+ * `cortapisa`) y las DIMENSIONES que se toman de él (`tomar`; `null` = todas).
+ * Los dos se completan al leer —un archivo viejo abre como referente que toma
+ * todo—, pero un carril que no sea uno de los dos, o una dimensión
+ * desconocida en `tomar`, rechazan el archivo entero.
  */
 import { DIMENSION_IDS, validateDesignSetShape, type DimensionId } from '@contope/core';
 import type { Alcance } from './alcance.js';
 import { esMundoId } from './mundos.js';
-import { KIND_SISTEMA, SCHEMA_SISTEMA, type Sistema } from './sistema.js';
+import { KIND_SISTEMA, SCHEMA_SISTEMA, type Carril, type Insumo, type Sistema } from './sistema.js';
 
 function esRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -32,6 +38,47 @@ function validarAlcance(valor: unknown): { ok: true; alcance: Alcance | null } |
   return { ok: true, alcance: { proposito: valor['proposito'], dimensiones, declaradoEn: valor['declaradoEn'] } };
 }
 
+function esCarril(valor: unknown): valor is Carril {
+  return valor === 'referente' || valor === 'cortapisa';
+}
+
+/**
+ * Completa lo que un archivo viejo no traía: carril `referente` y `tomar`
+ * `null` (todas las dimensiones). Lo que sí viene se valida.
+ */
+function normalizarInsumos(valor: unknown): { ok: true; insumos: Insumo[] } | { ok: false; motivo: string } {
+  if (!Array.isArray(valor)) return { ok: false, motivo: "'insumos' debe ser una lista" };
+  const insumos: Insumo[] = [];
+  for (const crudo of valor) {
+    if (!esRecord(crudo)) return { ok: false, motivo: 'cada insumo debe ser un objeto' };
+    const carrilCrudo = crudo['carril'];
+    if (carrilCrudo !== undefined && !esCarril(carrilCrudo)) {
+      return { ok: false, motivo: `carril desconocido en un insumo: ${String(carrilCrudo)}` };
+    }
+    const tomarCrudo = crudo['tomar'];
+    if (tomarCrudo !== undefined && tomarCrudo !== null && !Array.isArray(tomarCrudo)) {
+      return { ok: false, motivo: "'tomar' debe ser null o una lista de dimensiones" };
+    }
+    let tomar: DimensionId[] | null = null;
+    if (Array.isArray(tomarCrudo)) {
+      const dimensiones: DimensionId[] = [];
+      for (const d of tomarCrudo) {
+        if (typeof d !== 'string' || !(DIMENSION_IDS as readonly string[]).includes(d)) {
+          return { ok: false, motivo: `dimensión desconocida en 'tomar': ${String(d)}` };
+        }
+        dimensiones.push(d as DimensionId);
+      }
+      tomar = dimensiones;
+    }
+    insumos.push({
+      ...(crudo as unknown as Insumo),
+      carril: esCarril(carrilCrudo) ? carrilCrudo : 'referente',
+      tomar,
+    });
+  }
+  return { ok: true, insumos };
+}
+
 export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } | { ok: false; motivo: string } {
   if (!esRecord(valor)) return { ok: false, motivo: 'el archivo no contiene un objeto' };
   if (valor['kind'] !== KIND_SISTEMA) return { ok: false, motivo: `no es un sistema de ContOpe Design (kind '${String(valor['kind'])}')` };
@@ -44,9 +91,14 @@ export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } |
   if (!esRecord(valor['caminos'])) return { ok: false, motivo: "'caminos' debe ser un objeto" };
   const alcance = validarAlcance(valor['alcance']);
   if (!alcance.ok) return { ok: false, motivo: alcance.motivo };
+  const insumos = normalizarInsumos(valor['insumos']);
+  if (!insumos.ok) return { ok: false, motivo: insumos.motivo };
   const set = validateDesignSetShape(valor['designSet']);
   if (!set.ok) return { ok: false, motivo: `DesignSet inválido: ${set.errores.map((e) => e.mensaje).join('; ')}` };
-  return { ok: true, sistema: { ...(valor as unknown as Sistema), alcance: alcance.alcance } };
+  return {
+    ok: true,
+    sistema: { ...(valor as unknown as Sistema), alcance: alcance.alcance, insumos: insumos.insumos },
+  };
 }
 
 export function serializarSistema(sistema: Sistema): string {

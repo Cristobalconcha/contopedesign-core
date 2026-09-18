@@ -3,6 +3,10 @@
  * extensión y, cuando no hay extractor, registra el archivo igual como
  * referente, diciendo que de ahí no se lee nada todavía. Registrar sin
  * leer es honesto; leer a medias y callar, no.
+ *
+ * El extractor no decide carriles: todo insumo sale con `carril: 'referente'`
+ * y `tomar: null` (todas las dimensiones). Quien lo incorpora pone el carril
+ * que el diseñador eligió en Recolección (ver reductor.ts, «los dos carriles»).
  */
 import { nuevoId, type Insumo, type TipoInsumo } from '../sistema.js';
 import { candidatosDeCss, leerCss } from './css.js';
@@ -55,6 +59,10 @@ export async function extraer(archivo: ArchivoEntrante, opciones: OpcionesExtrac
     tipo,
     tamanoBytes: archivo.bytes.byteLength,
     incorporadoEn: opciones.ahora ?? new Date().toISOString(),
+    // El extractor no sabe de carriles: entra como referente que toma todo, y
+    // quien incorpora el insumo lo cambia si el diseñador eligió cortapisa.
+    carril: 'referente',
+    tomar: null,
   };
 
   try {

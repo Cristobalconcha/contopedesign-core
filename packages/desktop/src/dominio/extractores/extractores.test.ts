@@ -71,7 +71,7 @@ describe('css', () => {
     const candidatos = candidatosDeCss(leerCss(CSS), 'x');
     s = reducir(s, {
       tipo: 'agregar-insumo',
-      insumo: { id: 'i', nombre: 'a.css', extension: 'css', tipo: 'css', tamanoBytes: 1, incorporadoEn: '', resumen: '', candidatos },
+      insumo: { id: 'i', nombre: 'a.css', extension: 'css', tipo: 'css', tamanoBytes: 1, incorporadoEn: '', resumen: '', carril: 'referente', tomar: null, candidatos },
     });
     s = reducir(s, { tipo: 'incorporar', insumoId: 'i', candidatoIds: candidatos.map((c) => c.id) });
     const e = evaluar(s);

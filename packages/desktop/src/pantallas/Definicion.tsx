@@ -8,6 +8,11 @@
  * (lo que el alcance declaró), no contra el manifiesto entero: las preguntas
  * fuera del paquete se muestran apagadas, se pueden definir igual —son
  * definiciones de este sistema— pero no cuentan en «faltan N».
+ *
+ * También desde esa fecha una definición puede venir de una CORTAPISA (el
+ * manual de estilo, el logotipo, la paleta institucional, el sistema anterior):
+ * eso se marca en sus etiquetas y editar, quitar o reabrir piden confirmación,
+ * porque lo que trae una cortapisa no se discute: se redefine el resto.
  */
 import { findEntry, type Fuerza } from '@contope/core';
 import { useState } from 'react';
@@ -17,6 +22,7 @@ import { DIMENSIONES, NOMBRE_DIMENSION, REQUISITOS, dependientesDe } from '../do
 import { mundo as mundoDe } from '../dominio/mundos.js';
 import { enNucleo } from '../dominio/nucleos.js';
 import { muestraDePayload } from '../dominio/primitivas.js';
+import { esCortapisa } from '../dominio/reductor.js';
 import { instrumentoPara } from '../instrumentos/index.js';
 import { useTaller } from '../taller.js';
 
@@ -135,6 +141,13 @@ export function Definicion() {
                 const motivosPropios = (resultado?.motivos ?? []).filter((m) => !m.codigo.startsWith('dependencia-'));
                 const motivosDeps = (resultado?.motivos ?? []).filter((m) => m.codigo.startsWith('dependencia-'));
                 const enPaquete = evaluacion.paquete.has(r.id);
+                const deCortapisa = entrada !== undefined && esCortapisa(sistema, entrada);
+                const referenciaInsumo = entrada?.provenance.referenciaId ?? null;
+                const nombreCortapisa =
+                  referenciaInsumo === null
+                    ? 'insumo'
+                    : sistema.insumos.find((i) => i.id === referenciaInsumo)?.nombre ?? referenciaInsumo;
+                const avisoCortapisa = `Esta definición viene de una cortapisa (${nombreCortapisa}): no se discute, se redefine el resto. ¿Seguir igual?`;
 
                 return (
                   <div key={r.id} className={`rq ${entrada ? (resuelto ? 'ya' : 'incompleta') : ''} ${enPaquete ? '' : 'fuera'}`}>
@@ -152,6 +165,7 @@ export function Definicion() {
                           <i className={`et et-${entrada.resolutionPath === 'diseñador' ? 'dis' : entrada.resolutionPath}`}>{NOMBRE_CAMINO[entrada.resolutionPath]}</i>
                           <i className="et">{entrada.cicloDeVida}</i>
                           <i className="et">{entrada.fuerza}</i>
+                          {deCortapisa ? <i className="et et-cortapisa">cortapisa</i> : null}
                           <i className="et">rev. {entrada.revision}</i>
                           {entrada.resolutionPath === 'insumo' && entrada.provenance.referenciaId ? (
                             <i className="et">{sistema.insumos.find((i) => i.id === entrada.provenance.referenciaId)?.nombre ?? entrada.provenance.referenciaId}</i>
@@ -166,7 +180,13 @@ export function Definicion() {
                     {entrada ? (
                       <div className="caminos">
                         <span className={`resuelto ${resuelto ? '' : 'no'}`}>{resuelto ? '✓ resuelto' : `✗ ${motivosPropios.length + motivosDeps.length} motivo${motivosPropios.length + motivosDeps.length === 1 ? '' : 's'}`}</span>
-                        <button className="via" onClick={() => abrir(instrumento(r.id))}>
+                        <button
+                          className="via"
+                          onClick={() => {
+                            if (deCortapisa && !window.confirm(avisoCortapisa)) return;
+                            abrir(instrumento(r.id));
+                          }}
+                        >
                           Editar
                         </button>
                         {instrumento(r.id).tipo !== 'editor' ? (
@@ -175,7 +195,13 @@ export function Definicion() {
                           </button>
                         ) : null}
                         {entrada.cicloDeVida === 'aprobada' ? (
-                          <button className="via" onClick={() => despachar({ tipo: 'reabrir', requirementId: r.id })}>
+                          <button
+                            className="via"
+                            onClick={() => {
+                              if (deCortapisa && !window.confirm(avisoCortapisa)) return;
+                              despachar({ tipo: 'reabrir', requirementId: r.id });
+                            }}
+                          >
                             Reabrir
                           </button>
                         ) : (
@@ -186,6 +212,10 @@ export function Definicion() {
                         <button
                           className="via peligro"
                           onClick={() => {
+                            if (deCortapisa) {
+                              if (window.confirm(avisoCortapisa)) despachar({ tipo: 'quitar-definicion', requirementId: r.id });
+                              return;
+                            }
                             const aviso = dependientes.length
                               ? `Quitar esta definición deja sin resolver también: ${dependientes.map((d) => d.id).join(', ')}. ¿Quitar igual?`
                               : '¿Quitar esta definición?';
@@ -272,6 +302,13 @@ export function Definicion() {
                       </div>
                     ) : null}
 
+                    {deCortapisa ? (
+                      <div className="expl" style={{ borderLeftColor: 'var(--bronce)' }}>
+                        <b>Viene de una cortapisa.</b> {nombreCortapisa} entra como referente que no se discute: la definición queda aprobada e
+                        inamovible, y si algo choca con ella se redefine el resto. Se puede tocar igual, pero el sistema pide confirmarlo.
+                      </div>
+                    ) : null}
+
                     {tarea ? (
                       <div className="expl" style={{ borderLeftColor: 'var(--ia)' }}>
                         <b>Encargado a ContOpe.</b> Queda como tarea activa en la cápsula
@@ -284,6 +321,7 @@ export function Definicion() {
                       <div className="expl" style={{ borderLeftColor: 'var(--bronce)' }}>
                         <b>Ojo.</b> Este requisito ya venía resuelto por otro origen y {conflictos.length === 1 ? 'otro insumo' : `${conflictos.length} insumos más`} también lo
                         resuelve{conflictos.length === 1 ? '' : 'n'} ({conflictos.map((c) => sistema.insumos.find((i) => i.id === c.insumoId)?.nombre ?? c.insumoId).join(', ')}).
+                        {conflictos.some((c) => c.desplazada) ? ' Una cortapisa desplazó lo que había: quedó registrado para la armonización. ' : ' '}
                         Quedan las fuentes registradas; cuál manda se decide en la armonización, no acá.
                       </div>
                     ) : null}
