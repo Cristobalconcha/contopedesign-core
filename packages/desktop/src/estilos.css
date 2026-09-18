@@ -2105,3 +2105,62 @@ select.sel.corto {
   padding: 0.2rem 0;
   cursor: pointer;
 }
+
+/* Forma: el recuadro sólo fija su tamaño; radio, borde y sombra van en línea. */
+.pr-radio div {
+  width: 34px;
+  height: 22px;
+  background: var(--panel);
+}
+.pr-estados {
+  padding: 4px 5px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.pr-estados i {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 3px 2px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: var(--panel);
+  font: 400 6px/1 var(--mono);
+  font-style: normal;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.pr-movimiento {
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+.pr-movimiento i {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ia);
+}
+.pr-arquetipos {
+  padding: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 3px;
+  background: var(--panel2);
+}
+.pr-arquetipos i {
+  width: 9px;
+  height: 9px;
+  box-sizing: border-box;
+  border: 1px solid var(--apagado);
+  border-radius: 1px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 1px;
+}
