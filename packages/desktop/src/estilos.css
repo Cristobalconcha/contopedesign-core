@@ -2058,3 +2058,50 @@ select.sel.corto {
   gap: 0.3rem;
   margin: 0.2rem 0 0.8rem;
 }
+
+/* declaración: el texto en palabras, qué acota y quién la ejecuta */
+.declaracion {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 1rem 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.declaracion textarea {
+  width: 100%;
+  min-height: 8rem;
+  font-family: var(--sans);
+  font-size: 14px;
+  border: 1px solid var(--linea);
+  background: var(--panel2);
+  border-radius: 4px;
+  color: var(--tinta);
+  padding: 0.55rem 0.7rem;
+  resize: vertical;
+}
+.declaracion .rama {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+.declaracion .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.declaracion .chip2.on {
+  border-color: var(--tinta);
+  background: var(--papel);
+  color: var(--tinta);
+}
+.declaracion .radios label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 13px;
+  color: var(--tinta);
+  padding: 0.2rem 0;
+  cursor: pointer;
+}

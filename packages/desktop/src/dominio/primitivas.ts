@@ -10,6 +10,7 @@
  * cosa de `primitivas/Primitiva.tsx`.
  */
 import { findEntry, isRefValue, resolveRefValue, type DesignSetV0 } from '@contope/core';
+import { requisito } from './manifiesto.js';
 
 export type Muestra =
   | { tipo: 'color'; colores: string[] }
@@ -181,8 +182,19 @@ export function muestraDePayload(set: DesignSetV0, requirementId: string): Muest
         .filter((v): v is string => typeof v === 'string');
       return valores.length ? { tipo: 'espacio', valores } : { tipo: 'nada' };
     }
-    default:
+    default: {
+      // La salida física (pkg.salida.*) viaja en prosa: se muestra el texto
+      // declarado —o el «no aplica» escrito— y no un resumen de sus claves.
+      if (requisito(requirementId)?.packageId.startsWith('pkg.salida.')) {
+        const noAplica = p['noAplica'];
+        if (typeof noAplica === 'string') return { tipo: 'texto', texto: `no aplica: ${noAplica.slice(0, 40)}` };
+        const declaracion = p['declaracion'];
+        if (typeof declaracion === 'string') {
+          return { tipo: 'texto', texto: declaracion.length > 60 ? `${declaracion.slice(0, 60)}…` : declaracion };
+        }
+      }
       return resumenTexto(p);
+    }
   }
 }
 

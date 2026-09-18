@@ -17,6 +17,7 @@ export type Instrumento =
   | { tipo: 'tipografia'; requirementId: string; nombreBuscado?: string }
   | { tipo: 'color'; requirementId: string }
   | { tipo: 'espacio'; requirementId: string }
+  | { tipo: 'declaracion'; requirementId: string }
   | { tipo: 'editor'; requirementId: string };
 
 export interface Archivo {

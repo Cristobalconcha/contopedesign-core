@@ -56,3 +56,32 @@ describe('muestraDePayload', () => {
     expect(muestraDePayload(set, 'dim3.req07').tipo).toBe('texto');
   });
 });
+
+describe('declaraciones', () => {
+  it('definir por declaración muestra el texto declarado', () => {
+    let s = nuevoSistema('digital', 'x');
+    s = reducir(s, {
+      tipo: 'definir',
+      requirementId: 'dim10.req04',
+      payload: { declaracion: 'Pliegos de 8, corchete y hotmelt', ejecuta: 'proveedor' },
+      camino: 'diseñador',
+      fuerza: 'inamovible',
+    });
+    expect(muestraDePayload(s.designSet, 'dim10.req04')).toEqual({ tipo: 'texto', texto: 'Pliegos de 8, corchete y hotmelt' });
+  });
+
+  it('el «no aplica» escrito se muestra como tal', () => {
+    let s = nuevoSistema('digital', 'x');
+    s = reducir(s, {
+      tipo: 'definir',
+      requirementId: 'dim10.req02',
+      payload: { noAplica: 'sólo vive en pantalla' },
+      camino: 'diseñador',
+      fuerza: 'inamovible',
+    });
+    const m = muestraDePayload(s.designSet, 'dim10.req02');
+    expect(m.tipo).toBe('texto');
+    if (m.tipo !== 'texto') throw new Error('se esperaba una muestra de texto');
+    expect(m.texto.startsWith('no aplica: ')).toBe(true);
+  });
+});
