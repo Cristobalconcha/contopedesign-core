@@ -186,6 +186,13 @@ su universo no armoniza: corrige lo que estaba bien. Por eso cada regla por
 mundo lleva cita de su base de conocimiento y condición sobre lo que el sistema
 declara soportar, y por eso los árbitros se eligen por universo.
 
+**Cuando un árbitro choca con una cortapisa, gana la cortapisa.** Lo decidió
+Cristóbal el mismo 18 de septiembre: si la paleta institucional entró como
+restricción y el árbitro dice que ese color no tiene contraste sobre ese fondo,
+el color no se toca. Lo que se redefine es el resto, hasta que armonice: el
+color del texto, el tamaño, el fondo, lo que esté abierto. La armonización
+señala la disonancia y pide esa redefinición; nunca «corrige» una cortapisa.
+
 *Estado:* la armonización no existe (`constraintDefinitionIds` sigue reservado
 y vacío). Lo que sí existe es la forma de un árbitro: reglas con umbral, cita y
 condición en `nucleo/`, y la constatación de que hacen falta varios (oficina e
