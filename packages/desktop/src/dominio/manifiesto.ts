@@ -12,6 +12,7 @@ import {
   DIM3_MANIFEST_V0,
   DIM5_MANIFEST_V0,
   DIM6_MANIFEST_V0,
+  DIM7_MANIFEST_V0,
   type DimensionId,
   type RequirementManifestV0,
   type RequirementV0,
@@ -23,6 +24,7 @@ export const MANIFIESTOS: ReadonlyArray<RequirementManifestV0> = [
   DIM3_MANIFEST_V0,
   DIM5_MANIFEST_V0,
   DIM6_MANIFEST_V0,
+  DIM7_MANIFEST_V0,
 ];
 
 export const NOMBRE_DIMENSION: Partial<Record<DimensionId, string>> = {
@@ -31,6 +33,7 @@ export const NOMBRE_DIMENSION: Partial<Record<DimensionId, string>> = {
   dim3: 'Espacio, ritmo y retícula',
   dim5: 'Imagen y lenguaje gráfico',
   dim6: 'Composición',
+  dim7: 'Interacción y estados',
 };
 
 export const DIMENSIONES: ReadonlyArray<DimensionId> = MANIFIESTOS.map(

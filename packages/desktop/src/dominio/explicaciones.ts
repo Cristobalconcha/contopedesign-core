@@ -95,4 +95,20 @@ export const EXPLICACIONES: Readonly<Record<string, string>> = {
     'Por dónde entra el ojo y cómo recorre. En editorial es el flujo de lectura; en digital, también el de navegación.',
   'dim6.req07':
     'Cómo se reacomoda la composición al cambiar de formato, o la decisión explícita de que no se reacomode.',
+  'dim7.req01':
+    'Todo lo que se puede apretar o recorrer tiene que avisar que se puede. Si un botón, un enlace o una tarjeta no dan ninguna señal (forma, subrayado, cambio al pasar el puntero), la persona simplemente no lo intenta.',
+  'dim7.req02':
+    'Un mismo elemento se ve distinto según lo que está pasando con él: en reposo, con el puntero encima, con foco de teclado o apretado. Escribir qué significa cada estado evita que dos personas inventen dos conductas distintas para lo mismo.',
+  'dim7.req03':
+    'Dónde estoy, cuánto avancé, cómo vuelvo atrás y cómo llego a lo relacionado. Una galería con su «3 de 12», su botón de volver y un enlace al artículo completo ya es navegación declarada y no improvisada.',
+  'dim7.req04':
+    'Cada aviso necesita su propio trato: que se guardó bien, que ojo con esto, que algo falló y cómo se recupera. Si tratas los cuatro igual, un error se lee como una confirmación y nadie reacciona.',
+  'dim7.req05':
+    'Los controles de ingreso, edición y selección tienen que decir qué hacen: un campo de correo valida y avisa sin borrar lo escrito, una casilla marca y desmarca, un selector de fecha se puede abrir con el teclado.',
+  'dim7.req06':
+    'Si el color es lo único que dice «error», quien no distingue bien los colores se pierde. Cada significado necesita además algo que no sea color: un ícono, una palabra, un borde más grueso, una forma.',
+  'dim7.req07':
+    'Una interacción pensada para pantalla necesita su versión quieta para cuando no hay pantalla: el carrusel pasa a ser una lista de fotos con su pie, y así la intención no se pierde al imprimir.',
+  'dim7.req08':
+    'El botón de la acción principal no inventa su propio color: usa el rol de acento. Si además le escribes un color a mano, ese valor se desincroniza del tema, y el día que cambies el tema quedan dos verdades.',
 };

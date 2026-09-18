@@ -22,3 +22,4 @@ export * from './manifest-v0-dim2.js';
 export * from './manifest-v0-dim3.js';
 export * from './manifest-v0-dim5.js';
 export * from './manifest-v0-dim6.js';
+export * from './manifest-v0-dim7.js';

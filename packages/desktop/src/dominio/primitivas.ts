@@ -37,6 +37,8 @@ export function tipoDePaquete(packageId: string): TipoPrimitiva {
   if (p.startsWith('forma.') || p.includes('borde') || p.includes('profundidad')) return 'radio';
   if (p.startsWith('imagen.')) return 'imagen';
   if (p.startsWith('composicion.')) return 'reticula';
+  // dim7: sin primitiva visual propia todavía; se muestra como texto.
+  if (p.startsWith('interaccion.')) return 'texto';
   return 'nada';
 }
 
