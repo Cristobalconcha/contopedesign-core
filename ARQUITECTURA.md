@@ -164,11 +164,30 @@ no está en el escritorio.**
 
 ### 4. La IA construye lo suyo
 
-Una instancia, previa o final, en la que la IA construye sus propuestas para
-lo que le quedó asignado, usando como referencia los sistemas conocidos.
+La IA construye sus propuestas para lo que le quedó asignado, usando como
+referencia los sistemas conocidos. **Cuándo, da lo mismo, con una sola
+condición: antes de armonizar.** Y por lógica de tiempo conviene que sea **en
+simultáneo con las definiciones del diseñador**, porque él no necesita a la IA
+para lo que define por sí mismo (Cristóbal, 18 de septiembre). El único cuidado
+es el de las dependencias: una propuesta de la IA que apunte a algo que el
+diseñador todavía no definió se rehace cuando eso quede definido.
+
+**Y acá nace el modelo.** Mientras el diseñador resuelve, todo lo que resuelve
+(qué marcó en el alcance, qué tomó de cada insumo, qué definió por sí mismo, qué
+aprobó y con qué fuerza) puede ir entrenando **en modo sombra un modelo local**:
+un modelo que observa sin intervenir y aprende el estilo de ese diseñador, es
+decir, cómo resuelve él las dimensiones. Con eso el modelo llega a **habitar el
+ContOpe core del diseñador**: no un asistente genérico que propone lo habitual,
+sino uno que propone como propondría él. Cristóbal lo dijo sin rodeos: *«esto es
+el modelo»*. No es una función más del paso 4; es lo que el paso 4 termina
+siendo cuando hay datos. Los datos ya existen en el formato del taller
+(`*.contope.json`: caminos asignados, propuestas, aprobaciones con fuerza,
+cápsulas), y la regla de fuerza del set (`human-confirmed` contra
+`model-proposal`) es justo la etiqueta que un entrenamiento así necesita.
 
 *Estado:* el encargo existe; **traer de vuelta lo que la IA proponga no está
-construido**.
+construido**, y el modo sombra no está ni diseñado. Lo que sí está es el registro
+de lo que el diseñador resuelve, que es su materia prima.
 
 ### 5. Armonización, con árbitros por universo
 
