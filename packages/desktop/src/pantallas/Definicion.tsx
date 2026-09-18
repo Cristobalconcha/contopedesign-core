@@ -3,6 +3,11 @@
  * ya viene resuelto desde los insumos y lo que falta. Cada pendiente ofrece
  * los tres caminos: Insumo · Diseñador · ContOpe. La completitud la calcula
  * el evaluador del núcleo, requisito por requisito, con sus motivos.
+ *
+ * Desde el 18-09-2026 la completitud se mide contra el PAQUETE de definiciones
+ * (lo que el alcance declaró), no contra el manifiesto entero: las preguntas
+ * fuera del paquete se muestran apagadas, se pueden definir igual —son
+ * definiciones de este sistema— pero no cuentan en «faltan N».
  */
 import { findEntry, type Fuerza } from '@contope/core';
 import { useState } from 'react';
@@ -35,7 +40,9 @@ export function Definicion() {
     contope: entradas.filter((e) => e.resolutionPath === 'contope').length,
     encargados: sistema.tareas.filter((t) => t.state === 'active').length,
   };
-  const sinNada = REQUISITOS.filter((r) => !findEntry(sistema.designSet, r.id) && !sistema.caminos[r.id]).length;
+  const sinNada = REQUISITOS.filter(
+    (r) => evaluacion.paquete.has(r.id) && !findEntry(sistema.designSet, r.id) && !sistema.caminos[r.id],
+  ).length;
   const todasAbiertas = REQUISITOS.every((r) => abiertas.has(r.id));
 
   const alternarTodas = (): void => {
@@ -55,7 +62,11 @@ export function Definicion() {
           <div>
             <h2 className="tit">El núcleo, y quién resuelve lo que falta</h2>
             <p className="desde" style={{ margin: '.2rem 0 0' }}>
-              Mundo {mundoDe(sistema.mundo).nombre.toLowerCase()} · {evaluacion.total} requisitos · la completitud es binaria ·{' '}
+              Mundo {mundoDe(sistema.mundo).nombre.toLowerCase()} · paquete: {evaluacion.total} de {REQUISITOS.length} preguntas ·{' '}
+              <a className="enlace" onClick={() => ir('alcance')}>
+                cambiar el alcance
+              </a>{' '}
+              · la completitud es binaria ·{' '}
               {evaluacion.nucleo ? (
                 <>
                   núcleo del mundo: {evaluacion.nucleo.contador.cubiertos} de {evaluacion.nucleo.contador.total} preguntas y{' '}
@@ -97,12 +108,16 @@ export function Definicion() {
         {DIMENSIONES.map((dim) => {
           const reqs = REQUISITOS.filter((r) => r.dimensionId === dim);
           const ev = evaluacion.porDimension.get(dim);
+          const delPaquete = reqs.filter((r) => evaluacion.paquete.has(r.id));
+          const resueltosPaquete = delPaquete.filter(
+            (r) => evaluacion.porRequisito.get(r.id)?.resultado === 'resuelto',
+          ).length;
           return (
             <div className="dim" key={dim}>
               <h3>
                 {NOMBRE_DIMENSION[dim] ?? dim}{' '}
                 <em>
-                  {ev?.contador.resueltos ?? 0} de {reqs.length} resueltos
+                  {resueltosPaquete} de {delPaquete.length} del paquete
                 </em>
                 {ev?.resultado === 'resuelto' ? <span className="dim-ok">dimensión resuelta</span> : null}
               </h3>
@@ -119,15 +134,17 @@ export function Definicion() {
                 const dependientes = dependientesDe(r.id);
                 const motivosPropios = (resultado?.motivos ?? []).filter((m) => !m.codigo.startsWith('dependencia-'));
                 const motivosDeps = (resultado?.motivos ?? []).filter((m) => m.codigo.startsWith('dependencia-'));
+                const enPaquete = evaluacion.paquete.has(r.id);
 
                 return (
-                  <div key={r.id} className={`rq ${entrada ? (resuelto ? 'ya' : 'incompleta') : ''}`}>
+                  <div key={r.id} className={`rq ${entrada ? (resuelto ? 'ya' : 'incompleta') : ''} ${enPaquete ? '' : 'fuera'}`}>
                     <Primitiva muestra={muestra} />
                     <div className="q">
                       <span className="id">
                         {r.id} · {r.packageId.replace(/^pkg\./, '')} · {r.eje}
                         {r.dependsOn.length ? ` · depende de ${r.dependsOn.join(', ')}` : ''}
                         {enNucleo(sistema.mundo, r.id) ? <i className="et" title="El mundo elegido no puede dejar esta pregunta sin responder"> núcleo</i> : null}
+                        {enPaquete ? null : <i className="et" title="Queda fuera del alcance declarado; se puede definir igual, pero no cuenta en lo que falta">fuera del paquete</i>}
                       </span>
                       {r.pregunta}
                       {entrada ? (
@@ -280,8 +297,8 @@ export function Definicion() {
       <div className="pie-def">
         <span className="aviso">
           {evaluacion.completo
-            ? 'Todo el núcleo está resuelto. Se puede construir y después armonizar.'
-            : `Faltan ${evaluacion.total - evaluacion.resueltos} requisitos por resolver${sinNada ? ` (${sinNada} sin camino asignado)` : ''}. Sin todos resueltos no se habilita la armonización.`}
+            ? 'Todo el paquete está resuelto. Se puede construir y después armonizar.'
+            : `Faltan ${evaluacion.total - evaluacion.resueltos} preguntas del paquete por resolver${sinNada ? ` (${sinNada} sin camino asignado)` : ''}. Fuera del paquete quedan ${evaluacion.fueraDelPaquete}, que este sistema no declara. Sin todo el paquete resuelto no se habilita la armonización.`}
         </span>
         <button className="btn" onClick={() => ir('recoleccion')}>
           ← Recolección

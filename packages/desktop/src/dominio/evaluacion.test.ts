@@ -1,6 +1,8 @@
 import { DIM3_MANIFEST_V0 } from '@contope/core';
 import { describe, expect, it } from 'vitest';
 import { evaluar } from './evaluacion.js';
+import { REQUISITOS } from './manifiesto.js';
+import { enNucleo } from './nucleos.js';
 import { reducir } from './reductor.js';
 import { nuevoSistema, type Sistema } from './sistema.js';
 
@@ -104,5 +106,45 @@ describe('evaluar', () => {
     expect(digital.nucleo?.mundoId).toBe('web');
     expect(digital.nucleo?.contador.total).toBe(5);
     expect(evaluar(nuevoSistema('marca', 'Marca', AHORA)).nucleo).toBeUndefined();
+  });
+});
+
+describe('paquete', () => {
+  it('sin alcance declarado, el paquete es el manifiesto entero', () => {
+    const e = evaluar(nuevoSistema('digital', 'Sin acotar', AHORA));
+    expect(e.total).toBe(REQUISITOS.length);
+    expect(e.paquete.size).toBe(REQUISITOS.length);
+    expect(e.fueraDelPaquete).toBe(0);
+  });
+
+  it('con alcance de sólo dim1 en el mundo digital, el paquete suma las del núcleo web fuera de dim1', () => {
+    const s = reducir(
+      nuevoSistema('digital', 'Sitio', AHORA),
+      { tipo: 'declarar-alcance', alcance: { proposito: 'el sitio', dimensiones: ['dim1'], declaradoEn: AHORA } },
+      AHORA,
+    );
+    const esperado = REQUISITOS.filter((r) => r.dimensionId === 'dim1' || enNucleo('digital', r.id)).length;
+    const e = evaluar(s);
+    expect(e.total).toBe(esperado);
+    expect(e.paquete.size).toBe(esperado);
+    expect(e.fueraDelPaquete).toBe(REQUISITOS.length - esperado);
+    // Y la evaluación sigue conociendo el estado de lo que quedó fuera: porRequisito cubre todo.
+    expect(e.porRequisito.size).toBe(REQUISITOS.length);
+  });
+
+  it('resueltos y completo se cuentan sobre el paquete', () => {
+    const base = sistemaConDim3Completa();
+    const e = evaluar(
+      reducir(
+        base,
+        { tipo: 'declarar-alcance', alcance: { proposito: 'sólo espacio', dimensiones: ['dim3'], declaradoEn: AHORA } },
+        AHORA,
+      ),
+    );
+    const deDim3 = REQUISITOS.filter((r) => r.dimensionId === 'dim3').length;
+    // En editorial el núcleo también entra, así que el paquete es dim3 + núcleo fuera de dim3.
+    expect(e.total).toBeGreaterThanOrEqual(deDim3);
+    expect(e.resueltos).toBe(deDim3);
+    expect(e.completo).toBe(e.resueltos === e.total);
   });
 });

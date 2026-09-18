@@ -1928,3 +1928,106 @@ select.sel.corto {
   overflow-wrap: anywhere;
   color: var(--tinta);
 }
+
+/* ===== ALCANCE ===== */
+.alcance {
+  padding: 1.3rem 1.5rem 5rem;
+  max-width: 1180px;
+}
+.alcance h2 {
+  margin: 0 0 0.2rem;
+  font-size: 17px;
+  font-weight: 600;
+}
+.alcance .campo {
+  display: block;
+  margin-top: 0.6rem;
+}
+.alcance .campo .rot {
+  margin-bottom: 0.4rem;
+}
+.alcance .campo input {
+  display: block;
+  width: 100%;
+  max-width: 34rem;
+  border: 1px solid var(--linea);
+  background: var(--panel);
+  color: var(--tinta);
+  border-radius: 3px;
+  padding: 0.55rem 0.6rem;
+  font: 400 13px var(--sans);
+}
+.alcance .paquete-aviso {
+  max-width: 36rem;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--apagado);
+  margin: 1.1rem 0 1.3rem;
+}
+.alcance .paquete-aviso b {
+  color: var(--tinta);
+  font-weight: 600;
+}
+.alcance .dim-caja {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--linea);
+  border-radius: 3px;
+  margin-bottom: 0.35rem;
+  background: var(--panel2);
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+.alcance .dim-caja:hover {
+  border-color: var(--acero);
+}
+.alcance .dim-caja input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  accent-color: var(--acero);
+  cursor: pointer;
+}
+.alcance .dim-caja b {
+  font-size: 13px;
+  font-weight: 600;
+}
+.alcance .dim-caja .n {
+  font: 400 11px/1 var(--mono);
+  color: var(--tenue);
+}
+.alcance .dim-caja .nucleo-nota {
+  font: 400 9.5px/1 var(--mono);
+  font-style: normal;
+  color: var(--acero);
+  border: 1px solid var(--acero);
+  border-radius: 2px;
+  padding: 0.2rem 0.3rem;
+}
+.alcance .pie-alcance {
+  position: sticky;
+  bottom: 0;
+  margin-top: 1.4rem;
+  background: var(--panel);
+  border-top: 1px solid var(--linea);
+  padding: 0.85rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  z-index: 5;
+}
+.alcance .pie-alcance .aviso {
+  flex: 1;
+  min-width: 14rem;
+  font-size: 12px;
+  color: var(--apagado);
+}
+.alcance .pie-alcance .btn:last-child {
+  margin-left: auto;
+}
+.rq.fuera {
+  opacity: 0.55;
+}

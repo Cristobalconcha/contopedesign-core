@@ -2,13 +2,34 @@
  * Ir y volver del archivo `.contope.json`, validando en la frontera: un
  * archivo con forma inesperada se rechaza entero, con el motivo, en vez de
  * abrirse a medias. El DesignSet de adentro lo valida el núcleo.
+ *
+ * `alcance` es lo único que se normaliza al leer: si falta (archivo viejo) se
+ * pone `null`, que significa «sin acotar: todas las preguntas del manifiesto».
+ * No se sube `SCHEMA_SISTEMA` por eso: un archivo sin el campo abre igual.
  */
-import { validateDesignSetShape } from '@contope/core';
+import { DIMENSION_IDS, validateDesignSetShape, type DimensionId } from '@contope/core';
+import type { Alcance } from './alcance.js';
 import { esMundoId } from './mundos.js';
 import { KIND_SISTEMA, SCHEMA_SISTEMA, type Sistema } from './sistema.js';
 
 function esRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+function validarAlcance(valor: unknown): { ok: true; alcance: Alcance | null } | { ok: false; motivo: string } {
+  if (valor === undefined || valor === null) return { ok: true, alcance: null };
+  if (!esRecord(valor)) return { ok: false, motivo: "'alcance' debe ser un objeto o null" };
+  if (typeof valor['proposito'] !== 'string') return { ok: false, motivo: "'alcance.proposito' debe ser texto" };
+  if (!Array.isArray(valor['dimensiones'])) return { ok: false, motivo: "'alcance.dimensiones' debe ser una lista" };
+  const dimensiones: DimensionId[] = [];
+  for (const d of valor['dimensiones']) {
+    if (typeof d !== 'string' || !(DIMENSION_IDS as readonly string[]).includes(d)) {
+      return { ok: false, motivo: `dimensión desconocida en el alcance: ${String(d)}` };
+    }
+    dimensiones.push(d as DimensionId);
+  }
+  if (typeof valor['declaradoEn'] !== 'string') return { ok: false, motivo: "'alcance.declaradoEn' debe ser texto" };
+  return { ok: true, alcance: { proposito: valor['proposito'], dimensiones, declaradoEn: valor['declaradoEn'] } };
 }
 
 export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } | { ok: false; motivo: string } {
@@ -21,9 +42,11 @@ export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } |
     if (!Array.isArray(valor[campo])) return { ok: false, motivo: `'${campo}' debe ser una lista` };
   }
   if (!esRecord(valor['caminos'])) return { ok: false, motivo: "'caminos' debe ser un objeto" };
+  const alcance = validarAlcance(valor['alcance']);
+  if (!alcance.ok) return { ok: false, motivo: alcance.motivo };
   const set = validateDesignSetShape(valor['designSet']);
   if (!set.ok) return { ok: false, motivo: `DesignSet inválido: ${set.errores.map((e) => e.mensaje).join('; ')}` };
-  return { ok: true, sistema: valor as unknown as Sistema };
+  return { ok: true, sistema: { ...(valor as unknown as Sistema), alcance: alcance.alcance } };
 }
 
 export function serializarSistema(sistema: Sistema): string {

@@ -10,6 +10,8 @@
  * - Una definición que viene de insumo entra como `propuesta` y `explorable`
  *   —lo más débil— hasta que la persona la apruebe y le dé fuerza.
  * - Aprobar no cambia el valor; reabrir no lo borra.
+ * - Declarar el alcance reemplaza el anterior entero: es una decisión de
+ *   contorno (qué preguntas exige el sistema), no un ajuste parcial.
  */
 import type {
   DesignSetEntryV0,
@@ -20,12 +22,14 @@ import type {
   ResolutionPath,
   VerificationRecordV0,
 } from '@contope/core';
+import type { Alcance } from './alcance.js';
 import { manifiestoDe, requisito, dimensionDe } from './manifiesto.js';
 import { nuevoId, type Candidato, type Conflicto, type Insumo, type Sistema } from './sistema.js';
 import type { DesignContractV1 } from '@contope/core';
 
 export type Accion =
   | { tipo: 'renombrar'; nombre: string }
+  | { tipo: 'declarar-alcance'; alcance: Alcance }
   | { tipo: 'agregar-insumo'; insumo: Insumo }
   | { tipo: 'quitar-insumo'; insumoId: string }
   | { tipo: 'incorporar'; insumoId: string; candidatoIds: string[] }
@@ -194,6 +198,9 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
   switch (accion.tipo) {
     case 'renombrar':
       return { ...sistema, nombre: accion.nombre };
+
+    case 'declarar-alcance':
+      return { ...sistema, alcance: accion.alcance };
 
     case 'agregar-insumo':
       return { ...sistema, insumos: [...sistema.insumos, accion.insumo] };

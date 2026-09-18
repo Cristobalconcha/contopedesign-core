@@ -6,6 +6,7 @@ import { nombreDeArchivo, parsearSistema, serializarSistema } from './dominio/pe
 import { reducir, type Accion } from './dominio/reductor.js';
 import { type Sistema } from './dominio/sistema.js';
 import { Instrumentos } from './instrumentos/index.js';
+import { Alcance } from './pantallas/Alcance.js';
 import { Construccion } from './pantallas/Construccion.js';
 import { Definicion } from './pantallas/Definicion.js';
 import { Inicio } from './pantallas/Inicio.js';
@@ -189,6 +190,7 @@ export function App() {
             <nav className="fases">
               {(
                 [
+                  ['alcance', 'Alcance'],
                   ['recoleccion', 'Recolección'],
                   ['definicion', 'Definición'],
                   ['construccion', 'Construcción'],
@@ -226,6 +228,7 @@ export function App() {
       <main className="lienzo">
         {taller.sistema && contexto ? (
           <ContextoTaller.Provider value={contexto}>
+            {taller.pantalla === 'alcance' ? <Alcance /> : null}
             {taller.pantalla === 'recoleccion' ? <Recoleccion /> : null}
             {taller.pantalla === 'definicion' ? <Definicion /> : null}
             {taller.pantalla === 'construccion' ? <Construccion /> : null}
@@ -236,7 +239,7 @@ export function App() {
           <Inicio
             recientes={recientes}
             entorno={puente.entorno}
-            onNuevo={(sistema) => emitir({ tipo: 'sistema', sistema, archivo: null, pantalla: 'recoleccion' })}
+            onNuevo={(sistema) => emitir({ tipo: 'sistema', sistema, archivo: null, pantalla: 'alcance' })}
             onAbrir={() => void abrirDesde(() => puente.abrirSistema())}
             onAbrirReciente={(r) => void abrirDesde(() => puente.abrirReciente(r))}
           />

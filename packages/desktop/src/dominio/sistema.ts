@@ -10,8 +10,14 @@
  *
  * El DesignSet se guarda tal cual lo define el núcleo, para que la cápsula
  * que sale de acá sea exactamente la que el resto del sistema sabe leer.
+ *
+ * Desde el 18-09-2026 el documento también guarda el ALCANCE: qué preguntas
+ * del manifiesto este sistema declara necesitar. Es opcional en el archivo
+ * (`alcance` ausente se lee como `null`, que significa «todas»), así que un
+ * archivo viejo sigue abriendo igual.
  */
 import type { DesignContractV1, DesignSetV0, EditContextDevelopmentTask, VerificationRecordV0 } from '@contope/core';
+import type { Alcance } from './alcance.js';
 import type { MundoId } from './mundos.js';
 import type { Muestra } from './primitivas.js';
 
@@ -72,6 +78,8 @@ export interface Sistema {
   id: string;
   nombre: string;
   mundo: MundoId;
+  /** Qué preguntas declara necesitar este sistema; `null` = sin acotar (todas). */
+  alcance: Alcance | null;
   creadoEn: string;
   actualizadoEn: string;
   insumos: Insumo[];
@@ -99,6 +107,7 @@ export function nuevoSistema(mundo: MundoId, nombre: string, ahora = new Date().
     id: nuevoId('sistema'),
     nombre,
     mundo,
+    alcance: null,
     creadoEn: ahora,
     actualizadoEn: ahora,
     insumos: [],

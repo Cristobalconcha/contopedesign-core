@@ -196,3 +196,34 @@ describe('unirFragmento', () => {
     expect(salida).toEqual({ unidad: '4px', escala: [{ step: 1, value: '4px' }, { step: 2, value: '8px' }], nota: 'x' });
   });
 });
+
+describe('reducir · declarar-alcance', () => {
+  it('reemplaza el alcance entero y toca la fecha de actualización', () => {
+    const s0 = nuevoSistema('digital', 'P', AHORA);
+    expect(s0.alcance).toBeNull();
+
+    const s1 = reducir(
+      s0,
+      {
+        tipo: 'declarar-alcance',
+        alcance: { proposito: 'el sitio y las redes de una viña', dimensiones: ['dim1'], declaradoEn: '2026-09-18T10:00:00.000Z' },
+      },
+      '2026-09-18T11:00:00.000Z',
+    );
+    expect(s1.alcance).toEqual({
+      proposito: 'el sitio y las redes de una viña',
+      dimensiones: ['dim1'],
+      declaradoEn: '2026-09-18T10:00:00.000Z',
+    });
+    expect(s1.actualizadoEn).toBe('2026-09-18T11:00:00.000Z');
+    expect(s0.alcance).toBeNull();
+
+    const s2 = reducir(
+      s1,
+      { tipo: 'declarar-alcance', alcance: { proposito: '', dimensiones: ['dim2', 'dim3'], declaradoEn: '2026-09-18T12:00:00.000Z' } },
+      '2026-09-18T12:30:00.000Z',
+    );
+    expect(s2.alcance?.dimensiones).toEqual(['dim2', 'dim3']);
+    expect(s2.alcance?.proposito).toBe('');
+  });
+});

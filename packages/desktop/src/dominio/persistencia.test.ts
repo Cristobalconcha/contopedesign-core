@@ -22,3 +22,19 @@ describe('persistencia', () => {
     expect(nombreDeArchivo(nuevoSistema('marca', '¡¡!!'))).toBe('sistema.contope.json');
   });
 });
+
+describe('persistencia · alcance', () => {
+  it('un archivo viejo sin alcance se abre con alcance null', () => {
+    const plano = JSON.parse(serializarSistema(nuevoSistema('digital', 'Viejo'))) as Record<string, unknown>;
+    delete plano['alcance'];
+    expect(parsearSistema(JSON.stringify(plano)).alcance).toBeNull();
+  });
+
+  it('un alcance con una dimensión desconocida se rechaza', () => {
+    const roto: Record<string, unknown> = {
+      ...nuevoSistema('digital', 'x'),
+      alcance: { proposito: '', dimensiones: ['dim99'], declaradoEn: '2026-09-18T00:00:00.000Z' },
+    };
+    expect(() => parsearSistema(JSON.stringify(roto))).toThrow(/dimensión desconocida/);
+  });
+});
