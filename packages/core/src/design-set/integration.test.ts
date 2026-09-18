@@ -22,7 +22,7 @@ import { parseDesignSet, serializeDesignSet } from './persistence.js';
 import { projectColorEntry, projectSurfaceEntry } from './project-to-designruleset.js';
 
 describe('C2 de punta a punta con el fixture real de dim1 (13 requisitos)', () => {
-  it('exportar -> importar -> seguir resolviendo 13/13 a través del evaluador real de C1', () => {
+  it('exportar -> importar -> seguir resolviendo todos los requisitos activos a través del evaluador real de C1', () => {
     const original = buildDim1DesignSet();
     expect(findDanglingRefs(original)).toEqual([]);
     expect(findDuplicateEntries(original)).toEqual([]);
@@ -38,7 +38,8 @@ describe('C2 de punta a punta con el fixture real de dim1 (13 requisitos)', () =
       verifications: VERIFICATIONS,
     });
     expect(evaluation.resultado).toBe('resuelto');
-    expect(evaluation.contador).toEqual({ resueltos: 13, activos: 13 });
+    const activos = DIM1_MANIFEST_V0.requirements.filter((r) => r.estado === 'active').length;
+    expect(evaluation.contador).toEqual({ resueltos: activos, activos });
   });
 
   it('proyecta color real (dim1.req02, 13 roles) y surface real (dim1.req05) desde el mismo DesignSet importado', () => {

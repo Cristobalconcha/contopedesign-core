@@ -1,3 +1,4 @@
+import { DIM3_MANIFEST_V0 } from '@contope/core';
 import { describe, expect, it } from 'vitest';
 import { evaluar } from './evaluacion.js';
 import { reducir } from './reductor.js';
@@ -45,13 +46,16 @@ export function sistemaConDim3Completa(): Sistema {
   s = definir(s, 'dim3.req07', {
     correspondencia: { campoPlano: 'spacing', escalaRelacionada: { refReqId: 'dim3.req01', refPath: [] }, nota: 'spacing = paso 2' },
   });
+  // Adenda del núcleo editorial (2026-09-18): la hoja y el sangrado también son preguntas de espacio.
+  s = definir(s, 'dim3.req08', { formato: 'letter', orientacion: 'vertical', modo: 'pagina-fija' });
+  s = definir(s, 'dim3.req09', { sangrado: '14pt', zonaSegura: '40px', margenTextoCorrido: '72px', aSangre: ['fondo'] });
   return s;
 }
 
 describe('evaluar', () => {
-  it('un sistema vacío tiene 73 requisitos y ninguno resuelto', () => {
+  it('un sistema vacío tiene 79 requisitos y ninguno resuelto', () => {
     const e = evaluar(nuevoSistema('digital', 'Vacío', AHORA));
-    expect(e.total).toBe(73);
+    expect(e.total).toBe(79);
     expect(e.resueltos).toBe(0);
     expect(e.completo).toBe(false);
     expect(e.porRequisito.get('dim1.req01')?.resultado).toBe('no-resuelto');
@@ -61,9 +65,11 @@ describe('evaluar', () => {
   it('la dimensión de espacio queda resuelta con un set válido, y las demás no', () => {
     const e = evaluar(sistemaConDim3Completa());
     const dim3 = e.porDimension.get('dim3');
-    expect(dim3?.contador).toEqual({ resueltos: 7, activos: 7 });
+    // Contra el manifiesto real: dim3 creció a 9 el 2026-09-18 (hoja y sangrado).
+    const activos = DIM3_MANIFEST_V0.requirements.filter((r) => r.estado === 'active').length;
+    expect(dim3?.contador).toEqual({ resueltos: activos, activos });
     expect(dim3?.resultado).toBe('resuelto');
-    expect(e.resueltos).toBe(7);
+    expect(e.resueltos).toBe(activos);
     expect(e.completo).toBe(false);
   });
 

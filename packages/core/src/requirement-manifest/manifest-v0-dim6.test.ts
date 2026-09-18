@@ -11,7 +11,7 @@ const emptyRectoras = (): Map<string, RectoraV0> =>
     ['mood-wall', { id: 'mood-wall', tagsRequeridos: [], tagsProhibidos: [], exclusiones: [] }],
   ]);
 
-/** Payloads que resuelven las siete preguntas de la dimensión (fixture de test). */
+/** Payloads que resuelven las nueve preguntas de la dimensión (fixture de test). */
 function resolvedDim6Payloads(): Map<string, unknown> {
   const m = new Map<string, unknown>();
 
@@ -71,6 +71,45 @@ function resolvedDim6Payloads(): Map<string, unknown> {
     ],
   });
 
+  // Adenda C1: estructura física de un tríptico (insumos 10 y 11).
+  m.set('dim6.req08', {
+    paneles: [
+      {
+        nombre: 'cara exterior · solapa interior',
+        contenido: 'resumen del programa y datos de contacto',
+        orden: 1,
+      },
+      {
+        nombre: 'cara exterior · contraportada',
+        contenido: 'mapa de acceso y código QR de inscripción',
+        orden: 2,
+      },
+      { nombre: 'cara exterior · portada', contenido: 'titular del evento y fecha', orden: 3 },
+      {
+        nombre: 'cara interior · pliego',
+        contenido: 'programa completo, leído de izquierda a derecha',
+        orden: 4,
+      },
+    ],
+    plegado: 'tríptico en rollo con dos pliegues verticales',
+    ordenDespliegue: ['portada', 'pliego interior', 'solapa interior', 'contraportada'],
+    repetidosPorHoja: ['número de página', 'cabecera de sección', 'membrete'],
+  });
+
+  // Adenda C1: flyer de lectura a distancia (insumos 7 y 8). "Feria del libro 2026" = 4 palabras.
+  m.set('dim6.req09', {
+    dominante: 'Feria del libro 2026',
+    palabrasDominante: 4,
+    tamanoDominante: '96px',
+    cincoPreguntas: [
+      { pregunta: 'que', contenido: 'feria del libro independiente' },
+      { pregunta: 'cuando', contenido: 'viernes 25 y sábado 26 de septiembre' },
+      { pregunta: 'donde', contenido: 'plaza central, entrada por calle Arturo Prat' },
+      { pregunta: 'cuanto', contenido: 'entrada liberada' },
+      { pregunta: 'como-actuar', contenido: 'escanea el código QR o llama al +56 9 5555 5555' },
+    ],
+  });
+
   return m;
 }
 
@@ -80,7 +119,7 @@ describe('manifiesto v0 de Dimensión 6 — fidelidad a la spec C1-dim6 §3', ()
     expect(result.ok).toBe(true);
   });
 
-  it('contiene los siete requisitos: dim6.req01..req07', () => {
+  it('contiene los nueve requisitos: dim6.req01..req09 (siete originales + dos de la adenda)', () => {
     expect(DIM6_REQUIREMENTS_V0.map((r) => r.id)).toEqual([
       'dim6.req01',
       'dim6.req02',
@@ -89,6 +128,8 @@ describe('manifiesto v0 de Dimensión 6 — fidelidad a la spec C1-dim6 §3', ()
       'dim6.req05',
       'dim6.req06',
       'dim6.req07',
+      'dim6.req08',
+      'dim6.req09',
     ]);
   });
 
@@ -111,7 +152,7 @@ describe('manifiesto v0 de Dimensión 6 — fidelidad a la spec C1-dim6 §3', ()
     }
   });
 
-  it('las siete brechas de mapeo están vacías (composición no tiene kind propio) con mappingNotes', () => {
+  it('las nueve brechas de mapeo están vacías (composición no tiene kind propio) con mappingNotes', () => {
     expect(DIM6_REQUIREMENTS_V0.every((r) => r.mapsToKinds.length === 0)).toBe(true);
     for (const req of DIM6_REQUIREMENTS_V0) {
       expect(req.mappingNotes, req.id).toBeDefined();
@@ -172,15 +213,69 @@ describe('manifiesto v0 de Dimensión 6 — fidelidad a la spec C1-dim6 §3', ()
   });
 });
 
+describe('adenda C1 del núcleo editorial (2026-09-18) — dim6.req08 y dim6.req09', () => {
+  it('el documento sigue parseando limpio y la versión sube a 1.1 / revisión 2', () => {
+    const result = parseRequirementManifest(DIM6_MANIFEST_V0);
+    expect(result.ok).toBe(true);
+    expect(DIM6_MANIFEST_V0.manifestVersion).toBe('1.1');
+    expect(DIM6_MANIFEST_V0.revision).toBe(2);
+  });
+
+  it('los ids nuevos van al final y en orden, sin tocar los siete anteriores', () => {
+    const ids = DIM6_REQUIREMENTS_V0.map((r) => r.id);
+    expect(ids.slice(0, 7)).toEqual([
+      'dim6.req01',
+      'dim6.req02',
+      'dim6.req03',
+      'dim6.req04',
+      'dim6.req05',
+      'dim6.req06',
+      'dim6.req07',
+    ]);
+    expect(ids.slice(7)).toEqual(['dim6.req08', 'dim6.req09']);
+  });
+
+  it('ejes, dependsOn y packageId de los nuevos según la adenda §3', () => {
+    const byId = new Map(DIM6_REQUIREMENTS_V0.map((r) => [r.id, r]));
+    const req08 = byId.get('dim6.req08');
+    const req09 = byId.get('dim6.req09');
+    expect(req08?.eje).toBe('completitud');
+    expect(req08?.dependsOn).toEqual(['dim6.req06']);
+    expect(req08?.packageId).toBe('pkg.composicion.estructura');
+    expect(req09?.eje).toBe('validez');
+    expect(req09?.dependsOn).toEqual(['dim6.req01']);
+    expect(req09?.packageId).toBe('pkg.composicion.dominante');
+  });
+
+  it('los nuevos no declaran rectora y sí declaran su brecha de mapeo (adenda §2)', () => {
+    const byId = new Map(DIM6_REQUIREMENTS_V0.map((r) => [r.id, r]));
+    for (const id of ['dim6.req08', 'dim6.req09']) {
+      expect(byId.get(id)?.rectorBindings, id).toEqual([]);
+      expect(byId.get(id)?.mapsToKinds, id).toEqual([]);
+      expect(byId.get(id)?.mappingNotes?.length, id).toBeGreaterThan(0);
+    }
+  });
+
+  it('el umbral del flyer vive en el schema: palabrasDominante declara max 6 y noAplica es el canal de ausencia', () => {
+    const req09 = DIM6_REQUIREMENTS_V0.find((r) => r.id === 'dim6.req09')!;
+    const campos = req09.payloadSchema;
+    expect(campos['palabrasDominante']?.type).toEqual({ kind: 'numero', max: 6 });
+    expect(campos['tamanoDominante']?.type).toEqual({ kind: 'longitud-css' });
+    expect(campos['noAplica']?.optional).toBe(true);
+    // Opcional (integrador, 18-09): si la pieza se lee de cerca, noAplica basta y no hay dominante que escribir.
+    expect(campos['dominante']?.optional).toBe(true);
+  });
+});
+
 describe('evaluación de la Dimensión 6 completa', () => {
-  it('dimensión resuelta cuando las siete preguntas tienen definición efectiva válida', () => {
+  it('dimensión resuelta cuando las nueve preguntas tienen definición efectiva válida', () => {
     const evaluation = evaluateManifest({
       manifest: DIM6_MANIFEST_V0,
       payloads: resolvedDim6Payloads(),
       rectoras: emptyRectoras(),
     });
     expect(evaluation.resultado).toBe('resuelto');
-    expect(evaluation.contador).toEqual({ resueltos: 7, activos: 7 });
+    expect(evaluation.contador).toEqual({ resueltos: 9, activos: 9 });
     expect(evaluation.resultados.every((r) => r.resultado === 'resuelto')).toBe(true);
   });
 
@@ -193,7 +288,7 @@ describe('evaluación de la Dimensión 6 completa', () => {
       rectoras: emptyRectoras(),
     });
     expect(evaluation.resultado).toBe('no-resuelto');
-    expect(evaluation.contador).toEqual({ resueltos: 6, activos: 7 });
+    expect(evaluation.contador).toEqual({ resueltos: 8, activos: 9 });
     expect(evaluation.resultados.find((r) => r.requisitoId === 'dim6.req07')?.resultado).toBe(
       'no-resuelto',
     );
@@ -226,6 +321,123 @@ describe('evaluación de la Dimensión 6 completa', () => {
       rectoras: emptyRectoras(),
     });
     expect(evaluation.resultados.find((r) => r.requisitoId === 'dim6.req02')?.resultado).toBe(
+      'no-resuelto',
+    );
+  });
+
+  it('req08 completitud: un panel mudo (sin contenido) ⇒ no-resuelto', () => {
+    const payloads = resolvedDim6Payloads();
+    const req08 = payloads.get('dim6.req08') as Record<string, unknown>;
+    const paneles = req08['paneles'] as Array<Record<string, unknown>>;
+    payloads.set('dim6.req08', {
+      ...req08,
+      paneles: [{ nombre: 'cara exterior · portada', orden: 1 }, ...paneles.slice(1)],
+    });
+    const evaluation = evaluateManifest({
+      manifest: DIM6_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim6.req08')?.resultado).toBe(
+      'no-resuelto',
+    );
+  });
+
+  it('umbral roto en req09: siete palabras en la dominante ⇒ no-resuelto (cita «≤ 6 palabras»)', () => {
+    const payloads = resolvedDim6Payloads();
+    const req09 = payloads.get('dim6.req09') as Record<string, unknown>;
+    payloads.set('dim6.req09', { ...req09, palabrasDominante: 7 });
+    const evaluation = evaluateManifest({
+      manifest: DIM6_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim6.req09')?.resultado).toBe(
+      'no-resuelto',
+    );
+  });
+
+  it('umbral roto en req09: dominante de 40 px ⇒ no-resuelto (cita «80 px / 60 pt o más»)', () => {
+    const payloads = resolvedDim6Payloads();
+    const req09 = payloads.get('dim6.req09') as Record<string, unknown>;
+    payloads.set('dim6.req09', { ...req09, tamanoDominante: '40px' });
+    const evaluation = evaluateManifest({
+      manifest: DIM6_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim6.req09')?.resultado).toBe(
+      'no-resuelto',
+    );
+  });
+
+  it('req09 "covers": falta una de las cinco preguntas agrupadas ⇒ no-resuelto', () => {
+    const payloads = resolvedDim6Payloads();
+    const req09 = payloads.get('dim6.req09') as Record<string, unknown>;
+    const cincoPreguntas = req09['cincoPreguntas'] as unknown[];
+    payloads.set('dim6.req09', { ...req09, cincoPreguntas: cincoPreguntas.slice(0, 4) });
+    const evaluation = evaluateManifest({
+      manifest: DIM6_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim6.req09')?.resultado).toBe(
+      'no-resuelto',
+    );
+  });
+
+  it('canal de ausencia de req09: sólo la razón escrita (noAplica) ⇒ resuelto', () => {
+    const payloads = resolvedDim6Payloads();
+    payloads.set('dim6.req09', {
+      noAplica: 'es una carta formal que se lee en la mano, no desde el otro lado de la sala',
+    });
+    const evaluation = evaluateManifest({
+      manifest: DIM6_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('resuelto');
+    expect(evaluation.contador).toEqual({ resueltos: 9, activos: 9 });
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim6.req09')?.resultado).toBe(
+      'resuelto',
+    );
+  });
+
+  it('canal de ausencia de req09 mezclado con contenido (noAplica + dominante) ⇒ no-resuelto por exclusión mutua', () => {
+    const payloads = resolvedDim6Payloads();
+    payloads.set('dim6.req09', {
+      noAplica: 'es una carta formal que se lee en la mano',
+      dominante: 'Feria del libro 2026',
+    });
+    const evaluation = evaluateManifest({
+      manifest: DIM6_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim6.req09')?.resultado).toBe(
+      'no-resuelto',
+    );
+  });
+
+  it('romper req06 (con dependiente directo req08) cuenta la cascada: 9 activos, 7 resueltos', () => {
+    const payloads = resolvedDim6Payloads();
+    payloads.set('dim6.req06', { flujo: { tipo: 'editorial' } }); // sin descripción
+    const evaluation = evaluateManifest({
+      manifest: DIM6_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.contador).toEqual({ resueltos: 7, activos: 9 });
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim6.req06')?.resultado).toBe(
+      'no-resuelto',
+    );
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim6.req08')?.resultado).toBe(
       'no-resuelto',
     );
   });

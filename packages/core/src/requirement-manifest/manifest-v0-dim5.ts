@@ -41,6 +41,8 @@ const each = (target: readonly PathSegment[], condition: PredicateClause): Predi
   condition,
 });
 const or = (...clauses: PredicateClause[]): PredicateClause => ({ kind: 'or', clauses });
+const and = (...clauses: PredicateClause[]): PredicateClause => ({ kind: 'and', clauses });
+const not = (clause: PredicateClause): PredicateClause => ({ kind: 'not', clause });
 const covers = (
   target: readonly PathSegment[],
   key: readonly string[],
@@ -67,6 +69,11 @@ const containsNoneOf = (
 const TEXTO: PayloadType = { kind: 'texto' };
 const refTo = (reqId: string): PayloadType => ({ kind: 'ref', reqId });
 const enumOf = (...values: string[]): PayloadType => ({ kind: 'enum', values });
+const numero = (min?: number, max?: number): PayloadType => ({
+  kind: 'numero',
+  ...(min !== undefined ? { min } : {}),
+  ...(max !== undefined ? { max } : {}),
+});
 const lista = (of: PayloadType): PayloadType => ({ kind: 'lista', of });
 const objeto = (fields: Record<string, PayloadFieldSchema>): PayloadType => ({ kind: 'objeto', fields });
 const slot = (type: PayloadType, optional = false): PayloadFieldSchema =>
@@ -357,6 +364,57 @@ const req08: RequirementV0 = {
     'BRECHA DECLARADA: el designRuleSet no tiene kind de reglas de marca — vive en el DesignSet (C2) como restricción transversal de la dimensión, mismo tratamiento que dim1.req08.',
 };
 
+// ---------------------------------------------------------------------------
+// dim5.req09 — adenda del núcleo editorial (2026-09-18)
+// spec: spec-c1-adenda-nucleo-editorial §3, «dim5.req09 — Resolución y calidad
+// de reproducción». Eje completitud: ninguna fuente cita una cifra, así que no
+// hay umbral; el requisito exige declarar número o «no aplica (vectorial)» por
+// rol de medio, con exclusión mutua, y la política para el medio que no llega.
+// ---------------------------------------------------------------------------
+
+const req09: RequirementV0 = {
+  id: 'dim5.req09',
+  dimensionId: 'dim5',
+  packageId: 'pkg.imagen.reproduccion',
+  eje: 'completitud',
+  pregunta:
+    '¿Declara el sistema la resolución efectiva mínima de cada rol de medio al tamaño de salida y qué hace con el medio que no la alcanza?',
+  estado: 'active',
+  dependsOn: ['dim5.req02'],
+  payloadSchema: {
+    resoluciones: slot(
+      lista(
+        objeto({
+          rol: slot(enumOf(...MEDIA_ROLES_5)),
+          resolucionMinimaPpp: opt(numero()),
+          noAplica: opt(TEXTO),
+        }),
+      ),
+    ),
+    politica: slot(
+      objeto({
+        modo: slot(enumOf('rechazar', 'sustituir', 'aceptar-con-nota')),
+        texto: slot(TEXTO),
+      }),
+    ),
+  },
+  validityPredicate: [
+    covers(
+      p('resoluciones'),
+      ['rol'],
+      MEDIA_ROLES_5.map((rol) => str(rol)),
+    ),
+    each(p('resoluciones'), or(exists(p('resolucionMinimaPpp')), exists(p('noAplica')))),
+    each(p('resoluciones'), not(and(exists(p('resolucionMinimaPpp')), exists(p('noAplica'))))),
+    exists(p('politica', 'modo')),
+    exists(p('politica', 'texto')),
+  ],
+  rectorBindings: [],
+  mapsToKinds: [],
+  mappingNotes:
+    'BRECHA DECLARADA: el compilador web no imprime y el designRuleSet no tiene kind de resolución ni de calidad de salida. `media` (kind existente) gobierna encuadre y proporción (dim5.req04), no la densidad de píxeles al tamaño final — proyectar ahí mezclaría dos cosas.',
+};
+
 export const DIM5_REQUIREMENTS_V0: readonly RequirementV0[] = [
   req01,
   req02,
@@ -366,11 +424,14 @@ export const DIM5_REQUIREMENTS_V0: readonly RequirementV0[] = [
   req06,
   req07,
   req08,
+  req09,
 ];
 
+// 1.1 / rev 2 — adenda del núcleo editorial (2026-09-18): agrega dim5.req09 (resolución y calidad de
+// reproducción, eje completitud, sin umbral por falta de cita). Spec: spec-c1-adenda-nucleo-editorial §3.
 export const DIM5_MANIFEST_V0: RequirementManifestV0 = {
   schemaVersion: 1,
-  manifestVersion: '1.0',
-  revision: 1,
+  manifestVersion: '1.1',
+  revision: 2,
   requirements: [...DIM5_REQUIREMENTS_V0],
 };

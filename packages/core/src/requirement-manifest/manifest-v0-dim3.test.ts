@@ -15,7 +15,39 @@ const refRole = (role: (typeof SPATIAL_ROLES_3)[number]) => ({
   refPath: ['roleSpacing', SPATIAL_ROLES_3.indexOf(role)],
 });
 
-/** Payloads que resuelven las siete preguntas de la dimensión (fixture de test). */
+// --- Payloads de la adenda (tipados para no pelear con exactOptionalPropertyTypes) ---
+
+type HojaPayload = {
+  formato: string;
+  medida?: { ancho: string; alto: string };
+  orientacion: string;
+  modo: string;
+};
+
+type SangradoPayload = {
+  sangrado: string;
+  zonaSegura: string;
+  margenTextoCorrido: string;
+  aSangre: string[];
+  excepcion?: string;
+};
+
+/** Hoja: A4 vertical, página fija (el flyer de una cara de la medición). */
+function hojaResuelta(): HojaPayload {
+  return { formato: 'a4', orientacion: 'vertical', modo: 'pagina-fija' };
+}
+
+/** Sangrado: fondo a sangre declarado, 40 px libres y 72 px para el texto corrido (insumos 3 y 4). */
+function sangradoResuelto(): SangradoPayload {
+  return {
+    sangrado: '12px', // la Fuente A no cita cifra de sangrado: campo abierto declarado (tensión 6)
+    zonaSegura: '40px',
+    margenTextoCorrido: '72px',
+    aSangre: ['fondo'],
+  };
+}
+
+/** Payloads que resuelven las nueve preguntas de la dimensión (fixture de test). */
 function resolvedDim3Payloads(): Map<string, unknown> {
   const m = new Map<string, unknown>();
 
@@ -86,6 +118,10 @@ function resolvedDim3Payloads(): Map<string, unknown> {
     },
   });
 
+  // Adenda 2026-09-18: dim3.req08 (hoja) y dim3.req09 (sangrado).
+  m.set('dim3.req08', hojaResuelta());
+  m.set('dim3.req09', sangradoResuelto());
+
   return m;
 }
 
@@ -95,7 +131,7 @@ describe('manifiesto v0 de Dimensión 3 — fidelidad a la spec C1-dim3 §3', ()
     expect(result.ok).toBe(true);
   });
 
-  it('contiene los siete requisitos: dim3.req01..req07', () => {
+  it('contiene los nueve requisitos: dim3.req01..req09', () => {
     expect(DIM3_REQUIREMENTS_V0.map((r) => r.id)).toEqual([
       'dim3.req01',
       'dim3.req02',
@@ -104,6 +140,8 @@ describe('manifiesto v0 de Dimensión 3 — fidelidad a la spec C1-dim3 §3', ()
       'dim3.req05',
       'dim3.req06',
       'dim3.req07',
+      'dim3.req08',
+      'dim3.req09',
     ]);
   });
 
@@ -127,7 +165,14 @@ describe('manifiesto v0 de Dimensión 3 — fidelidad a la spec C1-dim3 §3', ()
 
   it('declara las brechas de mapeo vacías con mappingNotes (nunca silenciosas)', () => {
     const empties = DIM3_REQUIREMENTS_V0.filter((r) => r.mapsToKinds.length === 0);
-    expect(empties.map((r) => r.id)).toEqual(['dim3.req01', 'dim3.req03', 'dim3.req06', 'dim3.req07']);
+    expect(empties.map((r) => r.id)).toEqual([
+      'dim3.req01',
+      'dim3.req03',
+      'dim3.req06',
+      'dim3.req07',
+      'dim3.req08',
+      'dim3.req09',
+    ]);
     for (const req of empties) {
       expect(req.mappingNotes, req.id).toBeDefined();
       expect(req.mappingNotes?.length, req.id).toBeGreaterThan(0);
@@ -188,14 +233,14 @@ describe('manifiesto v0 de Dimensión 3 — fidelidad a la spec C1-dim3 §3', ()
 });
 
 describe('evaluación de la Dimensión 3 completa', () => {
-  it('dimensión resuelta cuando las siete preguntas tienen definición efectiva válida', () => {
+  it('dimensión resuelta cuando las nueve preguntas tienen definición efectiva válida', () => {
     const evaluation = evaluateManifest({
       manifest: DIM3_MANIFEST_V0,
       payloads: resolvedDim3Payloads(),
       rectoras: emptyRectoras(),
     });
     expect(evaluation.resultado).toBe('resuelto');
-    expect(evaluation.contador).toEqual({ resueltos: 7, activos: 7 });
+    expect(evaluation.contador).toEqual({ resueltos: 9, activos: 9 });
     expect(evaluation.resultados.every((r) => r.resultado === 'resuelto')).toBe(true);
   });
 
@@ -208,7 +253,7 @@ describe('evaluación de la Dimensión 3 completa', () => {
       rectoras: emptyRectoras(),
     });
     expect(evaluation.resultado).toBe('no-resuelto');
-    expect(evaluation.contador).toEqual({ resueltos: 6, activos: 7 });
+    expect(evaluation.contador).toEqual({ resueltos: 8, activos: 9 });
     expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req06')?.resultado).toBe(
       'no-resuelto',
     );
@@ -258,5 +303,196 @@ describe('evaluación de la Dimensión 3 completa', () => {
     expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req07')?.resultado).toBe(
       'no-resuelto',
     );
+  });
+});
+
+describe('adenda del núcleo editorial (2026-09-18) — dim3.req08 y dim3.req09', () => {
+  it('el documento sigue parseando limpio y la versión sube a 1.1 / revisión 2', () => {
+    const result = parseRequirementManifest(DIM3_MANIFEST_V0);
+    expect(result.ok).toBe(true);
+    expect(DIM3_MANIFEST_V0.schemaVersion).toBe(1);
+    expect(DIM3_MANIFEST_V0.manifestVersion).toBe('1.1');
+    expect(DIM3_MANIFEST_V0.revision).toBe(2);
+    expect(DIM3_MANIFEST_V0.requirements).toHaveLength(9);
+  });
+
+  it('los ids nuevos van al final, en orden, y no desplazan a los siete previos', () => {
+    expect(DIM3_REQUIREMENTS_V0.slice(0, 7).map((r) => r.id)).toEqual([
+      'dim3.req01',
+      'dim3.req02',
+      'dim3.req03',
+      'dim3.req04',
+      'dim3.req05',
+      'dim3.req06',
+      'dim3.req07',
+    ]);
+    expect(DIM3_REQUIREMENTS_V0.slice(7).map((r) => r.id)).toEqual(['dim3.req08', 'dim3.req09']);
+  });
+
+  it('ejes, dependsOn, packageId y rectorBindings de los requisitos nuevos (spec §3)', () => {
+    const byId = new Map(DIM3_REQUIREMENTS_V0.map((r) => [r.id, r]));
+    const req08 = byId.get('dim3.req08')!;
+    const req09 = byId.get('dim3.req09')!;
+
+    expect(req08.eje).toBe('validez');
+    expect(req08.dependsOn).toEqual([]);
+    expect(req08.packageId).toBe('pkg.espacio.hoja');
+    expect(req08.estado).toBe('active');
+
+    expect(req09.eje).toBe('validez');
+    expect(req09.dependsOn).toEqual(['dim3.req08']); // dependencia intra-dimensión
+    expect(req09.packageId).toBe('pkg.espacio.sangrado');
+    expect(req09.estado).toBe('active');
+
+    // adenda §2: ningún requisito de la adenda declara rectoras
+    expect(req08.rectorBindings).toEqual([]);
+    expect(req09.rectorBindings).toEqual([]);
+    expect(req08.mapsToKinds).toEqual([]);
+    expect(req09.mapsToKinds).toEqual([]);
+  });
+
+  it('req08: una hoja declarada a la medida, dentro del tope, resuelve la dimensión completa', () => {
+    const payloads = resolvedDim3Payloads();
+    payloads.set('dim3.req08', {
+      formato: 'medida-declarada',
+      medida: { ancho: '1181px', alto: '1748px' },
+      orientacion: 'apaisada',
+      modo: 'pagina-fija',
+    });
+    const evaluation = evaluateManifest({
+      manifest: DIM3_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('resuelto');
+    expect(evaluation.contador).toEqual({ resueltos: 9, activos: 9 });
+  });
+
+  it('req08 cita insumo 1 ("nunca una hoja inventada"): medida-declarada sin medida ⇒ no-resuelto, con cascada sobre req09', () => {
+    const payloads = resolvedDim3Payloads();
+    payloads.set('dim3.req08', {
+      formato: 'medida-declarada',
+      orientacion: 'vertical',
+      modo: 'pagina-fija',
+    });
+    const evaluation = evaluateManifest({
+      manifest: DIM3_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req08')?.resultado).toBe(
+      'no-resuelto',
+    );
+    // cascada: req09 depende de req08 y cae con él
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req09')?.resultado).toBe(
+      'no-resuelto',
+    );
+    expect(evaluation.contador).toEqual({ resueltos: 7, activos: 9 });
+  });
+
+  it('req08 cita insumo 1 ("lado ≤ 8000"): un lado de 9000 px ⇒ no-resuelto, con cascada sobre req09', () => {
+    const payloads = resolvedDim3Payloads();
+    payloads.set('dim3.req08', {
+      formato: 'medida-declarada',
+      medida: { ancho: '9000px', alto: '6000px' },
+      orientacion: 'vertical',
+      modo: 'pagina-fija',
+    });
+    const evaluation = evaluateManifest({
+      manifest: DIM3_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req08')?.resultado).toBe(
+      'no-resuelto',
+    );
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req09')?.resultado).toBe(
+      'no-resuelto',
+    );
+    expect(evaluation.contador).toEqual({ resueltos: 7, activos: 9 });
+  });
+
+  it('req09 cita insumo 3: zona segura de 39 px (< 40) sin razón escrita ⇒ no-resuelto', () => {
+    const payloads = resolvedDim3Payloads();
+    payloads.set('dim3.req09', { ...sangradoResuelto(), zonaSegura: '39px' });
+    const evaluation = evaluateManifest({
+      manifest: DIM3_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req09')?.resultado).toBe(
+      'no-resuelto',
+    );
+    expect(evaluation.contador).toEqual({ resueltos: 8, activos: 9 });
+  });
+
+  it('req09 citas insumos 3 y 4: margen del texto corrido de 60 px (< 72) sin razón escrita ⇒ no-resuelto', () => {
+    const payloads = resolvedDim3Payloads();
+    payloads.set('dim3.req09', { ...sangradoResuelto(), margenTextoCorrido: '60px' });
+    const evaluation = evaluateManifest({
+      manifest: DIM3_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req09')?.resultado).toBe(
+      'no-resuelto',
+    );
+    expect(evaluation.contador).toEqual({ resueltos: 8, activos: 9 });
+  });
+
+  it('req09 "aSangre" vacío no es una declaración ⇒ no-resuelto (fail-closed)', () => {
+    const payloads = resolvedDim3Payloads();
+    payloads.set('dim3.req09', { ...sangradoResuelto(), aSangre: [] });
+    const evaluation = evaluateManifest({
+      manifest: DIM3_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req09')?.resultado).toBe(
+      'no-resuelto',
+    );
+    expect(evaluation.contador).toEqual({ resueltos: 8, activos: 9 });
+  });
+
+  it('req09 canal de ausencia: umbrales cortos + razón escrita ⇒ resuelto', () => {
+    const payloads = resolvedDim3Payloads();
+    payloads.set('dim3.req09', {
+      ...sangradoResuelto(),
+      zonaSegura: '24px',
+      margenTextoCorrido: '48px',
+      excepcion: 'la imprenta confirmó márgenes reducidos por el plegado del tríptico',
+    });
+    const evaluation = evaluateManifest({
+      manifest: DIM3_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req09')?.resultado).toBe(
+      'resuelto',
+    );
+    expect(evaluation.contador).toEqual({ resueltos: 9, activos: 9 });
+  });
+
+  it('req09 exclusión mutua: cumplir los dos umbrales Y escribir la excepción ⇒ no-resuelto', () => {
+    const payloads = resolvedDim3Payloads();
+    payloads.set('dim3.req09', {
+      ...sangradoResuelto(),
+      excepcion: 'la escribo igual aunque los umbrales se cumplen',
+    });
+    const evaluation = evaluateManifest({
+      manifest: DIM3_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req09')?.resultado).toBe(
+      'no-resuelto',
+    );
+    expect(evaluation.contador).toEqual({ resueltos: 8, activos: 9 });
   });
 });

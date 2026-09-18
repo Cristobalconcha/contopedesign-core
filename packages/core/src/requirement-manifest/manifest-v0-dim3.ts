@@ -6,10 +6,15 @@
  * Los siete requisitos de §3 fielmente (IDs, ejes, dependsOn, payloadSchemas,
  * mapsToKinds — incluidas las brechas DECLARADAS en mappingNotes).
  *
+ * ADENDA 2026-09-18 (spec-c1-adenda-nucleo-editorial-2026-09-18.md §3): se AGREGAN
+ * dim3.req08 (hoja) y dim3.req09 (sangrado y zona segura). Nada de lo anterior cambia:
+ * ningún id, payloadSchema ni cláusula de los siete predicados vigentes se toca.
+ *
  * Diferencia deliberada frente a dim1/dim2 (spec §2): ningún requisito
  * declara `rectorBindings`/`noConflict('mood-wall')` — la taxonomía nombra
  * expresamente color/tipografía/imagen/composición como los dominios que
- * mood-wall gobierna, espacio no aparece ahí.
+ * mood-wall gobierna, espacio no aparece ahí. La adenda mantiene la decisión
+ * (adenda §2: ningún requisito de la adenda declara rectorBindings).
  *
  * CERO PROSA: cada validityPredicate es AST puro serializable, igual que
  * manifest-v0-dim1.ts/dim2.ts.
@@ -61,6 +66,24 @@ const validCss = (target: readonly PathSegment[]): PredicateClause => ({
 });
 const count = (target: readonly PathSegment[]): Operand => ({ kind: 'count', target });
 
+// Constructores que la adenda del núcleo editorial necesitó y dim3 todavía no
+// tenía (forma EXACTA de dim1: `not` y `compareCss` sobre longitud-css).
+const not = (clause: PredicateClause): PredicateClause => ({ kind: 'not', clause });
+const gteCss = (left: Operand, right: Operand): PredicateClause => ({
+  kind: 'compareCss',
+  cssType: 'longitud-css',
+  op: '>=',
+  left,
+  right,
+});
+const lteCss = (left: Operand, right: Operand): PredicateClause => ({
+  kind: 'compareCss',
+  cssType: 'longitud-css',
+  op: '<=',
+  left,
+  right,
+});
+
 // Constructores del payloadSchema
 const LONGITUD_CSS: PayloadType = { kind: 'longitud-css' };
 const TEXTO: PayloadType = { kind: 'texto' };
@@ -88,8 +111,20 @@ const SPATIAL_ROLES_3 = ['intraelemento', 'interelemento', 'entre-secciones'] as
 /** Las diez claves del almacén plano relevantes a esta dimensión (spec §3 dim3.req07). */
 const FLAT_STORE_FIELD = 'spacing';
 
+/**
+ * Las seis hojas cerradas + la medida declarada (adenda §3 dim3.req08, cita insumo 1:
+ * «Letter 816×1056 · A4 794×1123 · Legal 816×1344 · Tabloid 1056×1632 · A5 559×794 ·
+ * A3 1123×1587 (px a 96/in); apaisado = intercambiar; afiche a la medida dada = pulgadas
+ * × 96, lado ≤ 8000. Sin medida: Letter/A4, nunca una hoja inventada.»).
+ */
+const HOJAS_CERRADAS_3 = ['letter', 'a4', 'legal', 'tabloid', 'a5', 'a3', 'medida-declarada'] as const;
+
+/** El tope de lado declarado por la cita del insumo 1 (adenda §3 dim3.req08). */
+const LADO_MAXIMO_HOJA = '8000px';
+
 // ---------------------------------------------------------------------------
-// Los siete requisitos
+// Los nueve requisitos (req01..req07 originales, intactos + req08/req09 de la
+// adenda del núcleo editorial 2026-09-18)
 // ---------------------------------------------------------------------------
 
 const req01: RequirementV0 = {
@@ -322,6 +357,103 @@ const req07: RequirementV0 = {
     'este requisito documenta una relación con el ALMACÉN PLANO, no con el designRuleSet — no hay kind porque no es una regla nueva, es trazabilidad de una dependencia ya existente (y hoy sin consumidor) en producción. Brecha declarada (mismo tipo que dim1.req11/dim2.req07, provenance).',
 };
 
+/**
+ * dim3.req08 — Hoja (adenda del núcleo editorial 2026-09-18 §3, hueco H1).
+ * Eje validez, sin dependencias, packageId pkg.espacio.hoja, rectorBindings [] (adenda §2).
+ * «Nunca una hoja inventada» (insumo 1) = si `formato` es `medida-declarada`, la medida
+ * tiene que existir; si no, es una de las seis de la lista cerrada.
+ */
+const req08: RequirementV0 = {
+  id: 'dim3.req08',
+  dimensionId: 'dim3',
+  packageId: 'pkg.espacio.hoja',
+  eje: 'validez',
+  pregunta:
+    '¿Declara el sistema la hoja de la pieza —formato de una lista cerrada o medida declarada, orientación y modo de paginación— sin inventar una hoja que nadie pidió?',
+  estado: 'active',
+  dependsOn: [],
+  payloadSchema: {
+    // cita insumo 1: las seis hojas cerradas + medida-declarada
+    formato: slot(enumOf(...HOJAS_CERRADAS_3)),
+    // obligatoria si formato = medida-declarada (la implicación se escribe en el predicado)
+    medida: opt(
+      objeto({
+        ancho: slot(LONGITUD_CSS),
+        alto: slot(LONGITUD_CSS),
+      }),
+    ),
+    // cita insumo 1: «apaisado = intercambiar»
+    orientacion: slot(enumOf('vertical', 'apaisada')),
+    // cita insumo 2: Fixed (página fija) / Flow (contenido corrido)
+    modo: slot(enumOf('pagina-fija', 'contenido-corrido')),
+  },
+  validityPredicate: [
+    exists(p('formato')),
+    exists(p('orientacion')),
+    exists(p('modo')),
+    // «nunca una hoja inventada»: medida-declarada exige los dos lados
+    or(
+      not(eq(op('formato'), str('medida-declarada'))),
+      and(exists(p('medida', 'ancho')), exists(p('medida', 'alto'))),
+    ),
+    // cita insumo 1: lado ≤ 8000 (se compara sólo si la medida existe)
+    or(not(exists(p('medida', 'ancho'))), lteCss(op('medida', 'ancho'), str(LADO_MAXIMO_HOJA))),
+    or(not(exists(p('medida', 'alto'))), lteCss(op('medida', 'alto'), str(LADO_MAXIMO_HOJA))),
+  ],
+  rectorBindings: [],
+  mapsToKinds: [],
+  mappingNotes:
+    'BRECHA DECLARADA: no hay kind de hoja, página ni soporte en los 14 kinds del `designRuleSet` (todos son de reglas CSS); el compilador web no imprime. `layout` gobierna retícula interna y `spacing` pasos de espacio, no el tamaño del soporte — mismo tipo de brecha que `dim3.req05` declara para la relación con el soporte impreso.',
+};
+
+/**
+ * dim3.req09 — Sangrado y zona segura (adenda del núcleo editorial 2026-09-18 §3, hueco H2).
+ * Eje validez, dependsOn ['dim3.req08'], packageId pkg.espacio.sangrado, rectorBindings [].
+ * Umbrales citados: zonaSegura ≥ 40 px (insumo 3) y margenTextoCorrido ≥ 72 px (insumos 3 y 4).
+ * `sangrado` queda como longitud-css SIN umbral: la Fuente A no cita ninguna cifra (tensión 6).
+ */
+const req09: RequirementV0 = {
+  id: 'dim3.req09',
+  dimensionId: 'dim3',
+  packageId: 'pkg.espacio.sangrado',
+  eje: 'validez',
+  pregunta:
+    '¿Declara el sistema cuánto sangra el fondo, cuánto queda libre para el contenido en cada borde, el margen del texto corrido y qué elementos pueden ir a sangre —o la razón escrita de su excepción?',
+  estado: 'active',
+  dependsOn: ['dim3.req08'],
+  payloadSchema: {
+    sangrado: slot(LONGITUD_CSS),
+    zonaSegura: slot(LONGITUD_CSS),
+    margenTextoCorrido: slot(LONGITUD_CSS),
+    // "ninguno" escrito satisface exists; una lista vacía no (fail-closed, tensión 13)
+    aSangre: slot(lista(TEXTO)),
+    excepcion: opt(TEXTO),
+  },
+  validityPredicate: [
+    exists(p('sangrado')),
+    validCss(p('sangrado')),
+    validCss(p('zonaSegura')),
+    validCss(p('margenTextoCorrido')),
+    exists(p('aSangre')),
+    // o se cumplen los dos umbrales citados, o hay razón escrita
+    or(
+      and(gteCss(op('zonaSegura'), str('40px')), gteCss(op('margenTextoCorrido'), str('72px'))),
+      exists(p('excepcion')),
+    ),
+    // exclusión mutua: cumplir y exceptuar a la vez no es una declaración válida
+    not(
+      and(
+        exists(p('excepcion')),
+        and(gteCss(op('zonaSegura'), str('40px')), gteCss(op('margenTextoCorrido'), str('72px'))),
+      ),
+    ),
+  ],
+  rectorBindings: [],
+  mapsToKinds: [],
+  mappingNotes:
+    'BRECHA DECLARADA, mismo tipo que `dim3.req08`: el `designRuleSet` no tiene kind de sangrado, zona segura ni margen de página, y el compilador web no imprime; `spacing` declara pasos con uso, no el recorte físico del soporte.',
+};
+
 export const DIM3_REQUIREMENTS_V0: readonly RequirementV0[] = [
   req01,
   req02,
@@ -330,11 +462,15 @@ export const DIM3_REQUIREMENTS_V0: readonly RequirementV0[] = [
   req05,
   req06,
   req07,
+  req08,
+  req09,
 ];
 
+// 1.1 / revisión 2 — adenda del núcleo editorial (2026-09-18): se AGREGAN dim3.req08 (hoja) y
+// dim3.req09 (sangrado y zona segura) al final, sin tocar los siete previos (spec-c1-adenda-nucleo-editorial-2026-09-18.md §3).
 export const DIM3_MANIFEST_V0: RequirementManifestV0 = {
   schemaVersion: 1,
-  manifestVersion: '1.0',
-  revision: 1,
+  manifestVersion: '1.1',
+  revision: 2,
   requirements: [...DIM3_REQUIREMENTS_V0],
 };

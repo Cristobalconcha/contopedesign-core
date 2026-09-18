@@ -162,6 +162,26 @@ function resolvedDim1Payloads(): Map<string, unknown> {
   m.set('dim1.req13', {
     primaryConsumers: [{ role: 'primary', consumer: 'button tone=primary vía var(--cod-color-accent)' }],
   });
+  // dim1.req14 (adenda del núcleo editorial, 2026-09-18): reproducción de color y tinta.
+  // Los valores CMYK son de ejemplo, no una conversión medida.
+  m.set('dim1.req14', {
+    perfil: 'Coated FOGRA39 (ISO 12647-2:2004)',
+    equivalencias: [
+      {
+        colorRef: { refReqId: 'dim1.req01', refPath: ['institucionales', 0] },
+        sistemas: [
+          { sistema: 'rgb', valor: '29 78 216' },
+          { sistema: 'cmyk', valor: '87 64 0 15' },
+        ],
+      },
+      {
+        colorRef: { refReqId: 'dim1.req01', refPath: ['institucionales', 1] },
+        sistemas: [{ sistema: 'cmyk', valor: '89 0 100 20' }],
+      },
+    ],
+    coberturaTinta: 'sin manchas oscuras a página completa; cobertura total bajo 300 % según la imprenta',
+    grisTextoMinimo: '#767676',
+  });
   return m;
 }
 
@@ -170,9 +190,13 @@ export const VERIFICATIONS = new Map<string, VerificationRecordV0>([
     'contrast-matrix',
     { pruebaId: 'contrast-matrix', fecha: '2026-08-30', evidencia: 'matriz de contraste auditada contra WCAG' },
   ],
+  [
+    'lectura-monocroma',
+    { pruebaId: 'lectura-monocroma', fecha: '2026-09-18', evidencia: 'prueba impresa en escala de grises: todo el texto se lee' },
+  ],
 ]);
 
-/** Envuelve los 13 payloads reales en entradas de DesignSet (spec-c2 §2). */
+/** Envuelve los 14 payloads reales en entradas de DesignSet (spec-c2 §2). */
 export function buildDim1DesignSet(): DesignSetV0 {
   const payloads = resolvedDim1Payloads();
   const byId = new Map(DIM1_REQUIREMENTS_V0.map((r) => [r.id, r]));

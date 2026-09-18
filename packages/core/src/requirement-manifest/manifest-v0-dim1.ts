@@ -10,6 +10,12 @@
  * serialización del manifiesto es el propio dato (decisión 1 de la ficha).
  * La formalización de cada predicado en prosa de la fixture está documentada
  * en vault_contope-design/c1-implementacion-extension-gramatica-2026-08-30.md.
+ *
+ * 1.2 / revisión 3 (2026-09-18): la adenda del núcleo editorial (spec
+ * C1-adenda-nucleo-editorial, 2026-09-18, §3) agrega dim1.req14 (reproducción
+ * de color y tinta). Los trece requisitos previos quedan intactos: ningún id,
+ * payloadSchema publicado ni cláusula de predicado vigente cambia de forma
+ * (MINOR por estabilidad de los sets ya emitidos, §2 de la adenda).
  */
 import type {
   CoverExpected,
@@ -147,7 +153,7 @@ const STATE_PAIRS = INTERACTIVE_ROLES.flatMap((role) =>
 const MEANINGS_5 = ['success', 'warning', 'error', 'active', 'inactive'] as const;
 
 // ---------------------------------------------------------------------------
-// Los trece requisitos
+// Los catorce requisitos
 // ---------------------------------------------------------------------------
 
 const req01: RequirementV0 = {
@@ -684,6 +690,83 @@ const req13: RequirementV0 = {
   ],
 };
 
+// ---------------------------------------------------------------------------
+// Adenda del núcleo editorial (2026-09-18) — requisito nuevo de esta dimensión
+// ---------------------------------------------------------------------------
+
+/**
+ * dim1.req14 — Reproducción de color y tinta (spec C1-adenda-nucleo-editorial,
+ * 2026-09-18, §3). Eje validez; `dependsOn: ['dim1.req01']` (ref
+ * INTRA-dimensión); `rectorBindings: []` por la decisión de §2 (la rectora se
+ * concentra en requisitos con forma de fundamento/roles/identidad, no por
+ * pertenencia de dominio: mismo precedente que dim5.req03).
+ *
+ * Tensión 1 declarada: la regla «el gris de texto nunca más claro que #767676»
+ * NO es escribible como comparación (la gramática no compara luminancia ni
+ * canales de color). Se escribe como lo permite el lenguaje: el sistema
+ * DECLARA `grisTextoMinimo` (que pasa `validCss`) y la evidencia humana queda
+ * registrada con `verified('lectura-monocroma')` (cita insumo 6). La
+ * equivalencia con el umbral citado la cierra la auditoría, no el evaluador.
+ *
+ * Tensión 2 declarada: «una equivalencia por cada color institucional de
+ * dim1.req01» no es expresable (`covers` sólo sobre enum; `reference` exige
+ * que el slot sea la definición efectiva completa del destino), así que la
+ * correspondencia 1:1 la audita la persona. Sin degradados: ningún color
+ * literal nuevo, sólo texto sobre colores ya existentes de dim1.req01.
+ */
+const req14: RequirementV0 = {
+  id: 'dim1.req14',
+  dimensionId: 'dim1',
+  packageId: 'pkg.color.reproduccion',
+  eje: 'validez',
+  pregunta:
+    '¿Declara el sistema, para cada color institucional, sus equivalencias en los sistemas de color en que se reproduce (CMYK, RGB, Pantone, escala de grises), el perfil de salida, su política de cobertura de tinta y el gris de texto más claro permitido, con la prueba de lectura en escala de grises registrada?',
+  estado: 'active',
+  dependsOn: ['dim1.req01'],
+  payloadSchema: {
+    // Perfil de salida (Fuente B: Coated FOGRA39).
+    perfil: slot(TEXTO),
+    // POR CADA color institucional (pasada 1); ref INTRA-dimensión.
+    equivalencias: slot(
+      lista(
+        objeto({
+          colorRef: slot(refTo('dim1.req01')),
+          sistemas: slot(
+            lista(
+              objeto({
+                // cmyk y rgb: Fuente B (Coated FOGRA39, sRGB). pantone: Cristóbal
+                // 18-09 («Pantone es color y puede tener definiciones en distintos
+                // sistemas de color»). escala-de-grises: insto 6 (lectura monocroma).
+                sistema: slot(enumOf('cmyk', 'rgb', 'pantone', 'escala-de-grises')),
+                valor: slot(TEXTO),
+              }),
+            ),
+          ),
+        }),
+      ),
+    ),
+    // Campo abierto: la Fuente A no cita cifra de cobertura de tinta (tensión 4).
+    coberturaTinta: slot(TEXTO),
+    // Umbral citado: #767676 (insumo 6); la gramática no compara luminancia.
+    grisTextoMinimo: slot(COLOR_CSS),
+  },
+  validityPredicate: [
+    exists(p('perfil')),
+    exists(p('equivalencias')),
+    exists(p('coberturaTinta')),
+    validCss(p('grisTextoMinimo')),
+    each(p('equivalencias'), exists(p('colorRef'))),
+    each(p('equivalencias'), exists(p('sistemas'))),
+    each(p('equivalencias'), each(p('sistemas'), and(exists(p('sistema')), exists(p('valor'))))),
+    // Cita insumo 6: "tiene que seguir leyéndose en escala de grises".
+    verified('lectura-monocroma'),
+  ],
+  rectorBindings: [],
+  mapsToKinds: [],
+  mappingNotes:
+    'BRECHA DECLARADA: el compilador web no imprime. El `designRuleSet` no tiene kind de espacio de reproducción, perfil, cobertura de tinta ni preflight; `color` (kind existente) gobierna color CSS, no muestras CMYK/Pantone ni perfiles de salida — proyectar ahí falsearía el mapeo. La reproducción y el preflight viven en el adaptador editorial (Fuente B: «configuración editorial → tamaño, márgenes, sangrado, perfiles y preflight»), no como regla individual del compilador.',
+};
+
 export const DIM1_REQUIREMENTS_V0: readonly RequirementV0[] = [
   req01,
   req02,
@@ -698,14 +781,17 @@ export const DIM1_REQUIREMENTS_V0: readonly RequirementV0[] = [
   req11,
   req12,
   req13,
+  req14,
 ];
 
 // 1.1 / revisión 2 (2026-09-18): edición publicada del valueNotes de req03 —
 // el puente I1 vive en dim7.req08, no en un dim7.req10 que nunca existió.
 // Ningún requisito cambia de forma; sólo la nota. Ver decisión 12 del vault.
+// 1.2 / revisión 3 (2026-09-18): agrega dim1.req14 (reproducción de color y tinta) desde la
+// adenda del núcleo editorial (spec C1-adenda-nucleo-editorial §3, 2026-09-18); los 13 previos no cambian.
 export const DIM1_MANIFEST_V0: RequirementManifestV0 = {
   schemaVersion: 1,
-  manifestVersion: '1.1',
-  revision: 2,
+  manifestVersion: '1.2',
+  revision: 3,
   requirements: [...DIM1_REQUIREMENTS_V0],
 };

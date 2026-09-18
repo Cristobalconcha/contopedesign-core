@@ -12,7 +12,7 @@ import {
 } from './adapter.js';
 
 describe('DesignSet (C2, borrador) — puente con el evaluador real de C1', () => {
-  it('toFullPayloadsMap + evaluateManifest resuelven la Dimensión 1 completa (13/13), igual que el test de C1', () => {
+  it('toFullPayloadsMap + evaluateManifest resuelven la Dimensión 1 completa (todos sus requisitos activos), igual que el test de C1', () => {
     const designSet = buildDim1DesignSet();
     const evaluation = evaluateManifest({
       manifest: DIM1_MANIFEST_V0,
@@ -21,7 +21,9 @@ describe('DesignSet (C2, borrador) — puente con el evaluador real de C1', () =
       verifications: VERIFICATIONS,
     });
     expect(evaluation.resultado).toBe('resuelto');
-    expect(evaluation.contador).toEqual({ resueltos: 13, activos: 13 });
+    // Contra el manifiesto real, no contra un número escrito a mano: dim1 creció a 14 el 2026-09-18.
+    const activos = DIM1_MANIFEST_V0.requirements.filter((r) => r.estado === 'active').length;
+    expect(evaluation.contador).toEqual({ resueltos: activos, activos });
   });
 
   it('sin entradas colgantes en el fixture real', () => {

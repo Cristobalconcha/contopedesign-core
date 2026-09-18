@@ -35,6 +35,8 @@ export const EXPLICACIONES: Readonly<Record<string, string>> = {
     'La fuerza es cuánto se puede mover un color: inamovible (es la marca), prioritario (se cambia sólo con buena razón) o explorable (se puede probar otro). Declararla evita discusiones sobre qué es negociable.',
   'dim1.req13':
     'El color primario tiene que decir para qué sirve de verdad: el botón principal, el logotipo, los enlaces. Un primario «para todo» no dice nada.',
+  'dim1.req14':
+    'Cada color de la marca necesita su receta de imprenta: cómo se arma con tintas, cuánto tinta lleva cada plancha y cómo queda cuando la impresión sale en blanco y negro. Además hay un gris tope para el texto: si lo dejas más claro que ese, en papel ya no se lee, y tienes que dejar registrada la prueba que lo comprueba.',
   'dim2.req01':
     'Las familias tipográficas que usa el sistema, y de cada una: qué la reemplaza si no está (fallback), qué idiomas y caracteres cubre, y si se puede usar (licencia). Una tipografía sin licencia declarada es un problema esperando a aparecer en la imprenta.',
   'dim2.req02':
@@ -65,6 +67,10 @@ export const EXPLICACIONES: Readonly<Record<string, string>> = {
     'Qué pasa con los espacios cuando la pantalla se achica o cuando la interfaz tiene que ser más densa: qué se apila, en qué orden, qué se comprime. Si no está dicho, lo decide el navegador.',
   'dim3.req07':
     'Otro puente técnico: WordPress tiene un solo campo de espaciado (un número de 0 a 64). Esto pregunta cómo se relaciona la escala del sistema con ese único número.',
+  'dim3.req08':
+    'Antes de dibujar nada, el sistema tiene que decir en qué hoja se imprime: A4, Letter, Legal, una de las otras de la lista, o una medida tuya. Y si la medida es tuya, tiene que escribirla, porque una hoja que nadie pidió no sirve de nada. Si nadie dice nada, parte en A4 o Letter, nunca en una hoja inventada.',
+  'dim3.req09':
+    'El fondo sí puede llegar hasta el borde, pero lo que se lee no: tiene que quedar una franja libre en cada lado y, si el texto va corrido, esa franja tiene que ser más ancha todavía. Ejemplo: la mancha de color se pasa un poco más allá del borde para que al cortar no quede un filo blanco, y el párrafo igual queda bien adentro. Si de verdad no puedes respetar esas franjas, escribe por qué: no cumplirlas en silencio no vale.',
   'dim4.req01':
     'Antes de dibujar nada, el set dice con qué piezas geométricas trabaja: por ejemplo «superficie», «contenedor», «acción» y «separador». Cada una con su nombre y una frase que explique para qué sirve, así nadie tiene que adivinar qué es cada cosa.',
   'dim4.req02':
@@ -97,6 +103,8 @@ export const EXPLICACIONES: Readonly<Record<string, string>> = {
     'La gramática de los dibujos y los íconos: qué forma tienen, qué grosor de trazo, a qué escala, qué significa cada uno. Que parezcan hechos por la misma mano.',
   'dim5.req08':
     'Cómo se usa el logotipo y cómo no: tamaños mínimos, fondos permitidos, qué no se le hace nunca. «Vinculantes para el resto» quiere decir que ninguna otra definición puede contradecir esto.',
+  'dim5.req09':
+    'Cada tipo de imagen —una foto, una ilustración, un ícono, un símbolo, una marca— tiene que decir su resolución mínima al tamaño en que se va a usar, o explicar por qué no le corresponde (un logo vectorial no se mide en puntos por pulgada). Y tiene que quedar escrito qué haces cuando una imagen no llega a esa resolución: la rechazas, la cambias o la aceptas avisando.',
   'dim6.req01':
     'En cada composición hay algo que domina, algo que acompaña y algo que calla. Y un orden en que el ojo recorre. Pregunta si eso está declarado al menos para un contexto.',
   'dim6.req02':
@@ -111,6 +119,10 @@ export const EXPLICACIONES: Readonly<Record<string, string>> = {
     'Por dónde entra el ojo y cómo recorre. En editorial es el flujo de lectura; en digital, también el de navegación.',
   'dim6.req07':
     'Cómo se reacomoda la composición al cambiar de formato, o la decisión explícita de que no se reacomode.',
+  'dim6.req08':
+    'Una pieza de varias caras —un tríptico, un folleto, un flyer a dos caras— se arma panel por panel: cada uno con su contenido y su número de orden, más el orden en que se despliega al abrirla y lo que se repite en cada hoja, como el folio, la cabecera o el membrete. Si la pieza no se pliega, también lo escribes: «sin plegado».',
+  'dim6.req09':
+    'Un flyer o un afiche se lee desde el otro lado de la sala, así que manda una sola línea: seis palabras o menos y bien grande (80 px o más). Las cinco preguntas —qué, cuándo, dónde, cuánto y cómo actuar— van juntas y a la vista, no repartidas en la prosa. Si tu pieza se lee de cerca, escribes la razón y listo.',
   'dim7.req01':
     'Todo lo que se puede apretar o recorrer tiene que avisar que se puede. Si un botón, un enlace o una tarjeta no dan ninguna señal (forma, subrayado, cambio al pasar el puntero), la persona simplemente no lo intenta.',
   'dim7.req02':
