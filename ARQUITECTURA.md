@@ -205,6 +205,15 @@ su universo no armoniza: corrige lo que estaba bien. Por eso cada regla por
 mundo lleva cita de su base de conocimiento y condición sobre lo que el sistema
 declara soportar, y por eso los árbitros se eligen por universo.
 
+**La armonización es una etapa, no un aviso que corre mientras se define.**
+Propuse que los árbitros avisaran en vivo durante la definición, para no llegar
+tarde; Cristóbal lo descartó, y el motivo ordena el resto: armonizar **requiere
+IA** y se hace **iterativamente**. Definir es trabajo del diseñador; armonizar
+es cuando trabaja el sistema. Se entra con todas las casillas del paquete
+llenas, el sistema señala, el diseñador valida, anota o redefine, y se vuelve a
+pasar, las veces que haga falta. La evaluación en vivo que hoy hace el
+escritorio (resuelto o no, con motivos) no es armonización: es completitud.
+
 **Cuando un árbitro choca con una cortapisa, gana la cortapisa.** Lo decidió
 Cristóbal el mismo 18 de septiembre: si la paleta institucional entró como
 restricción y el árbitro dice que ese color no tiene contraste sobre ese fondo,
