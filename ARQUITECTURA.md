@@ -123,9 +123,17 @@ instrumentos (ver [`INTERFAZ.md`](INTERFAZ.md)).
 dimensiones de la taxonomía** —73 requisitos: 13 de color, 8 de tipografía, 7 de
 espacio, 8 de forma, 8 de imagen, 7 de composición, 8 de interacción, 7 de
 movimiento y 7 de patrones—, cada una con su especificación en el vault y sus
-pasadas adversariales. Lo que sigue **sin** existir en el núcleo, a propósito:
-el núcleo por mundo (packaging, editorial, campaña) es investigación que se
-cierra midiendo proyectos reales, no código; ver la decisión 11 del vault.
+pasadas adversariales. **Y desde la mañana del 18 de septiembre existen dos núcleos por mundo**
+(`packages/core/src/nucleo/`): el web, que son los ocho roles del plugin dichos como
+preguntas más la regla del contraste; y el editorial impreso, con cuarenta preguntas
+y cuatro reglas, medido sobre el folleto real de Santa Luisa, las reglas de impreso
+de Claude Design y el inventario de InDesign. Un núcleo son dos cosas: las
+preguntas que ese mundo no puede dejar sin responder y las reglas con umbral y cita
+que dicen cuándo una respuesta está bien; las reglas llevan condición cuando la
+fuente describe un tipo de pieza (los umbrales de Claude Design valen para un
+documento de oficina, no para un folleto de imprenta). Marca y campaña siguen sin
+núcleo medido, a propósito: no hay pieza real que medir; ver las decisiones 11 y 18
+del vault.
 Y dos límites del formato que salieron medidos esa noche: una dependencia o una
 referencia hacia **otra dimensión** no se puede **resolver** dentro del manifiesto
 (el validador comprueba a qué requisito apunta, pero el evaluador arma su contexto

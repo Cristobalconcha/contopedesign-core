@@ -249,8 +249,10 @@ se puedan revertir sabiendo por qué existían.
 - **El reparto institucional/neutro de los colores extraídos es una propuesta**
   por croma, corregible en el instrumento. El CMYK de un IDML se muestra en
   hex aproximado y se dice.
-- **Los mundos usan todos el mismo manifiesto**, y la pantalla lo dice. Cuando
-  exista el core por mundo, ahí se conecta.
+- **Los mundos usan todos el mismo manifiesto**, y la pantalla lo dice. Desde el 18
+  de septiembre, digital y editorial tienen su núcleo medido conectado (Definición lo
+  muestra en la cabecera y marca cada pregunta del núcleo); marca y campaña dicen
+  que no lo tienen todavía.
 
 ### Lo que falta, en orden de lo que más pesa
 

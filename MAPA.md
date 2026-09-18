@@ -57,7 +57,18 @@ del §4.
 | `project-to-designruleset.ts` | Proyección a las reglas del compilador del plugin. Cubre `color`, `surface` (dim1) y `typography` (dim2.req02). `spacing`/`layout` (dim3) sin proyector a propósito. Tres requisitos declarados «sin cobertura» porque piden decisión de producto (ver `pendientes-aprobacion-cristobal.md` en el vault). |
 | `dim1-fixture.ts` | Un set de ejemplo que resuelve dim1 entera; lo usan las pruebas de integración. |
 
-### 2.3 La cápsula — C3/C4
+### 2.3 `nucleo/` — los núcleos por mundo
+
+| archivo | qué hace |
+|---|---|
+| `types.ts` | `NucleoDeMundoV0`: `entradas` (ids de requisito que el mundo no puede dejar sin responder, con su porqué medido) y `reglas` (`ReglaDeMundoV0`: umbral con cita, escrito con el AST de `predicate.ts`, evaluado encima del predicado del requisito; opcionalmente `condicion` sobre otra pregunta del set, para que rija sólo en el tipo de pieza que la fuente describe). |
+| `evaluate.ts` | `evaluarNucleo` (recibe los resultados por requisito y los payloads; devuelve `cubierto`/`no-cubierto`, faltantes y el resultado de cada regla: `cumple`, `no-cumple` o `no-aplica`) y `validarNucleo` (ids existentes y activos, reglas con cita y sobre entradas del núcleo). |
+| `nucleo-web.ts` | Los ocho roles del plugin como ids (dim1.req02, dim1.req07, dim2.req02, dim2.req04, dim8.req02) más la regla del contraste 4,5:1. |
+| `nucleo-editorial.ts` | Cuarenta preguntas y cuatro reglas del mundo editorial impreso, medidas sobre el folleto real, Claude Design e InDesign; las reglas de tamaño de letra rigen sólo con `dim3.req08.modo = contenido-corrido`. |
+
+El escritorio los conecta en `dominio/nucleos.ts` (`nucleoDeMundo`, `enNucleo`) y `dominio/evaluacion.ts` los evalúa junto con el manifiesto.
+
+### 2.4 La cápsula — C3/C4
 
 | archivo | qué hace |
 |---|---|
@@ -155,7 +166,7 @@ dimensiones hay. Todo lo demás los lee.
 | 8 | Movimiento y temporalidad | `spec-c1-dim8-movimiento-manifest-2026-09-18.md`, 2 pasadas de ZCode/GLM | `manifest-v0-dim8.ts` (18-09) | 7 |
 | 9 | Patrones reutilizables y representación de información | `spec-c1-dim9-patrones-manifest-2026-09-18.md`, 2 pasadas de ZCode/GLM | `manifest-v0-dim9.ts` (18-09) | 7 |
 
-Total en código: **73** requisitos activos en las **nueve** dimensiones (al empezar la noche del 18-09 eran 43 en cinco; `evaluacion.test.ts` clava el número vigente). Todas las dimensiones nuevas siguieron el mismo protocolo: spec → pasadas hostiles de ZCode/GLM → manifiesto y pruebas de Dipsy en cuarentena → integración con `scripts/integrar-dimension.mjs` → un commit por dimensión, con su decisión numerada en el vault. El protocolo
+Total en código: **79** requisitos activos en las **nueve** dimensiones (43 en cinco al empezar la noche del 18-09; 73 al amanecer; 79 con la adenda del núcleo editorial: dim1 tiene 14, dim3 y dim6 tienen 9, dim5 tiene 9; `evaluacion.test.ts` clava el número vigente). Todas las dimensiones nuevas siguieron el mismo protocolo: spec → pasadas hostiles de ZCode/GLM → manifiesto y pruebas de Dipsy en cuarentena → integración con `scripts/integrar-dimension.mjs` → un commit por dimensión, con su decisión numerada en el vault. El protocolo
 que usaron las dimensiones 2 a 6: spec en el vault → al menos dos pasadas
 adversariales declaradas → manifiesto → pruebas → registro.
 
