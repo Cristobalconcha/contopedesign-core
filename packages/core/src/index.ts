@@ -17,3 +17,4 @@ export * from './design-contract-design-md.js';
 export * from './design-contract-portable.js';
 export * from './requirement-manifest/index.js';
 export * from './design-set/index.js';
+export * from './nucleo/index.js';
