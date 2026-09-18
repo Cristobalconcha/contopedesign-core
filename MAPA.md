@@ -34,7 +34,7 @@ importa siempre de `@contope/core`.
 | `no-conflict.ts` | La cláusula `noConflict(rectoraId)`: cruza tags del payload contra `tagsRequeridos` / `tagsProhibidos` / `exclusiones` de la rectora. | `types.ts` |
 | `graph.ts` | `parseRequirementManifest(raw)` (desde JSON desconocido), `validateManifestStructure(manifest)`, `detectCycles`, `isDimensionId`. Invariantes: ids con patrón, `dimensionId` coherente con el id, `dependsOn` a ids **que existan en el mismo documento** y no estén deprecados, sin ciclos, deprecaciones con registro. | `types.ts`, `predicate.ts` |
 | `evaluate.ts` | `evaluateRequirement` y `evaluateManifest` → `DimensionEvaluationV0`: AND estricto sobre los activos; `contador` es sólo diagnóstico. | `graph.ts`, `payload.ts`, `predicate.ts` |
-| `manifest-v0-dim1.ts` … `dim6.ts` | Un archivo por dimensión: exporta `DIMn_REQUIREMENTS_V0` y `DIMn_MANIFEST_V0`. Constructores locales de AST (`p`, `str`, `exists`, `each`, `covers`, `noConflict`, `objeto`, `lista`, `slot`…) copiados en cada archivo a propósito, para que cada manifiesto sea legible solo. **Cero prosa**: cada predicado es AST serializable, y la prueba hace round-trip por JSON. | `predicate.ts`, `types.ts` (sólo tipos) |
+| `manifest-v0-dim1.ts` … `dim9.ts` | Un archivo por dimensión: exporta `DIMn_REQUIREMENTS_V0` y `DIMn_MANIFEST_V0`. Constructores locales de AST (`p`, `str`, `exists`, `each`, `covers`, `noConflict`, `objeto`, `lista`, `slot`…) copiados en cada archivo a propósito, para que cada manifiesto sea legible solo. **Cero prosa**: cada predicado es AST serializable, y la prueba hace round-trip por JSON. | `predicate.ts`, `types.ts` (sólo tipos) |
 | `index.ts` | Barril del módulo. **Acá se registra cada dimensión nueva** (una línea `export * from './manifest-v0-dimN.js'`). | todos |
 
 **La regla que ordena todo el reparto: cada manifiesto es una isla.** `graph.ts`
@@ -148,14 +148,14 @@ dimensiones hay. Todo lo demás los lee.
 | 1 | Color y superficies | `spec-c1-requirement-manifest-2026-08-30.md`, auditada por Z | `manifest-v0-dim1.ts` | 13 |
 | 2 | Tipografía y jerarquía escrita | `spec-c1-dim2-…`, auditada | `manifest-v0-dim2.ts` | 8 |
 | 3 | Espacio, ritmo, retícula y contenedores | `spec-c1-dim3-…`, 2 pasadas | `manifest-v0-dim3.ts` | 7 |
-| 4 | Forma, borde y profundidad | **no existe** — quedó esperando una decisión de producto sobre los «roles geométricos basales» (`lista-trabajo-2026-08-31.md`, ítem 4) | no | 0 |
+| 4 | Forma, borde y profundidad | `spec-c1-dim4-forma-manifest-2026-09-18.md`, 2 pasadas de ZCode/GLM; los roles geométricos los declara el set (decisión 14) | `manifest-v0-dim4.ts` (18-09) | 8 |
 | 5 | Imagen y lenguaje gráfico | `spec-c1-dim5-…`, 3 pasadas | `manifest-v0-dim5.ts` | 8 |
 | 6 | Composición y jerarquía visual | `spec-c1-dim6-…`, 3 pasadas | `manifest-v0-dim6.ts` | 7 |
 | 7 | Interacción, estados, navegación y feedback | `spec-c1-dim7-interaccion-manifest-2026-08-31.md`, 4 pasadas (2 de Claude, 2 de ZCode/GLM) | `manifest-v0-dim7.ts` (18-09) | 8 (I1 entró como req08) |
 | 8 | Movimiento y temporalidad | `spec-c1-dim8-movimiento-manifest-2026-09-18.md`, 2 pasadas de ZCode/GLM | `manifest-v0-dim8.ts` (18-09) | 7 |
-| 9 | Patrones reutilizables y representación de información | **no existe** | no | 0 |
+| 9 | Patrones reutilizables y representación de información | `spec-c1-dim9-patrones-manifest-2026-09-18.md`, 2 pasadas de ZCode/GLM | `manifest-v0-dim9.ts` (18-09) | 7 |
 
-Total en código al escribir esta tabla: **43** en cinco dimensiones; la noche del 18-09 fue subiendo (51 con la 7, 58 con la 8; ver la tabla y `evaluacion.test.ts`, que clava el número vigente). El protocolo
+Total en código: **73** requisitos activos en las **nueve** dimensiones (al empezar la noche del 18-09 eran 43 en cinco; `evaluacion.test.ts` clava el número vigente). Todas las dimensiones nuevas siguieron el mismo protocolo: spec → pasadas hostiles de ZCode/GLM → manifiesto y pruebas de Dipsy en cuarentena → integración con `scripts/integrar-dimension.mjs` → un commit por dimensión, con su decisión numerada en el vault. El protocolo
 que usaron las dimensiones 2 a 6: spec en el vault → al menos dos pasadas
 adversariales declaradas → manifiesto → pruebas → registro.
 

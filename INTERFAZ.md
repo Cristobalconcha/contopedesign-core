@@ -9,7 +9,8 @@ Prototipo navegable:
 **Construida el 14 de septiembre de 2026** en `packages/desktop`, sobre el
 núcleo real: las pantallas 1, 2 y 3 tal como están descritas abajo, la
 pantalla 5 aprobada, y tres instrumentos más un editor estructurado que cubre
-a los 43 requisitos. La pantalla 4 sigue sin dibujar, a propósito. Lo que se
+a los 43 requisitos de entonces (73 desde el 18 de septiembre, cuando el
+manifiesto completó las nueve dimensiones; ver `MAPA.md` §5). La pantalla 4 sigue sin dibujar, a propósito. Lo que se
 construyó, y qué decisiones se tomaron sin preguntar, está al final, en
 [«Lo construido»](#lo-construido-14-de-septiembre).
 
@@ -87,8 +88,10 @@ los tres caminos: **Insumo · Diseñador · ContOpe**.
 La completitud es binaria y se ve: sin todo resuelto no se habilita la
 armonización.
 
-En el prototipo son los **43 requisitos reales** del manifiesto, en cinco
-dimensiones.
+En el prototipo eran los **43 requisitos reales** del manifiesto, en cinco
+dimensiones; desde el 18 de septiembre son 73, en las nueve. Las cuatro
+dimensiones nuevas (forma, interacción, movimiento, patrones) se muestran como
+texto: no tienen primitiva visual propia todavía.
 
 **Cada requisito lleva su explicación.** Cristóbal la pidió mirando la pantalla:
 *«¿qué quiere decir que cuenta con un fundamento de color efectivo? Eso necesita

@@ -119,6 +119,20 @@ contrato y su forma portable— y, desde el 14 de septiembre, la primera pasada
 de la interfaz en `packages/desktop`: recolección, definición y los primeros
 instrumentos (ver [`INTERFAZ.md`](INTERFAZ.md)).
 
+**Desde la noche del 17 al 18 de septiembre, el manifiesto cubre las nueve
+dimensiones de la taxonomía** —73 requisitos: 13 de color, 8 de tipografía, 7 de
+espacio, 8 de forma, 8 de imagen, 7 de composición, 8 de interacción, 7 de
+movimiento y 7 de patrones—, cada una con su especificación en el vault y sus
+pasadas adversariales. Lo que sigue **sin** existir en el núcleo, a propósito:
+el núcleo por mundo (packaging, editorial, campaña) es investigación que se
+cierra midiendo proyectos reales, no código; ver la decisión 11 del vault.
+Y dos límites del formato que salieron medidos esa noche: una dependencia o una
+referencia hacia **otra dimensión** no se puede verificar dentro del manifiesto
+(el evaluador arma su contexto por dimensión), así que esas relaciones viven en
+prosa y se resuelven en el set; y un valor cerrado sólo entra si tiene cita, por
+lo que los roles geométricos de la dimensión 4 los declara cada set y no el
+manifiesto. [`MAPA.md`](MAPA.md) dice dónde vive cada cosa.
+
 Lo que **todavía no existe** es lo que este documento dice que más importa: el
 cierre de definición con la IA construyendo lo encargado, y la armonización
 con su artefacto de exhibición. Eso es la capa visual grande, y no se dibuja
