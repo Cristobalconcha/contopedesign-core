@@ -141,4 +141,18 @@ export const EXPLICACIONES: Readonly<Record<string, string>> = {
     'Cuando varios elementos se mueven juntos, di en qué orden entran y con cuánto atraso cada uno, y cómo se relacionan —por ejemplo: primero el titular, después la bajada, y el botón sólo cuando lo tocan—. También di qué pasa si la persona ya está interactuando y la secuencia programada se cruza con ella.',
   'dim8.req07':
     'Cuenta qué pasa cuando alguien pide menos movimiento. Si eliges la versión reducida o la estática, di qué reemplaza a cada rol y con qué se comunica el cambio sin animación (un borde, el color de acción del sistema, más peso visual). Y si decides que no hay movimiento decorativo, explica igual cómo se entiende qué cambió y qué es más importante.',
+  'dim9.req01':
+    'Escribe los diez arquetipos de patrón —acción, contenedor, navegación, feedback, entrada, secuencia editorial, lista, tabla, métricas y representación de datos— y al lado de cada uno qué significa en tu set. Si alguno no se usa, su línea va igual con «no aplica, porque…»: un afiche no tiene tablas, pero lo dice.',
+  'dim9.req02':
+    'Para cada arquetipo que sí usas, escribe qué piezas lo forman, cuáles son obligatorias y cuáles opcionales, y cómo se relaciona cada pieza con las demás. Si un arquetipo no aplica, basta la frase que lo declara; eso sí, nunca las dos cosas a la vez: o traes la lista de piezas, o dices que no aplica.',
+  'dim9.req03':
+    'Cada variante de un arquetipo dice de dónde hereda y qué cambia: «botón de contorno hereda del botón sólido, quita el relleno y deja sólo el borde». Si tu set no tiene variantes, escríbelo con su razón —«no hay variantes porque cada pieza se usa en su forma base»—: una lista vacía no cuenta como respuesta.',
+  'dim9.req04':
+    'Un dato puede viajar en la posición, el largo, el color, la forma o la textura. Declara los cinco portadores y qué comunicas con cada uno. Para el color, apunta al rol de color que ya dejaste escrito en tu paleta en vez de inventar un color nuevo; y si en este set el color no comunica nada, dilo y explica por qué.',
+  'dim9.req05':
+    'Di cómo tratas el contenido cuando se desborda, cuando llega vacío, cuando falta un dato y cuando hay un error. Escribe las cuatro respuestas aunque en algún caso no cambie nada: «el texto se recorta sin aviso, porque…». La pregunta es para el sistema completo; el arquetipo de cada línea sólo indica dónde lo observaste.',
+  'dim9.req06':
+    'Cuenta cómo se porta un patrón cuando cambia el contexto —pantalla angosta, impresión, otro idioma— y qué se ajusta en cada caso. Si no cambia nada, declara esa decisión: una lista vacía no cuenta como respuesta.',
+  'dim9.req07':
+    'Escribe cómo entra un patrón nuevo al sistema, cómo se migran los sets que ya existen y qué les pasa a los sets históricos. La idea es que agregar algo no deje mudos ni incompletos a los sets viejos sin que nadie se entere.',
 };
