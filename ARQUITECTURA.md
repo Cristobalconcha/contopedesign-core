@@ -140,7 +140,16 @@ Cada uno se asigna: lo define el diseñador o lo define la IA. Son los tres
 rieles de la taxonomía (insumo, diseñador, ContOpe). Recién con todos los
 vacíos asignados empieza la definición.
 
-*Estado:* existe. Cada pregunta pendiente ofrece los tres caminos, y un encargo
+**Pero la asignación no es una puerta cerrada.** Definir algo puede abrir
+vacíos nuevos, porque una respuesta apunta a otra (un estilo de borde que usa
+un color de la paleta, una regla de escala que pide una base). Cuando aparece
+un vacío nuevo, se asigna ahí mismo, sin volver al principio; y una asignación
+hecha se puede cambiar de riel en cualquier momento (Cristóbal, 18 de
+septiembre).
+
+*Estado:* existe, y ya se comporta así: cada pregunta pendiente ofrece los tres
+caminos desde Definición, sin una pantalla de asignación previa que haya que
+cerrar. Cada pregunta pendiente ofrece los tres caminos, y un encargo
 a ContOpe queda como definición declarada y vacía en la cápsula.
 
 ### 3. Definición: el manifiesto con sus primitivas, y el editor
