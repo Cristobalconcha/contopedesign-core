@@ -166,7 +166,7 @@ dimensiones hay. Todo lo demás los lee.
 | 8 | Movimiento y temporalidad | `spec-c1-dim8-movimiento-manifest-2026-09-18.md`, 2 pasadas de ZCode/GLM | `manifest-v0-dim8.ts` (18-09) | 7 |
 | 9 | Patrones reutilizables y representación de información | `spec-c1-dim9-patrones-manifest-2026-09-18.md`, 2 pasadas de ZCode/GLM | `manifest-v0-dim9.ts` (18-09) | 7 |
 
-Total en código: **79** requisitos activos en las **nueve** dimensiones (43 en cinco al empezar la noche del 18-09; 73 al amanecer; 79 con la adenda del núcleo editorial: dim1 tiene 14, dim3 y dim6 tienen 9, dim5 tiene 9; `evaluacion.test.ts` clava el número vigente). Todas las dimensiones nuevas siguieron el mismo protocolo: spec → pasadas hostiles de ZCode/GLM → manifiesto y pruebas de Dipsy en cuarentena → integración con `scripts/integrar-dimension.mjs` → un commit por dimensión, con su decisión numerada en el vault. El protocolo
+Total en código: **84** requisitos activos en las **diez** dimensiones (43 en cinco al empezar la noche del 18-09; 73 al amanecer; 79 con la adenda del núcleo editorial; 84 con la décima, salida física, la tarde del 18-09, primera vez que cambió el formato de ids: dim1 tiene 14, dim3 y dim6 tienen 9, dim5 tiene 9; `evaluacion.test.ts` clava el número vigente). Todas las dimensiones nuevas siguieron el mismo protocolo: spec → pasadas hostiles de ZCode/GLM → manifiesto y pruebas de Dipsy en cuarentena → integración con `scripts/integrar-dimension.mjs` → un commit por dimensión, con su decisión numerada en el vault. El protocolo
 que usaron las dimensiones 2 a 6: spec en el vault → al menos dos pasadas
 adversariales declaradas → manifiesto → pruebas → registro.
 
