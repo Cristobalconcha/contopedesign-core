@@ -82,6 +82,14 @@ principio y los **árbitros** al final. Dos ideas atraviesan todo el flujo:
 - **Lo que el diseñador declara al principio sirve para una sola cosa:** acotar
   qué se le va a exigir al sistema. No dirige la definición ni la reemplaza.
 
+No es un flujo nuevo. El 29 de agosto Cristóbal ya había descrito tres de sus
+piezas (vault, `vision-flujo-definicion-cristobal-2026-08-29.md`): seleccionar
+qué se toma de cada insumo, dos caminos para lo que ningún insumo cubre
+(diseñador o IA), y GrapesJS dentro del escritorio como el lugar donde se
+define lo manual. Lo que agrega el 18 de septiembre es el paso de alcance al
+principio, la separación entre referentes y cortapisas, y los árbitros por
+universo al final.
+
 ### 0. Alcance: qué sistema se va a definir
 
 El diseñador elige el mundo, o describe en pocas palabras el trabajo al que va
