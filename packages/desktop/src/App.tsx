@@ -7,6 +7,7 @@ import { reducir, type Accion } from './dominio/reductor.js';
 import { type Sistema } from './dominio/sistema.js';
 import { Instrumentos } from './instrumentos/index.js';
 import { Alcance } from './pantallas/Alcance.js';
+import { Armonizacion } from './pantallas/Armonizacion.js';
 import { Construccion } from './pantallas/Construccion.js';
 import { Definicion } from './pantallas/Definicion.js';
 import { Inicio } from './pantallas/Inicio.js';
@@ -194,19 +195,20 @@ export function App() {
                   ['recoleccion', 'Recolección'],
                   ['definicion', 'Definición'],
                   ['construccion', 'Construcción'],
+                  ['armonizacion', 'Armonización'],
                 ] as Array<[Pantalla, string]>
               ).map(([p, n], i) => (
                 <span key={p} className="fase-grupo">
                   {i > 0 ? <span className="flechita">›</span> : null}
-                  <button className={`fase ${taller.pantalla === p ? 'on' : ''}`} onClick={() => contexto.ir(p)}>
+                  <button
+                    className={`fase ${taller.pantalla === p ? 'on' : ''}`}
+                    onClick={() => contexto.ir(p)}
+                    title={p === 'armonizacion' ? 'Primer dibujo, para conversar' : undefined}
+                  >
                     {n}
                   </button>
                 </span>
               ))}
-              <span className="flechita">›</span>
-              <span className="fase apagada" title="No construida todavía">
-                Armonización
-              </span>
             </nav>
             <div className="acciones-barra">
               <button className="btn" onClick={() => void guardar(false)} title="Ctrl+S">
@@ -232,6 +234,7 @@ export function App() {
             {taller.pantalla === 'recoleccion' ? <Recoleccion /> : null}
             {taller.pantalla === 'definicion' ? <Definicion /> : null}
             {taller.pantalla === 'construccion' ? <Construccion /> : null}
+            {taller.pantalla === 'armonizacion' ? <Armonizacion /> : null}
             {taller.pantalla === 'inicio' ? <Definicion /> : null}
             <Instrumentos />
           </ContextoTaller.Provider>

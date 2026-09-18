@@ -25,6 +25,7 @@
 import type { DesignContractV1, DesignSetV0, DimensionId, EditContextDevelopmentTask, VerificationRecordV0 } from '@contope/core';
 import type { Alcance } from './alcance.js';
 import type { MundoId } from './mundos.js';
+import { armonizacionVacia, type Armonizacion } from './armonizacion.js';
 import type { Muestra } from './primitivas.js';
 
 export const KIND_SISTEMA = 'contope/sistema';
@@ -125,6 +126,8 @@ export interface Sistema {
   verificaciones: VerificationRecordV0[];
   /** La última cápsula exportada, para que la siguiente continúe su linaje. */
   capsulaAnterior: DesignContractV1 | null;
+  /** Pasadas de armonización y lo decidido sobre cada señal (etapa, decisión 23). */
+  armonizacion: Armonizacion;
 }
 
 export function nuevoId(prefijo: string): string {
@@ -154,5 +157,6 @@ export function nuevoSistema(mundo: MundoId, nombre: string, ahora = new Date().
     tareas: [],
     verificaciones: [],
     capsulaAnterior: null,
+    armonizacion: armonizacionVacia(),
   };
 }

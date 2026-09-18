@@ -108,9 +108,35 @@ cada fila.
 dos fuentes registradas y sale un aviso: cuál manda lo decide la armonización,
 no la recolección.
 
-## 4. Construcción y armonización — *sin dibujar*
+## 4. Construcción y armonización — *primer dibujo, para conversar*
 
-El editor visual. La pieza más grande, y no se dibuja sin conversarla.
+El editor visual sigue sin dibujar: es la pieza más grande y no se dibuja sin
+conversarla. Lo que sí tiene primer dibujo, desde la tarde del 18 de
+septiembre, es la **armonización como etapa** (decisiones 20, 21 y 23), en
+`pantallas/Armonizacion.tsx` sobre `dominio/armonizacion.ts`:
+
+- **Se entra con el paquete completo.** Si faltan preguntas, la pantalla es una
+  puerta: dice cuántas faltan y muestra en sólo lectura lo que el árbitro ya
+  señala. La barra de fases ya no la muestra apagada.
+- **El árbitro es el núcleo del mundo** (decisión 20): su nombre, qué se midió
+  para cerrarlo, y cuántas de sus reglas con cita se cumplen. Las reglas que no
+  se cumplen son señales; cada una trae la pregunta, el motivo del evaluador y
+  la cita textual de la base de conocimiento.
+- **Los conflictos de origen también son señales**: dos orígenes para la misma
+  pregunta, o una cortapisa que desplazó lo que había.
+- **Gana la cortapisa** (decisión 21): si la definición señalada vino de una
+  cortapisa, la tarjeta lo dice y el botón cambia a «Redefinir el resto»; no se
+  toca la cortapisa.
+- **Sobre cada señal**: Validar (queda como está), Anotar (queda, con una nota
+  obligatoria) o Redefinir (abre el instrumento de la pregunta). Lo decidido se
+  guarda en el archivo con la pasada en que se decidió; se puede reabrir.
+- **Pasadas**: se empieza la primera a mano; «Nueva pasada» vuelve a pasar con
+  lo redefinido y conserva las decisiones. El contador vive en el archivo.
+- **Lo que no está construido, dicho en la pantalla**: la lectura de las
+  declaraciones por la IA. Cuando esté, sus señales entran por el mismo formato.
+
+Es un dibujo para conversarlo, no una decisión tomada. Construcción sigue como
+estaba (estado por dimensión, encargos, conflictos).
 
 ## 5. Elegir tipografía — **aprobado**
 
@@ -221,7 +247,7 @@ las pantallas de arriba, esto es lo que cambia y lo que no:
 | **1b. Alcance** (construida el 18-09, commit `8b7187d`) | Una línea para describir el trabajo al que va el sistema, y el desglose de las dimensiones del mundo con casillas: las del núcleo marcadas y fijas, las demás a elección. Lo marcado es el paquete de definiciones, y Definición mide contra él. |
 | 2. Recolección | **Construido el 18-09** (commit `2587a3a`): el paso 2 del ciclo («qué se toma de este insumo») son chips por dimensión sobre el insumo activo, y la zona de incorporar tiene **dos carriles**: referentes (entran como propuesta) y cortapisas (entran aprobadas e inamovibles; desplazan a un referente y lo dejan en conflictos). |
 | 3. Definición | Se ordena en dos momentos: primero **asignar los rieles** a todos los vacíos, después **definir**. Lo asignado al diseñador abre el instrumento del parámetro; GrapesJS entra como instrumento opcional que abre en el apartado de la variable. Sólo se exigen las preguntas del paquete. |
-| 4. Armonización | Sigue sin dibujar. Lo que sí quedó definido es quién arbitra: **sistemas de referencia por universo**, con cita y condición, nunca uno para todo. |
+| 4. Armonización | Primer dibujo el 18-09 por la tarde: etapa con pasadas, el núcleo del mundo como árbitro, señales que se validan, anotan o redefinen, y la cortapisa que gana. Quién arbitra ya estaba definido: **sistemas de referencia por universo**, con cita y condición, nunca uno para todo. |
 
 Con esto, el orden de «Lo que falta» de abajo cambia: la pantalla de alcance y
 los dos carriles van antes que los instrumentos visuales, porque sin ellos la
@@ -241,7 +267,7 @@ cambia el puente al disco.
 | 1. Inicio | construida, pendiente de revisión | Los cuatro mundos (propuesta), abrir, recientes, y la tira de sistemas ya construidos mostrados por sus colores y su familia. Dice en pantalla que el núcleo por mundo no está investigado. |
 | 2. Recolección | construida, pendiente de revisión | Entran archivos reales, por el selector del sistema o arrastrados. Se leen **CSS** (colores, familias, longitudes), **tokens W3C** (color, fontFamily, dimension), **imágenes** (paleta dominante) e **IDML** (muestras de color, familias, estilos de párrafo). PDF y el resto se registran como referente y lo dicen. Cada candidato apunta al requisito que resuelve y declara lo que el insumo no trae (una licencia, por ejemplo). |
 | 3. Definición | construida, pendiente de revisión | Los 43 requisitos reales, evaluados por `evaluateManifest` del núcleo: cada uno resuelto o no, con sus motivos. Tres caminos por pendiente; **Diseñador** abre el instrumento del parámetro, **ContOpe** crea el encargo, **Insumo** manda a recolección. Aprobar pide la fuerza. Explicaciones de las 43. |
-| 4. Construcción y armonización | sin dibujar | Muestra el estado real por dimensión, los encargos y los conflictos de origen. Nada más, porque no se dibuja sin conversarla. |
+| 4. Construcción y armonización | construcción sin dibujar; armonización con primer dibujo | Construcción muestra el estado real por dimensión, los encargos y los conflictos de origen. Armonización: puerta hasta completar el paquete, árbitro del mundo, señales de reglas y de conflictos, validar/anotar/redefinir, pasadas guardadas en el archivo. Para conversar. |
 | 5. Elegir tipografía | construida sobre lo aprobado | Las 1.946 familias de Google Fonts con los filtros de Google, muestra viva, contador de las que no declaran trazo, ancho leído del nombre, y el árbol de cuatro casos con prefiltro modificable. |
 
 Instrumentos, además del selector de tipografías: **parches de color** para el
@@ -309,7 +335,9 @@ se puedan revertir sabiendo por qué existían.
    recolección con la marca de «qué tomo de este insumo». Son del flujo del 18
    de septiembre y van primero porque sin ellos las cortapisas no existen.
 1. La pantalla 4: el editor visual y el artefacto de exhibición para la
-   armonización. Sin conversarla, no.
+   armonización. Sin conversarla, no. (La etapa de armonización ya tiene su
+   primer dibujo, para conversar; lo que falta es el editor visual y la lectura
+   de las declaraciones por la IA.)
 2. Instrumentos visuales para el resto de los parámetros (roles de color,
    superficies, estados, roles tipográficos, retícula, imagen…). Hoy los
    resuelve el editor estructurado. Las primitivas (cómo se muestran) ya

@@ -22,6 +22,9 @@
  * - Aprobar no cambia el valor; reabrir no lo borra.
  * - Declarar el alcance reemplaza el anterior entero: es una decisión de
  *   contorno (qué preguntas exige el sistema), no un ajuste parcial.
+ * - La armonización es una etapa con pasadas (decisión 23): resolver una señal
+ *   la marca como validada o anotada en la pasada actual; reabrirla borra esa
+ *   decisión; una pasada nueva sólo sube el contador, las decisiones quedan.
  */
 import type {
   DesignSetEntryV0,
@@ -59,7 +62,10 @@ export type Accion =
   | { tipo: 'quitar-definicion'; requirementId: string }
   | { tipo: 'encargar-a-contope'; requirementId: string }
   | { tipo: 'registrar-verificacion'; registro: VerificationRecordV0 }
-  | { tipo: 'registrar-capsula'; contrato: DesignContractV1 };
+  | { tipo: 'registrar-capsula'; contrato: DesignContractV1 }
+  | { tipo: 'resolver-senal'; senalId: string; estado: 'validada' | 'anotada'; nota?: string }
+  | { tipo: 'reabrir-senal'; senalId: string }
+  | { tipo: 'nueva-pasada' };
 
 function esRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -405,5 +411,24 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
 
     case 'registrar-capsula':
       return { ...sistema, capsulaAnterior: accion.contrato };
+    case 'resolver-senal': {
+      // Anotar sin nota no es una decisión: se ignora.
+      const nota = accion.nota?.trim() ?? '';
+      if (accion.estado === 'anotada' && nota === '') return sistema;
+      const pasada = Math.max(1, sistema.armonizacion.pasadas);
+      const decision = { estado: accion.estado, en: ahora, pasada, ...(nota !== '' ? { nota } : {}) };
+      return {
+        ...sistema,
+        armonizacion: { pasadas: pasada, senales: { ...sistema.armonizacion.senales, [accion.senalId]: decision } },
+      };
+    }
+    case 'reabrir-senal': {
+      if (sistema.armonizacion.senales[accion.senalId] === undefined) return sistema;
+      const senales = { ...sistema.armonizacion.senales };
+      delete senales[accion.senalId];
+      return { ...sistema, armonizacion: { ...sistema.armonizacion, senales } };
+    }
+    case 'nueva-pasada':
+      return { ...sistema, armonizacion: { ...sistema.armonizacion, pasadas: sistema.armonizacion.pasadas + 1 } };
   }
 }

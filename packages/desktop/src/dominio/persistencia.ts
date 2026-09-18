@@ -12,9 +12,13 @@
  * Los dos se completan al leer —un archivo viejo abre como referente que toma
  * todo—, pero un carril que no sea uno de los dos, o una dimensión
  * desconocida en `tomar`, rechazan el archivo entero.
+ *
+ * Y `armonizacion` (desde la tarde del 18-09): si falta, el archivo abre con
+ * cero pasadas y sin señales decididas; si viene con otra forma, se rechaza.
  */
 import { DIMENSION_IDS, validateDesignSetShape, type DimensionId } from '@contope/core';
 import type { Alcance } from './alcance.js';
+import { armonizacionVacia, type Armonizacion, type DecisionSobreSenal } from './armonizacion.js';
 import { esMundoId } from './mundos.js';
 import { KIND_SISTEMA, SCHEMA_SISTEMA, type Carril, type Insumo, type Sistema } from './sistema.js';
 
@@ -79,6 +83,26 @@ function normalizarInsumos(valor: unknown): { ok: true; insumos: Insumo[] } | { 
   return { ok: true, insumos };
 }
 
+function validarArmonizacion(valor: unknown): { ok: true; armonizacion: Armonizacion } | { ok: false; motivo: string } {
+  if (valor === undefined || valor === null) return { ok: true, armonizacion: armonizacionVacia() };
+  if (!esRecord(valor)) return { ok: false, motivo: "'armonizacion' debe ser un objeto" };
+  const pasadas = valor['pasadas'];
+  if (typeof pasadas !== 'number' || !Number.isInteger(pasadas) || pasadas < 0) {
+    return { ok: false, motivo: "'armonizacion.pasadas' debe ser un entero no negativo" };
+  }
+  if (!esRecord(valor['senales'])) return { ok: false, motivo: "'armonizacion.senales' debe ser un objeto" };
+  const senales: Record<string, DecisionSobreSenal> = {};
+  for (const [id, d] of Object.entries(valor['senales'])) {
+    if (!esRecord(d)) return { ok: false, motivo: `la señal '${id}' debe ser un objeto` };
+    const estado = d['estado'];
+    if (estado !== 'validada' && estado !== 'anotada') return { ok: false, motivo: `estado desconocido en la señal '${id}': ${String(estado)}` };
+    if (typeof d['en'] !== 'string' || typeof d['pasada'] !== 'number') return { ok: false, motivo: `la señal '${id}' necesita 'en' y 'pasada'` };
+    if (d['nota'] !== undefined && typeof d['nota'] !== 'string') return { ok: false, motivo: `la nota de la señal '${id}' debe ser texto` };
+    senales[id] = { estado, en: d['en'], pasada: d['pasada'], ...(typeof d['nota'] === 'string' ? { nota: d['nota'] } : {}) };
+  }
+  return { ok: true, armonizacion: { pasadas, senales } };
+}
+
 export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } | { ok: false; motivo: string } {
   if (!esRecord(valor)) return { ok: false, motivo: 'el archivo no contiene un objeto' };
   if (valor['kind'] !== KIND_SISTEMA) return { ok: false, motivo: `no es un sistema de ContOpe Design (kind '${String(valor['kind'])}')` };
@@ -93,11 +117,18 @@ export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } |
   if (!alcance.ok) return { ok: false, motivo: alcance.motivo };
   const insumos = normalizarInsumos(valor['insumos']);
   if (!insumos.ok) return { ok: false, motivo: insumos.motivo };
+  const armonizacion = validarArmonizacion(valor['armonizacion']);
+  if (!armonizacion.ok) return { ok: false, motivo: armonizacion.motivo };
   const set = validateDesignSetShape(valor['designSet']);
   if (!set.ok) return { ok: false, motivo: `DesignSet inválido: ${set.errores.map((e) => e.mensaje).join('; ')}` };
   return {
     ok: true,
-    sistema: { ...(valor as unknown as Sistema), alcance: alcance.alcance, insumos: insumos.insumos },
+    sistema: {
+      ...(valor as unknown as Sistema),
+      alcance: alcance.alcance,
+      insumos: insumos.insumos,
+      armonizacion: armonizacion.armonizacion,
+    },
   };
 }
 

@@ -323,3 +323,25 @@ describe('reducir · los dos carriles de insumos', () => {
     expect(s.insumos[0]?.tomar).toBeNull();
   });
 });
+
+describe('reducir · armonización', () => {
+  it('resolver una señal la marca en la pasada actual (mínimo 1) y reabrirla la borra', () => {
+    let s = nuevoSistema('digital', 'Prueba', AHORA);
+    s = reducir(s, { tipo: 'resolver-senal', senalId: 'regla:x', estado: 'validada' }, AHORA);
+    expect(s.armonizacion).toEqual({ pasadas: 1, senales: { 'regla:x': { estado: 'validada', en: AHORA, pasada: 1 } } });
+    s = reducir(s, { tipo: 'reabrir-senal', senalId: 'regla:x' }, AHORA);
+    expect(s.armonizacion.senales).toEqual({});
+  });
+
+  it('anotar exige nota; una pasada nueva sube el contador y conserva lo decidido', () => {
+    let s = nuevoSistema('digital', 'Prueba', AHORA);
+    const sinNota = reducir(s, { tipo: 'resolver-senal', senalId: 'regla:x', estado: 'anotada', nota: '  ' }, AHORA);
+    expect(sinNota).toBe(s);
+    s = reducir(s, { tipo: 'resolver-senal', senalId: 'regla:x', estado: 'anotada', nota: 'se deja así' }, AHORA);
+    s = reducir(s, { tipo: 'nueva-pasada' }, AHORA);
+    expect(s.armonizacion.pasadas).toBe(2);
+    expect(s.armonizacion.senales['regla:x']).toEqual({ estado: 'anotada', nota: 'se deja así', en: AHORA, pasada: 1 });
+    s = reducir(s, { tipo: 'resolver-senal', senalId: 'regla:y', estado: 'validada' }, AHORA);
+    expect(s.armonizacion.senales['regla:y']?.pasada).toBe(2);
+  });
+});

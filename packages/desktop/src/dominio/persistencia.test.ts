@@ -86,3 +86,13 @@ describe('persistencia · carril y tomar de los insumos', () => {
     expect(parsearSistema(serializarSistema(s))).toEqual(s);
   });
 });
+
+describe('persistencia · armonización', () => {
+  it('un archivo sin armonización abre con cero pasadas; una forma rara se rechaza', () => {
+    const base = nuevoSistema('digital', 'x') as unknown as Record<string, unknown>;
+    const { armonizacion: _sin, ...viejo } = base;
+    expect(parsearSistema(JSON.stringify(viejo)).armonizacion).toEqual({ pasadas: 0, senales: {} });
+    const raro = { ...base, armonizacion: { pasadas: 1, senales: { 'regla:x': { estado: 'quizás', en: 'hoy', pasada: 1 } } } };
+    expect(() => parsearSistema(JSON.stringify(raro))).toThrow(/estado desconocido/);
+  });
+});

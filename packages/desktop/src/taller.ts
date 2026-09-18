@@ -10,7 +10,7 @@ import type { Accion } from './dominio/reductor.js';
 import type { Sistema } from './dominio/sistema.js';
 import type { Puente } from './puente/index.js';
 
-export type Pantalla = 'inicio' | 'alcance' | 'recoleccion' | 'definicion' | 'construccion';
+export type Pantalla = 'inicio' | 'alcance' | 'recoleccion' | 'definicion' | 'construccion' | 'armonizacion';
 
 /** Un instrumento abierto desde un parámetro (INTERFAZ.md: ventanas, no etapas). */
 export type Instrumento =
