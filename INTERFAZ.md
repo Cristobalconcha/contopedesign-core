@@ -214,7 +214,7 @@ las pantallas de arriba, esto es lo que cambia y lo que no:
 |---|---|
 | 1. Inicio | Se queda como está (elegir mundo, abrir, recientes). Pero **ya no salta a Recolección**: pasa a una pantalla nueva. |
 | **1b. Alcance** (construida el 18-09, commit `8b7187d`) | Una línea para describir el trabajo al que va el sistema, y el desglose de las dimensiones del mundo con casillas: las del núcleo marcadas y fijas, las demás a elección. Lo marcado es el paquete de definiciones, y Definición mide contra él. |
-| 2. Recolección | El paso 2 del ciclo («qué se toma de este insumo») **estaba diseñado y no se construyó**; pasa a ser obligatorio y se hace sobre el mismo desglose de dimensiones. Y la zona de incorporar se parte en **dos carriles**: referentes (entran como propuesta) y cortapisas (entran como rectora, con qué se toma y qué queda abierto). |
+| 2. Recolección | **Construido el 18-09** (commit `2587a3a`): el paso 2 del ciclo («qué se toma de este insumo») son chips por dimensión sobre el insumo activo, y la zona de incorporar tiene **dos carriles**: referentes (entran como propuesta) y cortapisas (entran aprobadas e inamovibles; desplazan a un referente y lo dejan en conflictos). |
 | 3. Definición | Se ordena en dos momentos: primero **asignar los rieles** a todos los vacíos, después **definir**. Lo asignado al diseñador abre el instrumento del parámetro; GrapesJS entra como instrumento opcional que abre en el apartado de la variable. Sólo se exigen las preguntas del paquete. |
 | 4. Armonización | Sigue sin dibujar. Lo que sí quedó definido es quién arbitra: **sistemas de referencia por universo**, con cita y condición, nunca uno para todo. |
 

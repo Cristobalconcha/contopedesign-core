@@ -128,11 +128,13 @@ También acá se marca qué se toma y qué queda abierto para cambiar.
 Los dos carriles reciben lo mismo (IDML, PDF, tokens, CSS, imágenes, páginas
 web); lo que cambia es la fuerza con que entra lo que traen.
 
-*Estado:* Recolección lee CSS, tokens W3C, imágenes e IDML; PDF y páginas web
-sólo se registran. La pantalla tenía diseñado «qué se toma de este insumo»
-desde el 13 de septiembre, pero **no se construyó**: todo candidato entra como
-propuesta explorable. **No hay dos carriles**, y las rectoras se pasan vacías al
-evaluador.
+*Estado:* **construido el 18 de septiembre** (commit `2587a3a`): el conmutador
+referente/cortapisa, los chips de «qué tomo de este insumo» por dimensión, y
+la cortapisa entrando aprobada e inamovible (si desplaza a un referente, lo
+desplazado queda en conflictos para la armonización). Recolección lee CSS,
+tokens W3C, imágenes e IDML; PDF y páginas web sólo se registran. Las rectoras
+del núcleo (descriptor, mood wall) siguen sin restricciones: una cortapisa se
+expresa por fuerza y ciclo de vida, no por tags.
 
 ### 2. Rieles: quién resuelve cada vacío
 
@@ -355,9 +357,11 @@ de Claude Design y el inventario de InDesign. Un núcleo son dos cosas: las
 preguntas que ese mundo no puede dejar sin responder y las reglas con umbral y cita
 que dicen cuándo una respuesta está bien; las reglas llevan condición cuando la
 fuente describe un tipo de pieza (los umbrales de Claude Design valen para un
-documento de oficina, no para un folleto de imprenta). Marca y campaña siguen sin
-núcleo medido, a propósito: no hay pieza real que medir; ver las decisiones 11 y 18
-del vault.
+documento de oficina, no para un folleto de imprenta). Desde la tarde del 18 de septiembre los cuatro mundos tienen núcleo:
+marca, medido sobre la identidad real de Santa Luisa y las referencias de marca de
+Claude Design (sin pieza de packaging, y se dice); campaña, sobre las piezas para
+redes (con la regla de 1080 px de ancho mínimo). Ver
+`nucleo-mundos-marca-campana-medicion-2026-09-18.md` en el vault.
 Y dos límites del formato que salieron medidos esa noche: una dependencia o una
 referencia hacia **otra dimensión** no se puede **resolver** dentro del manifiesto
 (el validador comprueba a qué requisito apunta, pero el evaluador arma su contexto
