@@ -39,6 +39,8 @@ export function tipoDePaquete(packageId: string): TipoPrimitiva {
   if (p.startsWith('composicion.')) return 'reticula';
   // dim7: sin primitiva visual propia todavía; se muestra como texto.
   if (p.startsWith('interaccion.')) return 'texto';
+  // dim8: sin primitiva visual propia todavía; se muestra como texto.
+  if (p.startsWith('movimiento.')) return 'texto';
   return 'nada';
 }
 

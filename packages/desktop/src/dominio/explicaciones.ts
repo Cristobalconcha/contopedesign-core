@@ -111,4 +111,18 @@ export const EXPLICACIONES: Readonly<Record<string, string>> = {
     'Una interacción pensada para pantalla necesita su versión quieta para cuando no hay pantalla: el carrusel pasa a ser una lista de fotos con su pie, y así la intención no se pierde al imprimir.',
   'dim7.req08':
     'El botón de la acción principal no inventa su propio color: usa el rol de acento. Si además le escribes un color a mano, ese valor se desincroniza del tema, y el día que cambies el tema quedan dos verdades.',
+  'dim8.req01':
+    'Antes de animar nada, decide qué tiene que sentir quien mira: si el sistema es sobrio o juguetón, si va rápido o se toma su tiempo. Escribe esos principios y de dónde salen —por ejemplo, «nada rebota» viene del manual de marca—, porque todo lo demás se va a medir contra eso.',
+  'dim8.req02':
+    'Tienes seis papeles: entrada, salida, transición, feedback, orientación y énfasis. Para cada uno escribe qué significa en este diseño y cuánto dura, tomando el tiempo de tu escala. Si algún papel no existe acá, dilo y explica por qué; lo que no sirve es dejarlo en blanco.',
+  'dim8.req03':
+    'Haz una lista corta de duraciones con nombre —inmediata 160 ms, breve 240 ms, entrada 420 ms, por ejemplo— y de ahí saca los tiempos de todos tus movimientos. Así nadie inventa un número suelto y el sistema se siente parejo. El ritmo es cómo se encadenan esos tiempos y en qué momentos haces pausas.',
+  'dim8.req04':
+    'Un movimiento no queda completo si sólo dices cuánto dura: también necesitas la curva —si arranca despacio y frena al final, por ejemplo— y por dónde pasa. Si se desplaza, di cuánto recorre (24 px, media unidad de escala) y que sigue la misma retícula; si sólo aparece y desaparece, escríbelo igual.',
+  'dim8.req05':
+    'Escribe qué hace que cada movimiento parta: que la página cargue, que el bloque entre en pantalla, que el puntero pase por encima. Si el disparador es uno que el compilador ya entiende (carga, scroll, hover), márcalo; si es otro —recibir foco, un dato nuevo, el paso del tiempo— descríbelo con tus palabras.',
+  'dim8.req06':
+    'Cuando varios elementos se mueven juntos, di en qué orden entran y con cuánto atraso cada uno, y cómo se relacionan —por ejemplo: primero el titular, después la bajada, y el botón sólo cuando lo tocan—. También di qué pasa si la persona ya está interactuando y la secuencia programada se cruza con ella.',
+  'dim8.req07':
+    'Cuenta qué pasa cuando alguien pide menos movimiento. Si eliges la versión reducida o la estática, di qué reemplaza a cada rol y con qué se comunica el cambio sin animación (un borde, el color de acción del sistema, más peso visual). Y si decides que no hay movimiento decorativo, explica igual cómo se entiende qué cambió y qué es más importante.',
 };

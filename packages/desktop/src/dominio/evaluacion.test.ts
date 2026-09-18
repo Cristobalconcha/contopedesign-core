@@ -49,13 +49,13 @@ export function sistemaConDim3Completa(): Sistema {
 }
 
 describe('evaluar', () => {
-  it('un sistema vacío tiene 51 requisitos y ninguno resuelto', () => {
+  it('un sistema vacío tiene 58 requisitos y ninguno resuelto', () => {
     const e = evaluar(nuevoSistema('digital', 'Vacío', AHORA));
-    expect(e.total).toBe(51);
+    expect(e.total).toBe(58);
     expect(e.resueltos).toBe(0);
     expect(e.completo).toBe(false);
     expect(e.porRequisito.get('dim1.req01')?.resultado).toBe('no-resuelto');
-    expect(e.porDimension.size).toBe(6);
+    expect(e.porDimension.size).toBe(7);
   });
 
   it('la dimensión de espacio queda resuelta con un set válido, y las demás no', () => {
