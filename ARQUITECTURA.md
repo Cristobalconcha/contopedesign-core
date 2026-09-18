@@ -169,7 +169,7 @@ la definición con el universo web, donde ya hay un destino real que lee esas
 mismas variables. Es compatible con el principio de INTERFAZ.md: un instrumento
 por tipo de parámetro, que se abre desde el parámetro.
 
-#### Tres formas de definir, según lo que se define — propuesta mía, para revisión
+#### Tres formas de definir, según lo que se define — aceptado (decisión 26); la declaración tiene instrumento desde el 18-09
 
 Cristóbal puso el caso límite: *«Libro de 48 páginas en pliegos de 8 con
 corchete y hotmelt»*. Una primitiva que exprese el sistema de encuadernación
@@ -181,7 +181,7 @@ a eso sin inventar nada nuevo en el core:
 | forma | qué define | cómo se muestra | cómo se comprueba | dónde vive en el core |
 |---|---|---|---|---|
 | **Por variable** | color, tipografía, espacio, borde, retícula, imagen: lo que se reduce a valores con rol | primitiva e instrumento propios; GrapesJS para el subconjunto que es CSS | predicado del manifiesto (máquina) | los payloads de hoy |
-| **Por declaración** | encuadernación, materialidad, acabado, terminaciones, plegado, y todo lo que no cabe en un valor | una tarjeta con el texto, tal cual, junto a las demás primitivas | no la valida un predicado: la lee la IA en la armonización (que es la etapa que trabaja con IA, decisión 23) y la confirma el diseñador | payload `texto` + cláusula `verified`, que ya existen |
+| **Por declaración** | encuadernación, materialidad, acabado, terminaciones, plegado, y todo lo que no cabe en un valor | una tarjeta con el texto, tal cual, junto a las demás primitivas (instrumento `Declaracion.tsx`: texto, qué acota, quién ejecuta, o «no aplica» con porqué) | no la valida un predicado: la lee la IA en la armonización (que es la etapa que trabaja con IA, decisión 23) y la confirma el diseñador | payload `texto` + cláusula `verified`, que ya existen |
 | **Por referencia** | «como en el sistema anterior», «como en este referente» | la primitiva del referente, marcada como tomada | `ref` + presencia | los referentes y las cortapisas del paso 1 |
 
 Lo que hace que la declaración no sea texto suelto son dos campos, además del

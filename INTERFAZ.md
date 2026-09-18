@@ -247,6 +247,16 @@ eligiendo entre lo ya definido, listas con filas— y evalúa en vivo con el
 evaluador real. No es texto libre; es lo que falta mientras cada parámetro no
 tenga su instrumento visual, y así lo dice en su barra.
 
+Y el cuarto instrumento, desde el 18 de septiembre: **definir por declaración**
+(`instrumentos/Declaracion.tsx`), para lo que no cabe en un valor. Se abre en
+las preguntas de la salida física (dim10.req01–04; la confirmación de quien
+ejecuta, dim10.req05, sigue en el editor porque es una verificación). Tiene dos
+ramas: **declarar** —el texto en palabras del diseñador, qué dimensiones acota
+(casillas de las otras nueve) y quién la ejecuta (el destino, un proveedor, el
+diseñador)— o **no aplica a este sistema**, con su porqué. Se guarda con
+procedencia diseñador, y la fila lo muestra como texto: la declaración recortada,
+o «no aplica: …».
+
 ### Decisiones tomadas sin preguntar
 
 Todas son reversibles y están anotadas donde se tomaron. Se listan para que
