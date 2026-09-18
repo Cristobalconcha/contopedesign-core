@@ -26,3 +26,4 @@ export * from './manifest-v0-dim6.js';
 export * from './manifest-v0-dim7.js';
 export * from './manifest-v0-dim8.js';
 export * from './manifest-v0-dim9.js';
+export * from './manifest-v0-dim10.js';

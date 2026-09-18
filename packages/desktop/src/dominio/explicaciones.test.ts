@@ -6,7 +6,7 @@ describe('explicaciones', () => {
   it('hay exactamente una por requisito activo del manifiesto, ni más ni menos', () => {
     const ids = REQUISITOS.map((r) => r.id).sort();
     expect(Object.keys(EXPLICACIONES).sort()).toEqual(ids);
-    expect(ids).toHaveLength(79);
+    expect(ids).toHaveLength(84);
   });
 
   it('ninguna está vacía ni repite la pregunta del requisito', () => {

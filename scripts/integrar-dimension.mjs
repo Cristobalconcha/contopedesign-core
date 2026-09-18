@@ -36,10 +36,11 @@ if (!idx.includes(linea)) {
   // Los archivos del repo pueden venir con CRLF: se parte por cualquiera de los dos
   // (el 18-09 la versión anterior no reconoció las líneas con \r y dejó dim4 al final).
   const lines = idx.split(/\r?\n/);
-  const exportsManifest = lines.filter((l) => /^export \* from '\.\/manifest-v0-dim\d\.js';$/.test(l));
-  const resto = lines.filter((l) => !/^export \* from '\.\/manifest-v0-dim\d\.js';$/.test(l));
+  // \d+ y no \d: desde el 18-09 hay una dimensión de dos dígitos (dim10).
+  const exportsManifest = lines.filter((l) => /^export \* from '\.\/manifest-v0-dim\d+\.js';$/.test(l));
+  const resto = lines.filter((l) => !/^export \* from '\.\/manifest-v0-dim\d+\.js';$/.test(l));
   exportsManifest.push(linea);
-  exportsManifest.sort((a, b) => Number(a.match(/dim(\d)/)[1]) - Number(b.match(/dim(\d)/)[1]));
+  exportsManifest.sort((a, b) => Number(a.match(/dim(\d+)/)[1]) - Number(b.match(/dim(\d+)/)[1]));
   // Los exports de manifiesto van al final del archivo, después del resto.
   while (resto.length && resto[resto.length - 1] === '') resto.pop();
   idx = [...resto, ...exportsManifest, ''].join('\n');
@@ -51,12 +52,12 @@ const manPath = path.join(DOM, 'manifiesto.ts');
 let man = read(manPath);
 const constName = `DIM${N}_MANIFEST_V0`;
 if (!man.includes(constName)) {
-  const ordenar = (arr) => arr.sort((a, b) => Number(a.match(/DIM(\d)/)[1]) - Number(b.match(/DIM(\d)/)[1]));
+  const ordenar = (arr) => arr.sort((a, b) => Number(a.match(/DIM(\d+)/)[1]) - Number(b.match(/DIM(\d+)/)[1]));
   // import { DIM1_MANIFEST_V0, ... } — reconstruye la lista de DIMx_MANIFEST_V0 dentro del import.
   man = man.replace(/import \{([\s\S]*?)\} from '@contope\/core';/, (m, body) => {
     const items = body.split(',').map((s) => s.trim()).filter(Boolean);
-    const dims = ordenar([...items.filter((s) => /^DIM\d_MANIFEST_V0$/.test(s)), constName]);
-    const otros = items.filter((s) => !/^DIM\d_MANIFEST_V0$/.test(s));
+    const dims = ordenar([...items.filter((s) => /^DIM\d+_MANIFEST_V0$/.test(s)), constName]);
+    const otros = items.filter((s) => !/^DIM\d+_MANIFEST_V0$/.test(s));
     return `import {\n${[...dims, ...otros].map((s) => `  ${s},`).join('\n')}\n} from '@contope/core';`;
   });
   man = man.replace(/export const MANIFIESTOS: ReadonlyArray<RequirementManifestV0> = \[([\s\S]*?)\];/, (m, body) => {
@@ -66,7 +67,7 @@ if (!man.includes(constName)) {
   man = man.replace(/export const NOMBRE_DIMENSION: Partial<Record<DimensionId, string>> = \{([\s\S]*?)\};/, (m, body) => {
     const entradas = body.split('\n').map((s) => s.trim()).filter(Boolean);
     entradas.push(`dim${N}: '${nombre}',`);
-    entradas.sort((a, b) => Number(a.match(/dim(\d)/)[1]) - Number(b.match(/dim(\d)/)[1]));
+    entradas.sort((a, b) => Number(a.match(/dim(\d+)/)[1]) - Number(b.match(/dim(\d+)/)[1]));
     return `export const NOMBRE_DIMENSION: Partial<Record<DimensionId, string>> = {\n${entradas.map((s) => `  ${s}`).join('\n')}\n};`;
   });
   write(manPath, man);
@@ -83,7 +84,7 @@ if (!exp.includes(`'dim${N}.req01'`)) {
   // Inserta antes de la primera entrada de una dimensión mayor, o al final.
   const lines = exp.split('\n');
   let insertAt = lines.findIndex((l) => {
-    const m = l.match(/^  'dim(\d)\.req\d\d':/);
+    const m = l.match(/^  'dim(\d+)\.req\d\d':/);
     return m && Number(m[1]) > Number(N);
   });
   if (insertAt < 0) insertAt = lines.lastIndexOf('};');
@@ -95,9 +96,9 @@ if (!exp.includes(`'dim${N}.req01'`)) {
 // Sólo sobre los manifiestos REGISTRADOS en manifiesto.ts: un archivo suelto en el
 // árbol no cuenta (medido en el ensayo del 18-09). Y el número de dimensiones
 // (porDimension.size) sube con ellos.
-const registrados = [...new Set([...read(manPath).matchAll(/DIM(\d)_MANIFEST_V0/g)].map((m) => m[1]))];
+const registrados = [...new Set([...read(manPath).matchAll(/DIM(\d+)_MANIFEST_V0/g)].map((m) => m[1]))];
 const total = registrados.reduce(
-  (acc, d) => acc + (read(path.join(RM, `manifest-v0-dim${d}.ts`)).match(/id: 'dim\d\.req\d\d'/g) ?? []).length,
+  (acc, d) => acc + (read(path.join(RM, `manifest-v0-dim${d}.ts`)).match(/id: 'dim\d+\.req\d\d'/g) ?? []).length,
   0,
 );
 {

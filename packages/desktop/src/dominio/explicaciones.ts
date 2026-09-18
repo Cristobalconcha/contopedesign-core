@@ -167,4 +167,14 @@ export const EXPLICACIONES: Readonly<Record<string, string>> = {
     'Cuenta cómo se porta un patrón cuando cambia el contexto —pantalla angosta, impresión, otro idioma— y qué se ajusta en cada caso. Si no cambia nada, declara esa decisión: una lista vacía no cuenta como respuesta.',
   'dim9.req07':
     'Escribe cómo entra un patrón nuevo al sistema, cómo se migran los sets que ya existen y qué les pasa a los sets históricos. La idea es que agregar algo no deje mudos ni incompletos a los sets viejos sin que nadie se entere.',
+'dim10.req01':
+    'Qué soportes exige el sistema para imprimirse: el papel o el sustrato y su gramaje, o la tela o el vinilo. Un sistema que sólo vive en pantalla lo dice aquí mismo, en vez de dejar el hueco en blanco.',
+  'dim10.req02':
+    'El acabado es lo que se le hace a la superficie después de imprimir: laminado mate o brillante, barniz, reserva UV, estampado, relieve. Si no hay superficie que tratar, se declara que no aplica.',
+  'dim10.req03':
+    'Las terminaciones son los cortes y las formas finales: troquel, corte al ras, plegado especial, perforado, numerado. Es lo que el sistema exige que se le haga a la hoja después de imprimir para que quede armada como corresponde.',
+  'dim10.req04':
+    'Cómo se arma el conjunto: pliegos doblados y cosidos con hilo, corchete, hotmelt, espiral o anillado. Es la decisión que más pesa en un libro y no cabe en un solo dato; por eso se escribe en palabras.',
+  'dim10.req05':
+    'No basta con que las instrucciones estén bien escritas: quien las va a ejecutar —la imprenta o el taller— tiene que confirmar que se pueden hacer tal como quedaron, y esa confirmación queda registrada.',
 };

@@ -15,9 +15,11 @@
  */
 
 /**
- * IDs de las nueve dimensiones aprobadas (Puerta 0 punto 1). El espacio de
- * coordenadas es cerrado por diseño: una décima dimensión exige cambiar el
- * formato de ID y es un cambio MAJOR (spec §3.1).
+ * IDs de las dimensiones del catálogo. Nueve aprobadas en la Puerta 0 (punto
+ * 1); la décima, salida física, entró el 18-09-2026 (decisión 26 del vault:
+ * «alfa cero, el set crece cuando haga falta»). El espacio de coordenadas
+ * sigue cerrado: agregar una dimensión es cambiar esta lista y el patrón de
+ * abajo, y es un cambio MAJOR (spec §3.1); esta fue la primera vez.
  */
 export const DIMENSION_IDS = [
   'dim1',
@@ -29,11 +31,12 @@ export const DIMENSION_IDS = [
   'dim7',
   'dim8',
   'dim9',
+  'dim10',
 ] as const;
 export type DimensionId = (typeof DIMENSION_IDS)[number];
 
-/** Patrón exacto de ID de requisito (spec §2, §3.1): `^dim[1-9]\.req[0-9]{2}$`. */
-export const REQUIREMENT_ID_PATTERN = /^dim[1-9]\.req[0-9]{2}$/;
+/** Patrón exacto de ID de requisito (spec §2, §3.1; diez dimensiones desde el 18-09-2026): `^dim(?:[1-9]|10).req[0-9]{2}$`. */
+export const REQUIREMENT_ID_PATTERN = /^dim(?:[1-9]|10).req[0-9]{2}$/;
 
 /** Los cinco ejes transversales (Puerta 0 punto 1). Exactamente 1 por requisito. */
 export const EJES = [
@@ -154,7 +157,7 @@ export interface MapsToKindsEntry {
  * implementación (c1-implementacion-extension-gramatica-2026-08-30.md).
  */
 export interface RequirementV0 {
-  /** string, patrón `^dim[1-9]\.req[0-9]{2}$`, único para siempre (spec §2, §3). */
+  /** string, patrón `^dim(?:[1-9]|10).req[0-9]{2}$`, único para siempre (spec §2, §3). */
   id: string;
   dimensionId: DimensionId;
   /** Exactamente 1 de 5 ejes (spec §2). */

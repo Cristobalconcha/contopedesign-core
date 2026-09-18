@@ -461,7 +461,7 @@ function isValidRequirement(raw: unknown, errores: ManifestValidationIssue[], pa
 
   const id = raw['id'];
   if (typeof id !== 'string' || !REQUIREMENT_ID_PATTERN.test(id)) {
-    errores.push(issue('id-patron-invalido', `${path}: id '${String(id)}' no cumple ^dim[1-9]\\.req[0-9]{2}$`));
+    errores.push(issue('id-patron-invalido', `${path}: id '${String(id)}' no cumple ^dim(?:[1-9]|10)\\.req[0-9]{2}$`));
     ok = false;
   }
 

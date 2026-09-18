@@ -43,6 +43,8 @@ export function tipoDePaquete(packageId: string): TipoPrimitiva {
   if (p.startsWith('movimiento.')) return 'texto';
   // dim9: sin primitiva visual propia todavía; se muestra como texto.
   if (p.startsWith('patrones.')) return 'texto';
+  // dim10: sin primitiva visual propia todavía; se muestra como texto.
+  if (p.startsWith('salida.')) return 'texto';
   return 'nada';
 }
 
