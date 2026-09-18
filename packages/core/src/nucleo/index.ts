@@ -10,3 +10,5 @@ export * from './types.js';
 export * from './evaluate.js';
 export * from './nucleo-web.js';
 export * from './nucleo-editorial.js';
+export * from './nucleo-marca.js';
+export * from './nucleo-campana.js';

@@ -7,7 +7,8 @@
  * tienen núcleo medido (`nucleoId`): el digital usa el núcleo web (el sitio
  * real, 2026-09-16) y el editorial el núcleo editorial impreso (el folleto
  * real, Claude Design e InDesign, 2026-09-18). Marca y campaña no tienen
- * núcleo todavía, y la interfaz lo dice en vez de fingirlo.
+ * núcleo desde la tarde del 18-09: marca sobre la identidad real de Santa Luisa
+ * (sin pieza de packaging, y se dice) y campaña sobre las piezas para redes.
  */
 export type MundoId = 'editorial' | 'marca' | 'digital' | 'campana';
 
@@ -19,7 +20,7 @@ export interface Mundo {
   /** Qué pesa en su núcleo (o qué debería, si no está medido). */
   nucleo: string;
   /** Núcleo medido del repo Core, si existe. */
-  nucleoId?: 'web' | 'editorial-impreso';
+  nucleoId?: 'web' | 'editorial-impreso' | 'marca' | 'campana';
 }
 
 export const MUNDOS: ReadonlyArray<Mundo> = [
@@ -34,7 +35,8 @@ export const MUNDOS: ReadonlyArray<Mundo> = [
     id: 'marca',
     nombre: 'Marca y packaging',
     abarca: 'Identidad, envase, etiqueta, aplicaciones.',
-    nucleo: 'Sin núcleo medido todavía; debería pesar el fundamento cromático, la materialidad y las escalas de reproducción.',
+    nucleo: 'Medido el 18-09 sobre la identidad real de Santa Luisa y las referencias de marca de Claude Design: 13 preguntas, con las equivalencias por sistema de color, los usos de marca y la fuerza de cada voz tipográfica. Sin pieza de packaging real: el núcleo es de marca.',
+    nucleoId: 'marca',
   },
   {
     id: 'digital',
@@ -47,7 +49,8 @@ export const MUNDOS: ReadonlyArray<Mundo> = [
     id: 'campana',
     nombre: 'Campaña',
     abarca: 'Difusión, redes, piezas de marketing.',
-    nucleo: 'Sin núcleo medido todavía; debería pesar el sistema de variantes, los formatos y la consistencia entre piezas.',
+    nucleo: 'Medido el 18-09 sobre las piezas para redes de Santa Luisa: 10 preguntas, con los formatos soportados, la resolución por medio, las variantes y la dominante; regla de 1080 px de ancho mínimo.',
+    nucleoId: 'campana',
   },
 ];
 

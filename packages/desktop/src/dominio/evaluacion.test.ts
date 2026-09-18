@@ -96,7 +96,7 @@ describe('evaluar', () => {
     expect(r?.resultado).toBe('no-resuelto');
     expect(r?.motivos.some((m) => m.codigo === 'dependencia-no-resuelta')).toBe(true);
   });
-  it('el mundo editorial tiene núcleo medido y arranca no-cubierto; marca no tiene núcleo todavía', () => {
+  it('los cuatro mundos tienen núcleo medido y arrancan no-cubiertos', () => {
     const editorial = evaluar(nuevoSistema('editorial', 'Folleto', AHORA));
     expect(editorial.nucleo?.mundoId).toBe('editorial-impreso');
     expect(editorial.nucleo?.resultado).toBe('no-cubierto');
@@ -105,7 +105,13 @@ describe('evaluar', () => {
     const digital = evaluar(nuevoSistema('digital', 'Sitio', AHORA));
     expect(digital.nucleo?.mundoId).toBe('web');
     expect(digital.nucleo?.contador.total).toBe(5);
-    expect(evaluar(nuevoSistema('marca', 'Marca', AHORA)).nucleo).toBeUndefined();
+    const marca = evaluar(nuevoSistema('marca', 'Marca', AHORA));
+    expect(marca.nucleo?.mundoId).toBe('marca');
+    expect(marca.nucleo?.contador.total).toBe(13);
+    const campana = evaluar(nuevoSistema('campana', 'Campaña', AHORA));
+    expect(campana.nucleo?.mundoId).toBe('campana');
+    expect(campana.nucleo?.contador.total).toBe(10);
+    expect(campana.nucleo?.contador.reglasTotal).toBe(2);
   });
 });
 

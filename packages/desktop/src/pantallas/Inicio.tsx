@@ -49,10 +49,11 @@ export function Inicio({ recientes, entorno, onNuevo, onAbrir, onAbrirReciente }
         <div className="inicio-main">
           <h1 className="pregunta-grande">¿En qué vas a trabajar?</h1>
           <p className="sub">
-            Cada mundo trae su propio núcleo de definiciones: lo que no puede faltar para poder construir. Dos están
-            medidos —el digital sobre el sitio real, el editorial sobre el folleto real, Claude Design e InDesign— y dos
-            no todavía. Los cuatro comparten el mismo manifiesto de 79 preguntas; los cuatro mundos siguen siendo una
-            propuesta sin confirmar.
+            Cada mundo trae su propio núcleo de definiciones: lo que no puede faltar para poder construir. Los cuatro
+            están medidos sobre cosas reales de Santa Luisa: el digital sobre el sitio, el editorial sobre el folleto (más
+            Claude Design e InDesign), la marca sobre su identidad (sin pieza de packaging todavía) y la campaña sobre las
+            piezas para redes. Los cuatro comparten el mismo manifiesto de 84 preguntas en diez dimensiones; los cuatro
+            mundos siguen siendo una propuesta sin confirmar.
           </p>
           <div className="mundos">
             {MUNDOS.map((m) => (

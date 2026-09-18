@@ -11,10 +11,13 @@ import { DIM6_MANIFEST_V0 } from '../requirement-manifest/manifest-v0-dim6';
 import { DIM7_MANIFEST_V0 } from '../requirement-manifest/manifest-v0-dim7';
 import { DIM8_MANIFEST_V0 } from '../requirement-manifest/manifest-v0-dim8';
 import { DIM9_MANIFEST_V0 } from '../requirement-manifest/manifest-v0-dim9';
+import { DIM10_MANIFEST_V0 } from '../requirement-manifest/manifest-v0-dim10';
 import type { RequirementResultV0 } from '../requirement-manifest/types';
 import { evaluarNucleo, validarNucleo } from './evaluate';
 import { NUCLEO_WEB } from './nucleo-web';
 import { NUCLEO_EDITORIAL } from './nucleo-editorial';
+import { NUCLEO_MARCA } from './nucleo-marca';
+import { NUCLEO_CAMPANA } from './nucleo-campana';
 import type { NucleoDeMundoV0 } from './types';
 
 const TODOS = [
@@ -27,6 +30,7 @@ const TODOS = [
   DIM7_MANIFEST_V0,
   DIM8_MANIFEST_V0,
   DIM9_MANIFEST_V0,
+  DIM10_MANIFEST_V0,
 ];
 
 /** Evalúa dim1 con la fixture que la resuelve entera y devuelve resultados + payloads. */
@@ -184,5 +188,41 @@ describe('núcleo del mundo editorial impreso', () => {
   it('una condición que apunta a un requisito inexistente es error de programa, no ausencia del set', () => {
     const roto: NucleoDeMundoV0 = { ...NUCLEO_EDITORIAL, reglas: [{ ...NUCLEO_EDITORIAL.reglas[1]!, condicion: { requisitoId: 'dim3.req99', ruta: ['modo'], igualA: 'x' } }] };
     expect(validarNucleo(roto, TODOS).errores.join('; ')).toContain('dim3.req99');
+  });
+});
+
+describe('núcleos de marca y campaña (medidos el 18-09 sobre Santa Luisa)', () => {
+  it('cada id existe y está activo; las reglas apuntan a entradas y traen cita', () => {
+    for (const n of [NUCLEO_MARCA, NUCLEO_CAMPANA]) {
+      const v = validarNucleo(n, TODOS);
+      expect(v.errores).toEqual([]);
+      expect(v.ok).toBe(true);
+    }
+  });
+
+  it('marca exige lo que hace viajar una identidad: equivalencias por sistema, usos de marca, fuerza de cada voz', () => {
+    const ids = NUCLEO_MARCA.entradas.map((e) => e.requisitoId);
+    expect(ids).toContain('dim1.req14');
+    expect(ids).toContain('dim5.req08');
+    expect(ids).toContain('dim2.req08');
+    expect(NUCLEO_MARCA.entradas.find((e) => e.requisitoId === 'dim5.req02')?.roles).toEqual(['marcas', 'simbolos']);
+    expect(NUCLEO_MARCA.fuente).toContain('Sin pieza de packaging');
+  });
+
+  it('campaña: un formato con medida declarada de menos de 1080 px de ancho no cumple; 1080 sí; una hoja cerrada no se compara', () => {
+    const conFormatos = (formatos: unknown[]) => {
+      const resultados = new Map<string, RequirementResultV0>([['dim3.req08', { requisitoId: 'dim3.req08', resultado: 'resuelto', motivos: [] }]]);
+      const payloads = new Map<string, unknown>([['dim3.req08', { formatos }]]);
+      return evaluarNucleo({ nucleo: NUCLEO_CAMPANA, resultados, payloads, manifests: TODOS, rectoras: emptyRectoras() }).reglas.find(
+        (r) => r.reglaId === 'campana.ancho-minimo-1080',
+      )?.resultado;
+    };
+    const post = { nombre: 'post', formato: 'medida-declarada', medida: { ancho: '1080px', alto: '1350px' }, orientacion: 'vertical', modo: 'pagina-fija' };
+    const video = { nombre: 'video', formato: 'medida-declarada', medida: { ancho: '1280px', alto: '720px' }, orientacion: 'apaisada', modo: 'pagina-fija' };
+    const chico = { nombre: 'chico', formato: 'medida-declarada', medida: { ancho: '720px', alto: '1280px' }, orientacion: 'vertical', modo: 'pagina-fija' };
+    const carta = { nombre: 'carta', formato: 'letter', orientacion: 'vertical', modo: 'pagina-fija' };
+    expect(conFormatos([post, video])).toBe('cumple');
+    expect(conFormatos([post, chico])).toBe('no-cumple');
+    expect(conFormatos([carta])).toBe('cumple');
   });
 });
