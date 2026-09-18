@@ -151,11 +151,11 @@ dimensiones hay. Todo lo demás los lee.
 | 4 | Forma, borde y profundidad | **no existe** — quedó esperando una decisión de producto sobre los «roles geométricos basales» (`lista-trabajo-2026-08-31.md`, ítem 4) | no | 0 |
 | 5 | Imagen y lenguaje gráfico | `spec-c1-dim5-…`, 3 pasadas | `manifest-v0-dim5.ts` | 8 |
 | 6 | Composición y jerarquía visual | `spec-c1-dim6-…`, 3 pasadas | `manifest-v0-dim6.ts` | 7 |
-| 7 | Interacción, estados, navegación y feedback | `spec-c1-dim7-interaccion-manifest-2026-08-31.md`, **2 pasadas; la propia spec pide una tercera antes de implementar** | no | 0 (7 en la spec) |
-| 8 | Movimiento y temporalidad | **no existe** | no | 0 |
+| 7 | Interacción, estados, navegación y feedback | `spec-c1-dim7-interaccion-manifest-2026-08-31.md`, 4 pasadas (2 de Claude, 2 de ZCode/GLM) | `manifest-v0-dim7.ts` (18-09) | 8 (I1 entró como req08) |
+| 8 | Movimiento y temporalidad | `spec-c1-dim8-movimiento-manifest-2026-09-18.md`, 2 pasadas de ZCode/GLM | `manifest-v0-dim8.ts` (18-09) | 7 |
 | 9 | Patrones reutilizables y representación de información | **no existe** | no | 0 |
 
-Total en código: **43** requisitos activos en cinco dimensiones. El protocolo
+Total en código al escribir esta tabla: **43** en cinco dimensiones; la noche del 18-09 fue subiendo (51 con la 7, 58 con la 8; ver la tabla y `evaluacion.test.ts`, que clava el número vigente). El protocolo
 que usaron las dimensiones 2 a 6: spec en el vault → al menos dos pasadas
 adversariales declaradas → manifiesto → pruebas → registro.
 
@@ -173,20 +173,31 @@ núcleo; 5–7 del escritorio; 8 de la documentación.
 | 4 | `…/requirement-manifest/index.ts` | `export * from './manifest-v0-dimN.js'`. | **No**: archivo compartido; una línea por dimensión, se integra en serie. |
 | 5 | `packages/desktop/src/dominio/manifiesto.ts` | Agregar `DIMN_MANIFEST_V0` a `MANIFIESTOS` (en orden de número) y el nombre a `NOMBRE_DIMENSION`. | **No**: compartido. |
 | 6 | `packages/desktop/src/dominio/explicaciones.ts` | Una explicación por requisito nuevo, en castellano llano, más larga que 40 caracteres y distinta de la pregunta. | Las explicaciones sí (bloque propio por dimensión); el archivo es compartido. |
-| 7 | `explicaciones.test.ts` y `evaluacion.test.ts` | Subir el total (hoy 43). | **No**: se hace una vez al integrar. |
-| 8 | `ARQUITECTURA.md` («Qué falta»), `INTERFAZ.md` (dice «cinco dimensiones» y «43»), vault `indice.md` | Que los documentos digan lo que hay. | Al final. |
+| 7 | `explicaciones.test.ts` y `evaluacion.test.ts` | Subir el total de requisitos **y el número de dimensiones** (`porDimension.size`). | **No**: se hace una vez al integrar. |
+| 7b | `packages/desktop/src/dominio/primitivas.ts` | **Obligatorio, no opcional** (medido el 18-09): `primitivas.test.ts` exige que ningún requisito caiga en `nada`. Un prefijo nuevo de paquete (`interaccion.`, `movimiento.`, `patrones.`) necesita su línea en `tipoDePaquete`; mientras no exista primitiva visual, la honesta es `texto`. | Compartido. |
+| 8 | `ARQUITECTURA.md` («Qué falta»), `INTERFAZ.md` (dice «cinco dimensiones» y «43»), **este `MAPA.md` (§5)**, vault `indice.md` | Que los documentos digan lo que hay. | Al final. |
 
-Opcionales, que **no** son condición de completa: un prefijo en
-`primitivas.tipoDePaquete`, casos en `muestraDePayload`, un instrumento
-visual propio, un extractor, un proyector a `designRuleSet` (sólo tiene
-sentido si `mapsToKinds` no está vacío; las dimensiones 6 y 7 declaran
-brecha en todos sus requisitos).
+Opcionales, que **no** son condición de completa: casos en `muestraDePayload`,
+un instrumento visual propio, un extractor, un proyector a `designRuleSet`
+(sólo tiene sentido si `mapsToKinds` no está vacío; la dimensión 6 declara
+brecha en todos sus requisitos; la 7 proyecta `form` en req05 y
+`button`/`color` en req08; la 8 proyecta `motion` en req03–req06).
 
 ### Trampas medidas
 
-- **Los conteos están clavados en dos pruebas** (`43`). Agregar un manifiesto
-  al registro sin subir los conteos rompe el escritorio aunque el núcleo
-  esté verde.
+- **Los conteos están clavados en dos pruebas** (requisitos y número de
+  dimensiones). Agregar un manifiesto al registro sin subir los conteos rompe
+  el escritorio aunque el núcleo esté verde. `scripts/integrar-dimension.mjs`
+  los sube solo (ver §7).
+- **Un `ref` hacia otra dimensión no se puede validar en C1.** El `store` del
+  predicado es por dimensión (`evaluate.ts`), así que `validCss`/`reference`
+  sobre una ref cruzada dan `referencia-rota`; sólo `exists` pasa. C2 sí la
+  resuelve (`adapter.resolveRefValue`, `findDanglingRefs`). Medido el 18-09 en
+  dim4.req03; la forma que sirve es `union(refTo(dim1.req02), color-css)` +
+  `exists`, con la verificación de la rama ref declarada en C2.
+- **Vitest levanta todo `*.test.ts` del paquete.** Un archivo a medio hacer en
+  el árbol rompe el verde de las demás dimensiones: los ayudantes escriben
+  fuera del árbol y se prueba en un `git worktree` aparte.
 - **`dependsOn` no cruza dimensiones.** Una dependencia hacia otra
   dimensión se declara en `mappingNotes` o en la spec, no en el grafo.
 - **`dim1.req03` menciona `dim7.req10`** en el `valueNotes` de su

@@ -65,6 +65,22 @@ export const EXPLICACIONES: Readonly<Record<string, string>> = {
     'Qué pasa con los espacios cuando la pantalla se achica o cuando la interfaz tiene que ser más densa: qué se apila, en qué orden, qué se comprime. Si no está dicho, lo decide el navegador.',
   'dim3.req07':
     'Otro puente técnico: WordPress tiene un solo campo de espaciado (un número de 0 a 64). Esto pregunta cómo se relaciona la escala del sistema con ese único número.',
+  'dim4.req01':
+    'Antes de dibujar nada, el set dice con qué piezas geométricas trabaja: por ejemplo «superficie», «contenedor», «acción» y «separador». Cada una con su nombre y una frase que explique para qué sirve, así nadie tiene que adivinar qué es cada cosa.',
+  'dim4.req02':
+    'Para cada uno de esos roles, el set declara su forma: si es cuadrado de esquinas duras, redondeado o pastilla. Si eliges esquinas redondeadas, di el número exacto —«8px», «12px»— porque «redondeado» solo no alcanza para construir nada. Y no puede quedar ningún rol sin su forma: el listado de roles y el de formas tienen que calzar.',
+  'dim4.req03':
+    'Los bordes se guardan como estilos con nombre —«borde-sutil», «borde-enfasis»— y no como líneas sueltas que se apilan donde sea. Cada estilo dice a qué roles sirve y lista sus filetes en orden, con su grosor, su tipo, su color y dónde va: el color sale siempre de la paleta del sistema, nunca se inventa. Un filete puede ser continuo o segmentado, y cuando un estilo lleva varios filetes y alguno es segmentado, la web tiene un tope: no puede dibujar todo eso junto. Por eso el set dice de antemano a qué se cae si eso pasa.',
+  'dim4.req04':
+    'Cada rol declara su altura en la pila: quién va encima de quién y qué puede tapar a qué. Así, cuando dos objetos coinciden en la pantalla, el orden no se decide al azar ni se descubre recién al mirar el resultado. Y no puede quedar ningún rol sin su profundidad declarada.',
+  'dim4.req05':
+    'El set dice si usa sombra, luz, transparencia o mezcla, y para cada una si está permitida o no y en qué partes. Por ejemplo: «sombra sí, sólo en tarjetas, nunca en el texto». En este sistema no hay degradados, así que no se ofrecen como opción.',
+  'dim4.req06':
+    'Acá se define con qué se recortan las imágenes, qué proporción tienen y en qué se aplican: círculo para un retrato, esquinas redondeadas para una tarjeta, arco para una portada. Cada recorte con su nombre y con su uso, para poder nombrarlo cuando lo apliques.',
+  'dim4.req07':
+    'Si un rol se declara «plano» o «sin sombra», el set tiene que explicar cómo se separa igual de lo que tiene al lado: un filete delgado, un cambio de superficie, más aire alrededor. Y si en el set no hay ningún caso así, también se escribe, con una frase propia que lo diga —algo como «no aplica: ningún rol plano»—, para que la ausencia se lea como decisión y no como olvido. «Sin sombra» sin esa explicación no es una decisión, es un vacío.',
+  'dim4.req08':
+    'Formas, bordes y profundidades no se repiten igual en todas partes: el set dice cómo cambian entre contextos —pantalla chica, impreso— o deja escrito que no cambian. «No se adapta» vale sólo si está dicho; una lista vacía no lo dice.',
   'dim5.req01':
     'Hacia dónde mira la imagen del sistema: qué tono, qué clima, qué tipo de fotografía o ilustración. «Enlazada al mood wall» quiere decir que apunta a algo concreto que se puede ver, no a una frase de inspiración.',
   'dim5.req02':
