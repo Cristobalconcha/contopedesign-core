@@ -14,6 +14,7 @@ import { DIM9_MANIFEST_V0 } from '../requirement-manifest/manifest-v0-dim9';
 import type { RequirementResultV0 } from '../requirement-manifest/types';
 import { evaluarNucleo, validarNucleo } from './evaluate';
 import { NUCLEO_WEB } from './nucleo-web';
+import { NUCLEO_EDITORIAL } from './nucleo-editorial';
 import type { NucleoDeMundoV0 } from './types';
 
 const TODOS = [
@@ -126,5 +127,62 @@ describe('validarNucleo', () => {
     expect(validarNucleo(vacio, TODOS).ok).toBe(false);
     const ev = evaluarNucleo({ nucleo: vacio, resultados: new Map(), payloads: new Map(), manifests: TODOS, rectoras: emptyRectoras() });
     expect(ev.resultado).toBe('no-cubierto');
+  });
+});
+
+describe('núcleo del mundo editorial impreso', () => {
+  it('cada id existe y está activo; las reglas apuntan a entradas, traen cita y su condición existe', () => {
+    const v = validarNucleo(NUCLEO_EDITORIAL, TODOS);
+    expect(v.errores).toEqual([]);
+    expect(v.ok).toBe(true);
+  });
+
+  it('incluye las seis preguntas nuevas de la adenda y las dos estáticas de interacción y movimiento', () => {
+    const ids = NUCLEO_EDITORIAL.entradas.map((e) => e.requisitoId);
+    for (const id of ['dim1.req14', 'dim3.req08', 'dim3.req09', 'dim5.req09', 'dim6.req08', 'dim6.req09', 'dim7.req07', 'dim8.req07']) {
+      expect(ids, id).toContain(id);
+    }
+    expect(ids).not.toContain('dim8.req02'); // el impreso no emite movimiento
+  });
+
+  /** Un set mínimo: sólo lo que las reglas de tipografía miran, con la hoja declarada. */
+  function setTipografico(modo: 'pagina-fija' | 'contenido-corrido', cuerpoPx: string, lineHeight: number) {
+    const resultados = new Map<string, RequirementResultV0>([
+      ['dim2.req02', { requisitoId: 'dim2.req02', resultado: 'resuelto', motivos: [] }],
+      ['dim3.req08', { requisitoId: 'dim3.req08', resultado: 'resuelto', motivos: [] }],
+    ]);
+    const payloads = new Map<string, unknown>([
+      ['dim2.req02', { roleStyles: [{ role: 'cuerpo', fontSize: cuerpoPx, lineHeight }, { role: 'nota', fontSize: '12px', lineHeight: 1.3 }] }],
+      ['dim3.req08', { formato: 'letter', orientacion: 'vertical', modo }],
+    ]);
+    return { resultados, payloads };
+  }
+
+  it('una pieza de página fija (el folleto real, cuerpo 10 pt) NO cae por las reglas de documento de Claude Design: no aplican', () => {
+    const { resultados, payloads } = setTipografico('pagina-fija', '10pt', 1.2);
+    const ev = evaluarNucleo({ nucleo: NUCLEO_EDITORIAL, resultados, payloads, manifests: TODOS, rectoras: emptyRectoras() });
+    const cuerpo = ev.reglas.find((r) => r.reglaId === 'editorial.cuerpo-documento-12pt');
+    const notas = ev.reglas.find((r) => r.reglaId === 'editorial.notas-documento-9pt');
+    expect(cuerpo?.resultado).toBe('no-aplica');
+    expect(notas?.resultado).toBe('no-aplica');
+    expect(cuerpo?.motivos[0]?.mensaje).toContain('dim3.req08.modo = contenido-corrido');
+  });
+
+  it('en un documento corrido, un cuerpo de 10 pt no cumple la regla de 12 pt; uno de 16 px a 1,5 sí', () => {
+    const malo = setTipografico('contenido-corrido', '10pt', 1.2);
+    const evMalo = evaluarNucleo({ nucleo: NUCLEO_EDITORIAL, resultados: malo.resultados, payloads: malo.payloads, manifests: TODOS, rectoras: emptyRectoras() });
+    expect(evMalo.reglas.find((r) => r.reglaId === 'editorial.cuerpo-documento-12pt')?.resultado).toBe('no-cumple');
+    const bueno = setTipografico('contenido-corrido', '16px', 1.5);
+    const evBueno = evaluarNucleo({ nucleo: NUCLEO_EDITORIAL, resultados: bueno.resultados, payloads: bueno.payloads, manifests: TODOS, rectoras: emptyRectoras() });
+    expect(evBueno.reglas.find((r) => r.reglaId === 'editorial.cuerpo-documento-12pt')?.resultado).toBe('cumple');
+    expect(evBueno.reglas.find((r) => r.reglaId === 'editorial.notas-documento-9pt')?.resultado).toBe('cumple');
+    // Y el núcleo sigue sin cubrirse: faltan casi todas las preguntas.
+    expect(evBueno.resultado).toBe('no-cubierto');
+    expect(evBueno.contador.total).toBe(NUCLEO_EDITORIAL.entradas.length);
+  });
+
+  it('una condición que apunta a un requisito inexistente es error de programa, no ausencia del set', () => {
+    const roto: NucleoDeMundoV0 = { ...NUCLEO_EDITORIAL, reglas: [{ ...NUCLEO_EDITORIAL.reglas[1]!, condicion: { requisitoId: 'dim3.req99', ruta: ['modo'], igualA: 'x' } }] };
+    expect(validarNucleo(roto, TODOS).errores.join('; ')).toContain('dim3.req99');
   });
 });

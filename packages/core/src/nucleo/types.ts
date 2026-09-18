@@ -63,6 +63,22 @@ export interface ReglaDeMundoV0 {
   /** La cita textual de la base de conocimiento de la que sale el umbral. */
   cita: string;
   clausulas: readonly PredicateClause[];
+  /**
+   * Condición sobre el payload de OTRA pregunta del set para que la regla
+   * aplique. Medido el 18-09 con el folleto real de Santa Luisa: los umbrales
+   * de impreso de Claude Design (cuerpo ≥ 12 pt, notas ≥ 9 pt) describen un
+   * documento de oficina leído a distancia de escritorio, y el folleto de
+   * imprenta los contradice con 10 y 8 pt e igual se imprimió bien. Una regla
+   * con condición rige sólo cuando la pieza es del tipo que la fuente
+   * describe (por ejemplo, `dim3.req08.modo = contenido-corrido`); si no,
+   * queda «no aplica» y no cuenta contra el núcleo. La condición la lee el
+   * módulo de núcleos, no el predicado (que no puede cruzar dimensiones).
+   */
+  condicion?: {
+    requisitoId: string;
+    ruta: readonly (string | number)[];
+    igualA: string;
+  };
 }
 
 export interface NucleoDeMundoV0 {
@@ -81,7 +97,7 @@ export interface NucleoDeMundoV0 {
 export interface ReglaResultV0 {
   reglaId: string;
   requisitoId: string;
-  resultado: 'cumple' | 'no-cumple';
+  resultado: 'cumple' | 'no-cumple' | 'no-aplica';
   motivos: Motivo[];
 }
 
@@ -99,6 +115,7 @@ export interface NucleoEvaluationV0 {
   contador: {
     cubiertos: number;
     total: number;
+    /** Reglas que cumplen o no aplican; sólo una que no cumple descubre el núcleo. */
     reglasCumplidas: number;
     reglasTotal: number;
   };

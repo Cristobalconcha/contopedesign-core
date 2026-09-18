@@ -57,6 +57,20 @@ export function evaluarNucleo(input: EvaluarNucleoInput): NucleoEvaluationV0 {
   for (const m of input.manifests) for (const r of m.requirements) porId.set(r.id, r);
 
   const reglas: ReglaResultV0[] = nucleo.reglas.map((regla) => {
+    // Condición sobre otra pregunta: si no se cumple, la regla no aplica a esta pieza.
+    if (regla.condicion !== undefined) {
+      const otro = input.payloads.get(regla.condicion.requisitoId);
+      let v: unknown = otro;
+      for (const seg of regla.condicion.ruta) v = isRecord(v) ? v[String(seg)] : Array.isArray(v) && typeof seg === 'number' ? v[seg] : undefined;
+      if (v !== regla.condicion.igualA) {
+        return {
+          reglaId: regla.id,
+          requisitoId: regla.requisitoId,
+          resultado: 'no-aplica',
+          motivos: [{ codigo: 'regla-no-aplica', mensaje: `regla ${regla.id}: rige sólo cuando ${regla.condicion.requisitoId}.${regla.condicion.ruta.join('.')} = ${regla.condicion.igualA}` }],
+        };
+      }
+    }
     const requisito = porId.get(regla.requisitoId);
     const resultado = input.resultados.get(regla.requisitoId);
     const payload = input.payloads.get(regla.requisitoId);
@@ -99,7 +113,7 @@ export function evaluarNucleo(input: EvaluarNucleoInput): NucleoEvaluationV0 {
   });
 
   const total = nucleo.entradas.length;
-  const reglasCumplidas = reglas.filter((r) => r.resultado === 'cumple').length;
+  const reglasCumplidas = reglas.filter((r) => r.resultado !== 'no-cumple').length;
   const cubierto = total > 0 && faltantes.length === 0 && reglasCumplidas === reglas.length;
   return {
     mundoId: nucleo.mundoId,
@@ -147,6 +161,7 @@ export function validarNucleo(
     if (!vistos.has(regla.requisitoId)) e(`regla '${regla.id}' apunta a '${regla.requisitoId}', que no es una entrada del núcleo`);
     if (regla.cita.trim() === '') e(`regla '${regla.id}' sin cita (una regla sin cita es un invento)`);
     if (regla.clausulas.length === 0) e(`regla '${regla.id}' sin cláusulas`);
+    if (regla.condicion !== undefined && !activos.has(regla.condicion.requisitoId)) e(`regla '${regla.id}': su condición apunta a '${regla.condicion.requisitoId}', que no existe`);
   }
   return { ok: errores.length === 0, errores };
 }
