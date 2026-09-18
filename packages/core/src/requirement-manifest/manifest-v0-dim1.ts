@@ -266,7 +266,7 @@ const req03: RequirementV0 = {
     {
       kind: 'button',
       valueNotes:
-        'tone=primary consume var(--cod-color-accent) (class-cod-canvas-mcp-recipe-compiler.php:3011). El puente completo se exige en dim7.req10 (implícito I1)',
+        'tone=primary consume var(--cod-color-accent) (class-cod-canvas-mcp-recipe-compiler.php:3011). El puente completo (I1) se exige en dim7.req08',
     },
   ],
 };
@@ -700,9 +700,12 @@ export const DIM1_REQUIREMENTS_V0: readonly RequirementV0[] = [
   req13,
 ];
 
+// 1.1 / revisión 2 (2026-09-18): edición publicada del valueNotes de req03 —
+// el puente I1 vive en dim7.req08, no en un dim7.req10 que nunca existió.
+// Ningún requisito cambia de forma; sólo la nota. Ver decisión 12 del vault.
 export const DIM1_MANIFEST_V0: RequirementManifestV0 = {
   schemaVersion: 1,
-  manifestVersion: '1.0',
-  revision: 1,
+  manifestVersion: '1.1',
+  revision: 2,
   requirements: [...DIM1_REQUIREMENTS_V0],
 };

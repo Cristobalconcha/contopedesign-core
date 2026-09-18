@@ -1,4 +1,4 @@
-import { findEntry } from '@contope/core';
+import { DIM1_MANIFEST_V0, findEntry } from '@contope/core';
 import { describe, expect, it } from 'vitest';
 import { reducir, unirFragmento } from './reductor.js';
 import { nuevoSistema, type Candidato, type Insumo } from './sistema.js';
@@ -45,7 +45,12 @@ describe('reducir · incorporar desde insumos', () => {
     expect(e?.fuerza).toBe('explorable');
     expect(e?.mapsToKinds.map((k) => k.kind)).toEqual(['color']);
     expect(s.caminos['dim1.req01']).toBeUndefined();
-    expect(s.designSet.manifestRefs.dim1).toEqual({ manifestVersion: '1.0', revision: 1 });
+    // Contra el manifiesto real, no contra un número escrito a mano: la versión de dim1
+    // sube cada vez que se publica una edición (subió a 1.1 el 2026-09-18).
+    expect(s.designSet.manifestRefs.dim1).toEqual({
+      manifestVersion: DIM1_MANIFEST_V0.manifestVersion,
+      revision: DIM1_MANIFEST_V0.revision,
+    });
     expect(s.insumos[0]?.candidatos[0]?.estado).toBe('incorporado');
   });
 
