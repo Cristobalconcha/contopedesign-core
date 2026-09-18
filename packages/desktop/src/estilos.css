@@ -1782,3 +1782,149 @@ select.sel.corto {
   padding: 0.45rem 0.6rem 0.45rem 0;
   border-bottom: 1px solid var(--linea);
 }
+
+/* espécimen: ver de cerca una familia */
+.especimen {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.especimen .rot {
+  margin: 0;
+}
+.especimen .esp-cab {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--linea);
+  padding-bottom: 0.8rem;
+}
+.especimen .esp-titulo b {
+  font-size: 17px;
+  font-weight: 600;
+}
+.especimen .esp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.4rem;
+}
+.especimen .esp-meta i {
+  font: 400 9.5px/1 var(--mono);
+  font-style: normal;
+  color: var(--tenue);
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  padding: 0.2rem 0.3rem;
+}
+.especimen .esp-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.especimen .esp-controles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+  align-items: flex-start;
+}
+.especimen .esp-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.especimen .esp-campo-texto {
+  flex: 1 1 18rem;
+}
+.especimen .esp-campo-color {
+  flex: 1 1 100%;
+  gap: 0.5rem;
+}
+.especimen .esp-texto {
+  width: 100%;
+  min-height: 3.4rem;
+  resize: vertical;
+  border: 1px solid var(--linea);
+  background: var(--panel);
+  color: var(--tinta);
+  border-radius: 3px;
+  padding: 0.5rem 0.6rem;
+  font: 400 13px/1.45 var(--sans);
+}
+.especimen .esp-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.especimen .esp-fila input[type='range'] {
+  width: 11rem;
+  accent-color: var(--acero);
+}
+.especimen .esp-num {
+  width: 4.6rem;
+  border: 1px solid var(--linea);
+  background: var(--panel);
+  color: var(--tinta);
+  border-radius: 3px;
+  padding: 0.4rem 0.5rem;
+  font: 400 12.5px var(--sans);
+}
+.especimen .esp-muestra-color {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 0.35rem;
+  vertical-align: -1px;
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+}
+.especimen .esp-paleta-vacia {
+  font: 400 11.5px/1.4 var(--sans);
+  color: var(--tenue);
+}
+.especimen input[type='color'] {
+  width: 34px;
+  height: 26px;
+  border: 1px solid var(--linea);
+  border-radius: 3px;
+  padding: 2px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.especimen .esp-muestra {
+  min-height: 5rem;
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  padding: 1.1rem 1.2rem;
+  line-height: 1.2;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.especimen .esp-todos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.especimen .esp-fila-peso {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 0.8rem;
+  align-items: baseline;
+  border-top: 1px solid var(--linea);
+  padding-top: 0.5rem;
+}
+.especimen .esp-etiqueta {
+  font: 400 11px/1.4 var(--mono);
+  color: var(--apagado);
+}
+.especimen .esp-linea {
+  min-width: 0;
+  font-size: 28px;
+  line-height: 1.2;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--tinta);
+}

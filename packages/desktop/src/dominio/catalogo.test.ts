@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CATALOGO, filtrar, resolverCaso, SIN_FILTROS, tieneAncho, urlDeMuestra } from './catalogo.js';
+import { CATALOGO, filtrar, resolverCaso, SIN_FILTROS, tieneAncho, urlDeFamiliaCompleta, urlDeMuestra } from './catalogo.js';
 
 describe('catálogo tipográfico', () => {
   it('trae las 1.946 familias de Google Fonts con fecha de descarga', () => {
@@ -64,5 +64,33 @@ describe('urlDeMuestra', () => {
     expect(urlDeMuestra(['Archivo Narrow', 'Lora'])).toBe(
       'https://fonts.googleapis.com/css2?family=Archivo+Narrow&family=Lora&display=swap',
     );
+  });
+});
+
+describe('urlDeFamiliaCompleta', () => {
+  const base = {
+    f: 'Nombre Con Espacios',
+    c: 'Sans Serif',
+    s: 'Sans Serif',
+    k: [],
+    w: [300, 400, 700],
+    i: 0 as 0 | 1,
+    v: [],
+    wd: null,
+    l: ['latin'],
+    p: null,
+    t: null,
+    d: null,
+    o: 1 as 0 | 1,
+  };
+
+  it('con itálica pide cada peso dos veces, primero las redondas y después las itálicas', () => {
+    expect(urlDeFamiliaCompleta({ ...base, i: 1 })).toBe(
+      'https://fonts.googleapis.com/css2?family=Nombre+Con+Espacios:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap',
+    );
+  });
+
+  it('sin itálica pide sólo los pesos', () => {
+    expect(urlDeFamiliaCompleta(base)).toBe('https://fonts.googleapis.com/css2?family=Nombre+Con+Espacios:wght@300;400;700&display=swap');
   });
 });

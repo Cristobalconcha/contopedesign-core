@@ -4,7 +4,8 @@
  * insumo trajo una familia que no está (Adobe Caslon Pro, típico de un
  * IDML), el selector llega prefiltrado por lo que el nombre deja leer, y el
  * prefiltro se puede cambiar. Nunca se elige una sola candidata por la
- * persona: se muestran alternativas y ella decide.
+ * persona: se muestran alternativas y ella decide. Cada tarjeta se puede
+ * abrir «de cerca» en el espécimen, para decidir mirando y no adivinando.
  */
 import { findEntry } from '@contope/core';
 import { useEffect, useMemo, useState } from 'react';
@@ -25,6 +26,7 @@ import {
 } from '../dominio/catalogo.js';
 import { cargarMuestras } from '../navegador/fuentes.js';
 import { useTaller } from '../taller.js';
+import { Especimen } from './Especimen.js';
 import { Ventana } from './Ventana.js';
 
 interface FamiliaDeclarada {
@@ -60,10 +62,16 @@ export function Tipografia({ requirementId, nombreBuscado: buscadoInicial }: { r
     return Array.isArray(p?.familias) ? p.familias : [];
   }, [entrada]);
 
+  // La paleta del set (dim1.req01) para el espécimen: los institucionales y
+  // los neutros, cada uno con su nombre.
+  const p = findEntry(sistema.designSet, 'dim1.req01')?.payload as { institucionales?: Array<{ name: string; value: string }>; neutros?: Array<{ name: string; value: string }> } | undefined;
+  const colores = [...(p?.institucionales ?? []), ...(p?.neutros ?? [])];
+
   const [buscado, setBuscado] = useState<string | undefined>(buscadoInicial);
   const caso = useMemo(() => (buscado !== undefined ? resolverCaso({ nombre: buscado }) : null), [buscado]);
   const [filtros, setFiltros] = useState<Filtros>(() => ({ ...SIN_FILTROS, ...(caso?.caso === 2 ? caso.prefiltro : {}) }));
   const [elegida, setElegida] = useState<FamiliaCatalogo | null>(null);
+  const [abierta, setAbierta] = useState<FamiliaCatalogo | null>(null);
   const [tope, setTope] = useState(24);
   const [texto, setTexto] = useState('El veloz murciélago hindú');
   const [tam, setTam] = useState(26);
@@ -185,88 +193,133 @@ export function Tipografia({ requirementId, nombreBuscado: buscadoInicial }: { r
       </aside>
 
       <div className="resultados">
-        {declaradas.length ? (
-          <div className="declaradas">
-            <span className="rot" style={{ margin: 0 }}>
-              Ya declaradas
-            </span>
-            {declaradas.map((d) => {
-              const enGoogle = buscarFamilia(d.name);
-              return (
-                <span key={d.name} className={`chip-familia ${enGoogle ? '' : 'ausente'}`} style={enGoogle ? { fontFamily: `'${d.name}', ${d.stack.at(-1) ?? 'sans-serif'}` } : undefined}>
-                  {d.name}
-                  {enGoogle ? null : (
-                    <button className="enlace" onClick={() => setBuscado(d.name)} title="No está en Google Fonts: buscar equivalencia">
-                      buscar equivalente
+        {abierta ? (
+          <Especimen
+            key={abierta.f}
+            familia={abierta}
+            colores={colores}
+            textoInicial={texto}
+            onElegir={(f) => {
+              setElegida(f);
+              setAbierta(null);
+            }}
+            onVolver={() => setAbierta(null)}
+          />
+        ) : (
+          <>
+            {declaradas.length ? (
+              <div className="declaradas">
+                <span className="rot" style={{ margin: 0 }}>
+                  Ya declaradas
+                </span>
+                {declaradas.map((d) => {
+                  const enGoogle = buscarFamilia(d.name);
+                  return (
+                    <span key={d.name} className={`chip-familia ${enGoogle ? '' : 'ausente'}`} style={enGoogle ? { fontFamily: `'${d.name}', ${d.stack.at(-1) ?? 'sans-serif'}` } : undefined}>
+                      {d.name}
+                      {enGoogle ? null : (
+                        <button className="enlace" onClick={() => setBuscado(d.name)} title="No está en Google Fonts: buscar equivalencia">
+                          buscar equivalente
+                        </button>
+                      )}
+                      <button className="quitar" onClick={() => quitar(d.name)} title="Quitar del fundamento">
+                        ✕
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {caso?.caso === 2 ? (
+              <div className="procedencia">
+                <div className="cab">
+                  Se abrió para buscarle equivalencia a <b>{caso.nombre}</b>, que no está en Google Fonts.
+                </div>
+                <div className="cuerpo">{caso.pista}</div>
+              </div>
+            ) : null}
+            {caso?.caso === 1 ? (
+              <div className="procedencia">
+                <div className="cab">
+                  <b>{caso.familia.f}</b> está en Google Fonts: se puede usar directo.
+                </div>
+              </div>
+            ) : null}
+
+            <div className="res-cab">
+              <span className="n">
+                {resultado.familias.length} {resultado.familias.length === 1 ? 'familia' : 'familias'}
+                {resultado.familias.length > vista.length ? ` · mostrando ${vista.length}` : ''}
+                {resultado.sinTrazo ? <span className="tenue"> · {resultado.sinTrazo} no declaran trazo y quedaron fuera</span> : null}
+              </span>
+              <input className="muestra-txt" value={texto} onChange={(e) => setTexto(e.target.value)} aria-label="Texto de muestra" />
+              <input type="range" min={14} max={46} value={tam} onChange={(e) => setTam(Number(e.target.value))} aria-label="Tamaño de muestra" />
+            </div>
+            {/* La tarjeta no es <button> porque lleva adentro el botón «ver de cerca»,
+                y un botón dentro de otro es HTML inválido (React lo acusa en consola). */}
+            <div className="fuentes">
+              {vista.map((f) => (
+                <div
+                  key={f.f}
+                  className="fuente"
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={elegida?.f === f.f}
+                  onClick={() => setElegida(f)}
+                  onDoubleClick={() => setAbierta(f)}
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setElegida(f);
+                    }
+                  }}
+                >
+                  <span className="nom">
+                    <b>{f.f}</b>
+                    <span>
+                      {f.w.length} peso{f.w.length === 1 ? '' : 's'}
+                      {f.i ? ' · it' : ''}
+                    </span>
+                  </span>
+                  <span className="esp" style={{ fontFamily: `'${f.f}', ${genericaDe(f)}`, fontSize: `${tam}px` }}>
+                    {texto || 'Aa'}
+                  </span>
+                  <span className="meta">
+                    <i>{f.c}</i>
+                    {f.s && f.s !== f.c ? <i>{f.s}</i> : null}
+                    {f.v.length ? <i>variable</i> : null}
+                    {f.wd ? (
+                      <i>
+                        ancho {f.wd[0]}–{f.wd[1]}
+                      </i>
+                    ) : null}
+                    {!f.o ? <i>sin licencia declarada</i> : null}
+                  </span>
+                  <span style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                    <button
+                      className="btn chico"
+                      title="Abrir el espécimen de esta familia"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAbierta(f);
+                      }}
+                    >
+                      ver de cerca
                     </button>
-                  )}
-                  <button className="quitar" onClick={() => quitar(d.name)} title="Quitar del fundamento">
-                    ✕
-                  </button>
-                </span>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {caso?.caso === 2 ? (
-          <div className="procedencia">
-            <div className="cab">
-              Se abrió para buscarle equivalencia a <b>{caso.nombre}</b>, que no está en Google Fonts.
+                  </span>
+                </div>
+              ))}
             </div>
-            <div className="cuerpo">{caso.pista}</div>
-          </div>
-        ) : null}
-        {caso?.caso === 1 ? (
-          <div className="procedencia">
-            <div className="cab">
-              <b>{caso.familia.f}</b> está en Google Fonts: se puede usar directo.
-            </div>
-          </div>
-        ) : null}
-
-        <div className="res-cab">
-          <span className="n">
-            {resultado.familias.length} {resultado.familias.length === 1 ? 'familia' : 'familias'}
-            {resultado.familias.length > vista.length ? ` · mostrando ${vista.length}` : ''}
-            {resultado.sinTrazo ? <span className="tenue"> · {resultado.sinTrazo} no declaran trazo y quedaron fuera</span> : null}
-          </span>
-          <input className="muestra-txt" value={texto} onChange={(e) => setTexto(e.target.value)} aria-label="Texto de muestra" />
-          <input type="range" min={14} max={46} value={tam} onChange={(e) => setTam(Number(e.target.value))} aria-label="Tamaño de muestra" />
-        </div>
-        <div className="fuentes">
-          {vista.map((f) => (
-            <button key={f.f} className="fuente" aria-pressed={elegida?.f === f.f} onClick={() => setElegida(f)}>
-              <span className="nom">
-                <b>{f.f}</b>
-                <span>
-                  {f.w.length} peso{f.w.length === 1 ? '' : 's'}
-                  {f.i ? ' · it' : ''}
-                </span>
-              </span>
-              <span className="esp" style={{ fontFamily: `'${f.f}', ${genericaDe(f)}`, fontSize: `${tam}px` }}>
-                {texto || 'Aa'}
-              </span>
-              <span className="meta">
-                <i>{f.c}</i>
-                {f.s && f.s !== f.c ? <i>{f.s}</i> : null}
-                {f.v.length ? <i>variable</i> : null}
-                {f.wd ? (
-                  <i>
-                    ancho {f.wd[0]}–{f.wd[1]}
-                  </i>
-                ) : null}
-                {!f.o ? <i>sin licencia declarada</i> : null}
-              </span>
-            </button>
-          ))}
-        </div>
-        {resultado.familias.length === 0 ? <div className="vacio">Ningún resultado con esos filtros.</div> : null}
-        {resultado.familias.length > vista.length ? (
-          <button className="btn" style={{ margin: '1rem auto 0', display: 'block' }} onClick={() => setTope((t) => t + 24)}>
-            Ver más
-          </button>
-        ) : null}
+            {resultado.familias.length === 0 ? <div className="vacio">Ningún resultado con esos filtros.</div> : null}
+            {resultado.familias.length > vista.length ? (
+              <button className="btn" style={{ margin: '1rem auto 0', display: 'block' }} onClick={() => setTope((t) => t + 24)}>
+                Ver más
+              </button>
+            ) : null}
+          </>
+        )}
       </div>
     </Ventana>
   );

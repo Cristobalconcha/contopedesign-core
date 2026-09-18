@@ -209,3 +209,17 @@ export function urlDeMuestra(nombres: ReadonlyArray<string>): string {
     '&display=swap'
   );
 }
+
+/**
+ * La URL de css2 para traer una familia completa: todos sus pesos y, si los
+ * tiene, sus itálicas. La usa el espécimen, que necesita la familia entera
+ * cargada para poder mostrar cada peso en su fila. Google exige las tuplas
+ * ordenadas: primero las `0,` de menor a mayor peso, y después las `1,`. Si
+ * la familia no declara pesos, se pide el regular.
+ */
+export function urlDeFamiliaCompleta(f: FamiliaCatalogo): string {
+  const familia = encodeURIComponent(f.f).replace(/%20/g, '+');
+  const pesos = f.w.length ? [...f.w].sort((a, b) => a - b) : [400];
+  const ejes = f.i === 1 ? `ital,wght@${[...pesos.map((p) => `0,${p}`), ...pesos.map((p) => `1,${p}`)].join(';')}` : `wght@${pesos.join(';')}`;
+  return `https://fonts.googleapis.com/css2?family=${familia}:${ejes}&display=swap`;
+}
