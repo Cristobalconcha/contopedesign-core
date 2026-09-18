@@ -11,7 +11,8 @@
  *
  * Adenda C1 «núcleo editorial impreso»
  * (spec-c1-adenda-nucleo-editorial-2026-09-18.md §3, 2026-09-18): AGREGA
- * `dim6.req08` (estructura física de la pieza) y `dim6.req09` (dominante de
+ * `dim6.req08` (estructuras físicas que el sistema puede producir) y
+ * `dim6.req09` (tratamiento de la dominante cuando el sistema soporta
  * lectura a distancia). Los siete anteriores quedan intactos: sus
  * predicados son el dato serializado del manifiesto y tocarlos rompería los
  * sets ya emitidos. Ver el comentario de versión sobre `DIM6_MANIFEST_V0`.
@@ -112,7 +113,8 @@ const opt = (type: PayloadType): PayloadFieldSchema => ({ type, optional: true }
 
 const WEIGHT_ROLES_3 = ['dominante', 'secundario', 'silencio'] as const;
 const GROUPING_PRINCIPLES_3 = ['proximidad', 'continuidad', 'separacion'] as const;
-// Adenda §3 (`dim6.req09`): las cinco preguntas del flyer, agrupadas y no en prosa (insumo 8).
+// Adenda §3 (`dim6.req09`): las cinco preguntas que agrupa el sistema cuando
+// soporta lectura a distancia, agrupadas y no en prosa (insumo 8).
 const FIVE_QUESTIONS_5 = ['que', 'cuando', 'donde', 'cuanto', 'como-actuar'] as const;
 
 // ---------------------------------------------------------------------------
@@ -322,94 +324,115 @@ const req07: RequirementV0 = {
 };
 
 // Adenda C1, 2026-09-18 (spec-c1-adenda-nucleo-editorial-2026-09-18.md §3):
-// estructura física de la pieza — hueco H3. Eje completitud, rectorBindings [] (§2).
+// estructuras físicas que el sistema puede producir — hueco H3. Eje
+// completitud, rectorBindings [] (§2).
 const req08: RequirementV0 = {
   id: 'dim6.req08',
   dimensionId: 'dim6',
   packageId: 'pkg.composicion.estructura',
   eje: 'completitud',
   pregunta:
-    '¿Declara el sistema la estructura física de la pieza —caras y paneles con su contenido y su orden, el plegado, el orden de despliegue y lo que se repite en cada hoja?',
+    '¿Declara el sistema las estructuras físicas que puede producir —cada una con sus caras o paneles, el rol de cada uno, su orden, el plegado, el orden de despliegue y lo que se repite en cada hoja?',
   estado: 'active',
   dependsOn: ['dim6.req06'],
   payloadSchema: {
-    paneles: slot(
+    estructuras: slot(
       lista(
         objeto({
-          nombre: slot(TEXTO),
-          contenido: slot(TEXTO),
-          orden: slot(numero()),
+          nombre: slot(TEXTO), // "folleto de 12", "tríptico", "díptico"
+          paneles: slot(
+            lista(
+              objeto({
+                nombre: slot(TEXTO),
+                rol: slot(TEXTO), // portada, contraportada, interior…
+                orden: slot(numero()),
+              }),
+            ),
+          ),
+          plegado: slot(TEXTO), // "sin plegado" escrito es válido (adenda, tensión 13)
+          ordenDespliegue: slot(lista(TEXTO)), // cita insumo 10 ("en orden de lectura")
+          repetidosPorHoja: slot(lista(TEXTO)), // folio, cabecera, membrete (insumo 10); "ninguno" escrito satisface
         }),
       ),
     ),
-    plegado: slot(TEXTO), // "sin plegado" escrito es válido (adenda, tensión 13)
-    ordenDespliegue: slot(lista(TEXTO)), // cita insumo 10 ("en orden de lectura")
-    repetidosPorHoja: slot(lista(TEXTO)), // folio, cabecera, membrete (insumo 10); "ninguno" escrito satisface
   },
   validityPredicate: [
-    exists(p('paneles')),
-    each(p('paneles'), exists(p('nombre'))),
-    each(p('paneles'), exists(p('contenido'))),
-    each(p('paneles'), exists(p('orden'))),
-    exists(p('plegado')),
-    exists(p('ordenDespliegue')),
-    exists(p('repetidosPorHoja')),
+    exists(p('estructuras')),
+    each(
+      p('estructuras'),
+      and(
+        exists(p('nombre')),
+        exists(p('paneles')),
+        exists(p('plegado')),
+        exists(p('ordenDespliegue')),
+        exists(p('repetidosPorHoja')),
+      ),
+    ),
+    each(
+      p('estructuras'),
+      each(
+        p('paneles'),
+        and(exists(p('nombre')), exists(p('rol')), exists(p('orden'))),
+      ),
+    ),
   ],
   rectorBindings: [],
   mapsToKinds: [],
   mappingNotes:
-    'BRECHA DECLARADA, mismo tipo que dim6.req06: la estructura física de la pieza (caras, paneles, plegado, folios por hoja) no tiene kind en el designRuleSet y el compilador web no la emite; vive en el adaptador editorial y en el DesignSet (C2).',
+    'BRECHA DECLARADA, mismo tipo que dim6.req06: las estructuras que el sistema produce (caras, paneles, plegado, folios por hoja) no tienen kind en el designRuleSet y el compilador web no las emite; viven en el adaptador editorial y en el DesignSet (C2).',
 };
 
 // Adenda C1, 2026-09-18 (spec-c1-adenda-nucleo-editorial-2026-09-18.md §3):
-// dominante de lectura a distancia — umbrales impresos del flyer (insumo 7).
-// Eje validez, rectorBindings [] (§2); no toca el predicado de dim6.req01.
+// dominante cuando el sistema soporta lectura a distancia — umbrales impresos
+// (insumo 7). Eje validez, rectorBindings [] (§2); no toca el predicado de
+// dim6.req01.
 const req09: RequirementV0 = {
   id: 'dim6.req09',
   dimensionId: 'dim6',
   packageId: 'pkg.composicion.dominante',
   eje: 'validez',
   pregunta:
-    '¿Declara el sistema, para las piezas que se leen desde lejos, su única línea dominante con su número de palabras y su tamaño, y las cinco preguntas agrupadas —o la razón escrita de que la pieza se lee de cerca?',
+    'Cuando el sistema soporta lectura a distancia (cartelería, afiche, flyer), ¿declara cómo trata la línea dominante —su máximo de palabras, su tamaño mínimo— y cómo agrupa las cinco preguntas; o declara que no soporta lectura a distancia?',
   estado: 'active',
   dependsOn: ['dim6.req01'],
   payloadSchema: {
-    // Opcionales (integrador, 18-09): si la pieza se lee de cerca, se escribe
-    // noAplica y no hay dominante que declarar; el predicado exige una de las dos.
-    dominante: opt(TEXTO), // "una sola línea" = valor único, no lista
-    palabrasDominante: opt(numero(undefined, 6)), // cita insumo 7: "≤ 6 palabras"
-    tamanoDominante: opt(LONGITUD_CSS), // cita insumo 7: "80 px / 60 pt o más"
+    // Todos opcionales (integrador, 18-09): si el sistema no soporta lectura a
+    // distancia, se escribe noAplica y no hay dominante que declarar; el
+    // predicado exige una de las dos ramas y prohíbe mezclarlas.
+    tratamientoDominante: opt(TEXTO), // cómo se compone la dominante en este sistema
+    palabrasMaximo: opt(numero(undefined, 6)), // cita insumo 7: "≤ 6 palabras"
+    tamanoMinimo: opt(LONGITUD_CSS), // cita insumo 7: "80 px / 60 pt o más"
     cincoPreguntas: opt(
       lista(
         objeto({
           pregunta: slot(enumOf(...FIVE_QUESTIONS_5)), // cita insumo 8 (agrupadas, no en prosa)
-          contenido: slot(TEXTO),
+          tratamiento: slot(TEXTO),
         }),
       ),
     ),
-    noAplica: opt(TEXTO), // piezas de lectura cercana, con razón escrita
+    noAplica: opt(TEXTO), // "este sistema no soporta lectura a distancia, porque …"
   },
   validityPredicate: [
     or(
       and(
-        exists(p('dominante')),
-        lte(op('palabrasDominante'), num(6)),
-        gteCss(op('tamanoDominante'), str('80px')),
+        exists(p('tratamientoDominante')),
+        lte(op('palabrasMaximo'), num(6)),
+        gteCss(op('tamanoMinimo'), str('80px')),
         covers(
           p('cincoPreguntas'),
           ['pregunta'],
           FIVE_QUESTIONS_5.map((pregunta) => str(pregunta)),
         ),
-        each(p('cincoPreguntas'), exists(p('contenido'))),
+        each(p('cincoPreguntas'), exists(p('tratamiento'))),
       ),
       exists(p('noAplica')),
     ),
-    not(and(exists(p('noAplica')), exists(p('dominante')))), // exclusión mutua canal/contenido
+    not(and(exists(p('noAplica')), exists(p('tratamientoDominante')))), // exclusión mutua canal/contenido
   ],
   rectorBindings: [],
   mapsToKinds: [],
   mappingNotes:
-    'BRECHA DECLARADA, mismo tipo que dim6.req01: el designRuleSet no tiene kind de jerarquía ni de dominante tipográfica; la pieza es una definición del DesignSet (C2) y no emite regla individual del compilador.',
+    'BRECHA DECLARADA, mismo tipo que dim6.req01: el designRuleSet no tiene kind de jerarquía ni de dominante tipográfica; el tratamiento de la dominante es una definición del DesignSet (C2) y no emite regla individual del compilador.',
 };
 
 export const DIM6_REQUIREMENTS_V0: readonly RequirementV0[] = [
@@ -424,7 +447,7 @@ export const DIM6_REQUIREMENTS_V0: readonly RequirementV0[] = [
   req09,
 ];
 
-// v1.1 / revisión 2 (adenda del núcleo editorial, 2026-09-18): se AGREGAN dim6.req08 (estructura física: paneles, plegado, despliegue) y dim6.req09 (dominante de lectura a distancia: ≤ 6 palabras, ≥ 80 px, cinco preguntas);
+// v1.1 / revisión 2 (adenda del núcleo editorial, 2026-09-18): se AGREGAN dim6.req08 (estructuras físicas que el sistema puede producir: paneles con nombre, rol y orden, plegado, despliegue y repetidos por hoja) y dim6.req09 (tratamiento de la dominante cuando el sistema soporta lectura a distancia: ≤ 6 palabras, ≥ 80 px, cinco preguntas agrupadas, o la razón escrita de que no soporta lectura a distancia);
 // los siete requisitos previos quedan intactos — cambiar un predicado publicado rompería los sets ya emitidos. Fuente: spec-c1-adenda-nucleo-editorial-2026-09-18.md §3 (insumos 7, 8, 10 y 11).
 export const DIM6_MANIFEST_V0: RequirementManifestV0 = {
   schemaVersion: 1,

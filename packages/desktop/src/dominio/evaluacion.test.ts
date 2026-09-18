@@ -47,8 +47,10 @@ export function sistemaConDim3Completa(): Sistema {
     correspondencia: { campoPlano: 'spacing', escalaRelacionada: { refReqId: 'dim3.req01', refPath: [] }, nota: 'spacing = paso 2' },
   });
   // Adenda del núcleo editorial (2026-09-18): la hoja y el sangrado también son preguntas de espacio.
-  s = definir(s, 'dim3.req08', { formato: 'letter', orientacion: 'vertical', modo: 'pagina-fija' });
-  s = definir(s, 'dim3.req09', { sangrado: '14pt', zonaSegura: '40px', margenTextoCorrido: '72px', aSangre: ['fondo'] });
+  s = definir(s, 'dim3.req08', { formatos: [{ nombre: 'carta vertical', formato: 'letter', orientacion: 'vertical', modo: 'pagina-fija' }] });
+  s = definir(s, 'dim3.req09', {
+    porFormato: [{ formato: { refReqId: 'dim3.req08', refPath: ['formatos', 0] }, sangrado: '14pt', zonaSegura: '40px', margenTextoCorrido: '72px', aSangre: ['fondo'] }],
+  });
   return s;
 }
 

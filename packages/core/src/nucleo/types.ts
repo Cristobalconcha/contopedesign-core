@@ -69,10 +69,13 @@ export interface ReglaDeMundoV0 {
    * de impreso de Claude Design (cuerpo ≥ 12 pt, notas ≥ 9 pt) describen un
    * documento de oficina leído a distancia de escritorio, y el folleto de
    * imprenta los contradice con 10 y 8 pt e igual se imprimió bien. Una regla
-   * con condición rige sólo cuando la pieza es del tipo que la fuente
-   * describe (por ejemplo, `dim3.req08.modo = contenido-corrido`); si no,
-   * queda «no aplica» y no cuenta contra el núcleo. La condición la lee el
-   * módulo de núcleos, no el predicado (que no puede cruzar dimensiones).
+   * con condición rige sólo cuando el sistema declara SOPORTAR aquello que la
+   * fuente describe (por ejemplo, algún formato de `dim3.req08` con
+   * `modo = contenido-corrido`); si no, queda «no aplica» y no cuenta contra
+   * el núcleo. Nunca habla de «la pieza»: ContOpe produce sistemas, y la pieza
+   * la arma el destino. La condición la lee el módulo de núcleos, no el
+   * predicado (que no puede cruzar dimensiones). Un segmento `'*'` de la ruta
+   * significa «cualquier elemento de la lista».
    */
   condicion?: {
     requisitoId: string;

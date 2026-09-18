@@ -15,16 +15,21 @@ const refRole = (role: (typeof SPATIAL_ROLES_3)[number]) => ({
   refPath: ['roleSpacing', SPATIAL_ROLES_3.indexOf(role)],
 });
 
-// --- Payloads de la adenda (tipados para no pelear con exactOptionalPropertyTypes) ---
+// --- Payloads de la adenda, a nivel de SISTEMA (tipados para no pelear con
+// exactOptionalPropertyTypes). El sistema declara formatos soportados, no piezas. ---
 
-type HojaPayload = {
+type FormatoSoportado = {
+  nombre: string;
   formato: string;
   medida?: { ancho: string; alto: string };
   orientacion: string;
   modo: string;
 };
 
-type SangradoPayload = {
+type FormatosPayload = { formatos: FormatoSoportado[] };
+
+type SangradoEntry = {
+  formato: { refReqId: string; refPath: (string | number)[] };
   sangrado: string;
   zonaSegura: string;
   margenTextoCorrido: string;
@@ -32,18 +37,45 @@ type SangradoPayload = {
   excepcion?: string;
 };
 
-/** Hoja: A4 vertical, página fija (el flyer de una cara de la medición). */
-function hojaResuelta(): HojaPayload {
-  return { formato: 'a4', orientacion: 'vertical', modo: 'pagina-fija' };
+type SangradoPayload = { porFormato: SangradoEntry[] };
+
+/** Ref a la ENTRADA del formato declarado en dim3.req08 (no a la pieza). */
+const refFormato = (i: number) => ({ refReqId: 'dim3.req08', refPath: ['formatos', i] });
+
+/** Dos formatos soportados: carta vertical página fija y A4 con contenido corrido. */
+function formatosResueltos(): FormatosPayload {
+  return {
+    formatos: [
+      { nombre: 'carta vertical', formato: 'letter', orientacion: 'vertical', modo: 'pagina-fija' },
+      {
+        nombre: 'A4 contenido corrido',
+        formato: 'a4',
+        orientacion: 'vertical',
+        modo: 'contenido-corrido',
+      },
+    ],
+  };
 }
 
-/** Sangrado: fondo a sangre declarado, 40 px libres y 72 px para el texto corrido (insumos 3 y 4). */
-function sangradoResuelto(): SangradoPayload {
+/** Sangrado por formato soportado: 40 px libres y 72 px de texto corrido (insumos 3 y 4). */
+function sangradoPorFormatoResuelto(): SangradoPayload {
   return {
-    sangrado: '12px', // la Fuente A no cita cifra de sangrado: campo abierto declarado (tensión 6)
-    zonaSegura: '40px',
-    margenTextoCorrido: '72px',
-    aSangre: ['fondo'],
+    porFormato: [
+      {
+        formato: refFormato(0),
+        sangrado: '12px', // la Fuente A no cita cifra de sangrado: campo abierto declarado (tensión 6)
+        zonaSegura: '40px',
+        margenTextoCorrido: '72px',
+        aSangre: ['fondo'],
+      },
+      {
+        formato: refFormato(1),
+        sangrado: '9px',
+        zonaSegura: '48px',
+        margenTextoCorrido: '72px',
+        aSangre: ['ninguno'], // "ninguno" escrito sí satisface (fail-closed sobre lista vacía)
+      },
+    ],
   };
 }
 
@@ -118,11 +150,33 @@ function resolvedDim3Payloads(): Map<string, unknown> {
     },
   });
 
-  // Adenda 2026-09-18: dim3.req08 (hoja) y dim3.req09 (sangrado).
-  m.set('dim3.req08', hojaResuelta());
-  m.set('dim3.req09', sangradoResuelto());
+  // Adenda 2026-09-18, a nivel de sistema: dim3.req08 (formatos soportados) y dim3.req09 (sangrado por formato).
+  m.set('dim3.req08', formatosResueltos());
+  m.set('dim3.req09', sangradoPorFormatoResuelto());
 
   return m;
+}
+
+/** Ajusta una entrada de sangrado sin pelear con exactOptionalPropertyTypes. */
+function ajustarSangrado(
+  payloads: Map<string, unknown>,
+  index: number,
+  ajuste: Partial<SangradoEntry>,
+): void {
+  const actual = payloads.get('dim3.req09') as SangradoPayload;
+  const porFormato = actual['porFormato'];
+  porFormato[index] = { ...porFormato[index]!, ...ajuste };
+}
+
+/** Reemplaza el formato en la posición `index` de req08. */
+function reemplazarFormato(
+  payloads: Map<string, unknown>,
+  index: number,
+  ajuste: Partial<FormatoSoportado>,
+): void {
+  const actual = payloads.get('dim3.req08') as FormatosPayload;
+  const formatos = actual['formatos'];
+  formatos[index] = { ...formatos[index]!, ...ajuste };
 }
 
 describe('manifiesto v0 de Dimensión 3 — fidelidad a la spec C1-dim3 §3', () => {
@@ -306,7 +360,7 @@ describe('evaluación de la Dimensión 3 completa', () => {
   });
 });
 
-describe('adenda del núcleo editorial (2026-09-18) — dim3.req08 y dim3.req09', () => {
+describe('adenda del núcleo editorial (2026-09-18) — dim3.req08 y dim3.req09 a nivel de sistema', () => {
   it('el documento sigue parseando limpio y la versión sube a 1.1 / revisión 2', () => {
     const result = parseRequirementManifest(DIM3_MANIFEST_V0);
     expect(result.ok).toBe(true);
@@ -351,9 +405,9 @@ describe('adenda del núcleo editorial (2026-09-18) — dim3.req08 y dim3.req09'
     expect(req09.mapsToKinds).toEqual([]);
   });
 
-  it('req08: una hoja declarada a la medida, dentro del tope, resuelve la dimensión completa', () => {
+  it('req08: un formato a la medida declarada, dentro del tope, resuelve la dimensión completa', () => {
     const payloads = resolvedDim3Payloads();
-    payloads.set('dim3.req08', {
+    reemplazarFormato(payloads, 0, {
       formato: 'medida-declarada',
       medida: { ancho: '1181px', alto: '1748px' },
       orientacion: 'apaisada',
@@ -368,13 +422,29 @@ describe('adenda del núcleo editorial (2026-09-18) — dim3.req08 y dim3.req09'
     expect(evaluation.contador).toEqual({ resueltos: 9, activos: 9 });
   });
 
+  it('req09 cobertura (eachIn/some): un formato soportado sin su sangrado ⇒ no-resuelto', () => {
+    const payloads = resolvedDim3Payloads();
+    const sangrado = payloads.get('dim3.req09') as SangradoPayload;
+    // Queda declarado el sangrado del formato 0, pero el formato 1 (A4) soportado queda sin sangrado.
+    payloads.set('dim3.req09', { porFormato: sangrado['porFormato'].slice(0, 1) });
+    const evaluation = evaluateManifest({
+      manifest: DIM3_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req08')?.resultado).toBe(
+      'resuelto',
+    );
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req09')?.resultado).toBe(
+      'no-resuelto',
+    );
+    expect(evaluation.contador).toEqual({ resueltos: 8, activos: 9 });
+  });
+
   it('req08 cita insumo 1 ("nunca una hoja inventada"): medida-declarada sin medida ⇒ no-resuelto, con cascada sobre req09', () => {
     const payloads = resolvedDim3Payloads();
-    payloads.set('dim3.req08', {
-      formato: 'medida-declarada',
-      orientacion: 'vertical',
-      modo: 'pagina-fija',
-    });
+    reemplazarFormato(payloads, 0, { formato: 'medida-declarada' });
     const evaluation = evaluateManifest({
       manifest: DIM3_MANIFEST_V0,
       payloads,
@@ -384,7 +454,7 @@ describe('adenda del núcleo editorial (2026-09-18) — dim3.req08 y dim3.req09'
     expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req08')?.resultado).toBe(
       'no-resuelto',
     );
-    // cascada: req09 depende de req08 y cae con él
+    // cascada: req09 depende de req08 y cae con él aunque su propio payload esté completo
     expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req09')?.resultado).toBe(
       'no-resuelto',
     );
@@ -393,11 +463,9 @@ describe('adenda del núcleo editorial (2026-09-18) — dim3.req08 y dim3.req09'
 
   it('req08 cita insumo 1 ("lado ≤ 8000"): un lado de 9000 px ⇒ no-resuelto, con cascada sobre req09', () => {
     const payloads = resolvedDim3Payloads();
-    payloads.set('dim3.req08', {
+    reemplazarFormato(payloads, 0, {
       formato: 'medida-declarada',
       medida: { ancho: '9000px', alto: '6000px' },
-      orientacion: 'vertical',
-      modo: 'pagina-fija',
     });
     const evaluation = evaluateManifest({
       manifest: DIM3_MANIFEST_V0,
@@ -414,9 +482,9 @@ describe('adenda del núcleo editorial (2026-09-18) — dim3.req08 y dim3.req09'
     expect(evaluation.contador).toEqual({ resueltos: 7, activos: 9 });
   });
 
-  it('req09 cita insumo 3: zona segura de 39 px (< 40) sin razón escrita ⇒ no-resuelto', () => {
+  it('req09 cita insumo 3: zona segura de 20 px (< 40) sin razón escrita ⇒ no-resuelto', () => {
     const payloads = resolvedDim3Payloads();
-    payloads.set('dim3.req09', { ...sangradoResuelto(), zonaSegura: '39px' });
+    ajustarSangrado(payloads, 0, { zonaSegura: '20px' });
     const evaluation = evaluateManifest({
       manifest: DIM3_MANIFEST_V0,
       payloads,
@@ -429,41 +497,10 @@ describe('adenda del núcleo editorial (2026-09-18) — dim3.req08 y dim3.req09'
     expect(evaluation.contador).toEqual({ resueltos: 8, activos: 9 });
   });
 
-  it('req09 citas insumos 3 y 4: margen del texto corrido de 60 px (< 72) sin razón escrita ⇒ no-resuelto', () => {
+  it('req09 canal de ausencia: zona segura de 20 px con razón escrita ⇒ resuelto', () => {
     const payloads = resolvedDim3Payloads();
-    payloads.set('dim3.req09', { ...sangradoResuelto(), margenTextoCorrido: '60px' });
-    const evaluation = evaluateManifest({
-      manifest: DIM3_MANIFEST_V0,
-      payloads,
-      rectoras: emptyRectoras(),
-    });
-    expect(evaluation.resultado).toBe('no-resuelto');
-    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req09')?.resultado).toBe(
-      'no-resuelto',
-    );
-    expect(evaluation.contador).toEqual({ resueltos: 8, activos: 9 });
-  });
-
-  it('req09 "aSangre" vacío no es una declaración ⇒ no-resuelto (fail-closed)', () => {
-    const payloads = resolvedDim3Payloads();
-    payloads.set('dim3.req09', { ...sangradoResuelto(), aSangre: [] });
-    const evaluation = evaluateManifest({
-      manifest: DIM3_MANIFEST_V0,
-      payloads,
-      rectoras: emptyRectoras(),
-    });
-    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim3.req09')?.resultado).toBe(
-      'no-resuelto',
-    );
-    expect(evaluation.contador).toEqual({ resueltos: 8, activos: 9 });
-  });
-
-  it('req09 canal de ausencia: umbrales cortos + razón escrita ⇒ resuelto', () => {
-    const payloads = resolvedDim3Payloads();
-    payloads.set('dim3.req09', {
-      ...sangradoResuelto(),
-      zonaSegura: '24px',
-      margenTextoCorrido: '48px',
+    ajustarSangrado(payloads, 0, {
+      zonaSegura: '20px',
       excepcion: 'la imprenta confirmó márgenes reducidos por el plegado del tríptico',
     });
     const evaluation = evaluateManifest({
@@ -478,10 +515,9 @@ describe('adenda del núcleo editorial (2026-09-18) — dim3.req08 y dim3.req09'
     expect(evaluation.contador).toEqual({ resueltos: 9, activos: 9 });
   });
 
-  it('req09 exclusión mutua: cumplir los dos umbrales Y escribir la excepción ⇒ no-resuelto', () => {
+  it('req09 exclusión mutua: cumplir los dos umbrales Y escribir la excepción en el mismo formato ⇒ no-resuelto', () => {
     const payloads = resolvedDim3Payloads();
-    payloads.set('dim3.req09', {
-      ...sangradoResuelto(),
+    ajustarSangrado(payloads, 0, {
       excepcion: 'la escribo igual aunque los umbrales se cumplen',
     });
     const evaluation = evaluateManifest({

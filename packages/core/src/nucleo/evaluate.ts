@@ -45,6 +45,19 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
+/**
+ * ¿El valor en `ruta` es `igualA`? Un segmento `'*'` recorre una lista y basta
+ * con que un elemento cumpla: «el sistema soporta algún formato de contenido
+ * corrido». Ausente o de otra forma ⇒ falso (fail-closed).
+ */
+function cumpleCondicion(valor: unknown, ruta: readonly (string | number)[], igualA: string): boolean {
+  if (ruta.length === 0) return valor === igualA;
+  const [seg, ...resto] = ruta;
+  if (seg === '*') return Array.isArray(valor) && valor.some((v) => cumpleCondicion(v, resto, igualA));
+  if (typeof seg === 'number') return Array.isArray(valor) && cumpleCondicion(valor[seg], resto, igualA);
+  return isRecord(valor) && cumpleCondicion(valor[seg as string], resto, igualA);
+}
+
 export function evaluarNucleo(input: EvaluarNucleoInput): NucleoEvaluationV0 {
   const { nucleo } = input;
   const faltantes: string[] = [];
@@ -57,12 +70,10 @@ export function evaluarNucleo(input: EvaluarNucleoInput): NucleoEvaluationV0 {
   for (const m of input.manifests) for (const r of m.requirements) porId.set(r.id, r);
 
   const reglas: ReglaResultV0[] = nucleo.reglas.map((regla) => {
-    // Condición sobre otra pregunta: si no se cumple, la regla no aplica a esta pieza.
+    // Condición sobre otra pregunta: si el sistema no declara soportar aquello, la regla no aplica.
     if (regla.condicion !== undefined) {
       const otro = input.payloads.get(regla.condicion.requisitoId);
-      let v: unknown = otro;
-      for (const seg of regla.condicion.ruta) v = isRecord(v) ? v[String(seg)] : Array.isArray(v) && typeof seg === 'number' ? v[seg] : undefined;
-      if (v !== regla.condicion.igualA) {
+      if (!cumpleCondicion(otro, regla.condicion.ruta, regla.condicion.igualA)) {
         return {
           reglaId: regla.id,
           requisitoId: regla.requisitoId,

@@ -68,9 +68,9 @@ export const EXPLICACIONES: Readonly<Record<string, string>> = {
   'dim3.req07':
     'Otro puente técnico: WordPress tiene un solo campo de espaciado (un número de 0 a 64). Esto pregunta cómo se relaciona la escala del sistema con ese único número.',
   'dim3.req08':
-    'Antes de dibujar nada, el sistema tiene que decir en qué hoja se imprime: A4, Letter, Legal, una de las otras de la lista, o una medida tuya. Y si la medida es tuya, tiene que escribirla, porque una hoja que nadie pidió no sirve de nada. Si nadie dice nada, parte en A4 o Letter, nunca en una hoja inventada.',
+    'Acá tu sistema deja escrito qué formatos de hoja sabe producir, uno por uno, con el nombre que tú les das («carta vertical», «A5 apaisado»). Cada formato sale de una lista cerrada (carta, A4, legal, tabloid, A5, A3) o lleva su propia medida, pero nunca puede ser una hoja que nadie pidió. Además dices si va vertical o apaisado y si se arma por páginas fijas o con el contenido corrido. Si eliges «medida declarada» tienes que escribir el ancho y el alto, y ninguno de los dos lados puede pasar de 8000 px.',
   'dim3.req09':
-    'El fondo sí puede llegar hasta el borde, pero lo que se lee no: tiene que quedar una franja libre en cada lado y, si el texto va corrido, esa franja tiene que ser más ancha todavía. Ejemplo: la mancha de color se pasa un poco más allá del borde para que al cortar no quede un filo blanco, y el párrafo igual queda bien adentro. Si de verdad no puedes respetar esas franjas, escribe por qué: no cumplirlas en silencio no vale.',
+    'Para cada formato que tu sistema soporta, acá dices cuánto sangra el fondo, cuánto espacio queda libre en cada borde para lo que sí debe verse, cuánto margen necesita el texto corrido y qué elementos pueden ir a sangre. Escribe «ninguno» cuando no haya nada a sangre: una lista vacía no cuenta como decisión. Si no alcanzas los 40 px libres y los 72 px de margen para el texto corrido, tienes que dejar escrita la razón; y si cumples los dos, no corresponde poner excusa. Tu sistema tiene que cubrir todos los formatos que declaró antes, sin dejar ninguno sin su sangrado.',
   'dim4.req01':
     'Antes de dibujar nada, el set dice con qué piezas geométricas trabaja: por ejemplo «superficie», «contenedor», «acción» y «separador». Cada una con su nombre y una frase que explique para qué sirve, así nadie tiene que adivinar qué es cada cosa.',
   'dim4.req02':
@@ -120,9 +120,9 @@ export const EXPLICACIONES: Readonly<Record<string, string>> = {
   'dim6.req07':
     'Cómo se reacomoda la composición al cambiar de formato, o la decisión explícita de que no se reacomode.',
   'dim6.req08':
-    'Una pieza de varias caras —un tríptico, un folleto, un flyer a dos caras— se arma panel por panel: cada uno con su contenido y su número de orden, más el orden en que se despliega al abrirla y lo que se repite en cada hoja, como el folio, la cabecera o el membrete. Si la pieza no se pliega, también lo escribes: «sin plegado».',
+    'El sistema no describe una pieza en particular: declara qué estructuras sabe armar, como un folleto de doce páginas, un tríptico o un díptico. Para cada una deja escrito qué paneles tiene, qué rol cumple cada uno, en qué orden van, cómo se dobla, en qué orden se despliega al abrirla y qué elementos se repiten en todas las hojas, como el folio o la cabecera.',
   'dim6.req09':
-    'Un flyer o un afiche se lee desde el otro lado de la sala, así que manda una sola línea: seis palabras o menos y bien grande (80 px o más). Las cinco preguntas —qué, cuándo, dónde, cuánto y cómo actuar— van juntas y a la vista, no repartidas en la prosa. Si tu pieza se lee de cerca, escribes la razón y listo.',
+    'Si el sistema sirve para carteles, afiches o volantes, aquí queda escrito cómo trata la línea dominante: cuántas palabras acepta como máximo, con qué tamaño mínimo aparece y cómo agrupa las cinco preguntas del aviso. Si no sirve para leerse de lejos, basta con que escribas la razón y no declares nada más, porque las dos cosas juntas se contradicen.',
   'dim7.req01':
     'Todo lo que se puede apretar o recorrer tiene que avisar que se puede. Si un botón, un enlace o una tarjeta no dan ninguna señal (forma, subrayado, cambio al pasar el puntero), la persona simplemente no lo intenta.',
   'dim7.req02':

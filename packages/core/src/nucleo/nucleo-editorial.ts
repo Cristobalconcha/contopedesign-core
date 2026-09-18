@@ -19,9 +19,16 @@
  * Design (cuerpo 10 pt donde pide 12, notas 8 pt donde pide 9, filetes de
  * 0,25 pt donde pide 1 px) y se imprimió bien, porque Claude describe un
  * documento de oficina y el folleto es imprenta. Por eso esos umbrales van
- * **condicionados** al tipo de pieza que Claude describe (contenido corrido)
- * y no rigen sobre una pieza de página fija. Lo que ninguna fuente cita con
- * número —el filete mínimo de imprenta, la resolución— no es regla.
+ * **condicionados** a que el sistema declare soportar lo que Claude describe
+ * (algún formato de contenido corrido) y no rigen sobre un sistema que sólo
+ * soporta página fija. Lo que ninguna fuente cita con número —el filete
+ * mínimo de imprenta, la resolución— no es regla.
+ *
+ * Vocabulario (Cristóbal, 18-09): ContOpe produce sistemas, no piezas. Las
+ * preguntas hablan de lo que el sistema SOPORTA (formatos, estructuras,
+ * lectura a distancia); la pieza la arma el destino con ese ADN. La
+ * declaración inicial del sistema sólo sirve para acotar qué preguntas se le
+ * exigen.
  */
 import type { Operand, PathSegment, PredicateClause } from '../requirement-manifest/predicate.js';
 import type { NucleoDeMundoV0 } from './types.js';
@@ -40,8 +47,8 @@ const gte = (left: Operand, right: Operand): PredicateClause => ({ kind: 'compar
 const lte = (left: Operand, right: Operand): PredicateClause => ({ kind: 'compare', op: '<=', left, right });
 const gteCss = (left: Operand, right: Operand): PredicateClause => ({ kind: 'compareCss', cssType: 'longitud-css', op: '>=', left, right });
 
-/** Rige sólo cuando la hoja se declara como contenido corrido (dim3.req08.modo). */
-const SOLO_DOCUMENTO_CORRIDO = { requisitoId: 'dim3.req08', ruta: ['modo'], igualA: 'contenido-corrido' } as const;
+/** Rige sólo cuando el sistema declara soportar algún formato de contenido corrido (dim3.req08). */
+const SOLO_SI_SOPORTA_CONTENIDO_CORRIDO = { requisitoId: 'dim3.req08', ruta: ['formatos', '*', 'modo'], igualA: 'contenido-corrido' } as const;
 
 export const NUCLEO_EDITORIAL: NucleoDeMundoV0 = {
   schemaVersion: 1,
@@ -73,8 +80,8 @@ export const NUCLEO_EDITORIAL: NucleoDeMundoV0 = {
     { requisitoId: 'dim3.req03', porque: 'Retícula base declarada (12 pt desde 36 pt en el folleto, oculta pero definida).' },
     { requisitoId: 'dim3.req04', porque: 'Retícula de columnas: 3 columnas con medianil de 17 pt en 15 de 16 páginas del folleto.' },
     { requisitoId: 'dim3.req05', porque: 'Contenedores con relación explícita con el soporte: márgenes de 20/20/15/10 mm en el folleto.' },
-    { requisitoId: 'dim3.req08', porque: 'La hoja: carta vertical en el folleto, A3 en Hanta; Claude Design: «nunca una hoja inventada».' },
-    { requisitoId: 'dim3.req09', porque: 'Sangrado de 5 mm uniforme en el folleto con el contenido dentro de los márgenes; Claude Design: fondos a sangre, contenido no.' },
+    { requisitoId: 'dim3.req08', porque: 'Los formatos que el sistema soporta: carta vertical en el folleto, A3 en Hanta; Claude Design: «nunca una hoja inventada».' },
+    { requisitoId: 'dim3.req09', porque: 'Sangrado y zona segura por formato soportado: 5 mm uniforme en el folleto con el contenido dentro de los márgenes; Claude Design: fondos a sangre, contenido no.' },
     // Forma
     { requisitoId: 'dim4.req01', porque: 'Los roles geométricos los declara el set; el folleto tiene un estilo de objeto «Puntas redondeadas» de 2 mm de radio.' },
     { requisitoId: 'dim4.req02', porque: 'Radio de esquina por rol (2 mm en el folleto; radios con uso en el Design System de Claude).' },
@@ -91,8 +98,8 @@ export const NUCLEO_EDITORIAL: NucleoDeMundoV0 = {
     { requisitoId: 'dim6.req02', porque: 'Agrupación: las cinco preguntas del flyer van agrupadas, no repartidas en prosa (print.md).' },
     { requisitoId: 'dim6.req04', porque: 'Secuencia y repetición: la maestra A del folleto repite folio y cabecera en cada página.' },
     { requisitoId: 'dim6.req06', porque: 'Flujo editorial: 12 páginas en 7 pliegos leídas en orden.' },
-    { requisitoId: 'dim6.req08', porque: 'Estructura física: caras, paneles, plegado y lo que se repite por hoja (maestras).' },
-    { requisitoId: 'dim6.req09', porque: 'Dominante de lectura a distancia para flyer y afiche; «no aplica» escrito para lo que se lee de cerca.' },
+    { requisitoId: 'dim6.req08', porque: 'Las estructuras físicas que el sistema puede producir: caras, paneles, plegado y lo que se repite por hoja (maestras).' },
+    { requisitoId: 'dim6.req09', porque: 'Cómo trata la dominante cuando el sistema soporta lectura a distancia (cartelería, afiche, flyer); «no soporta» escrito si no.' },
     // Interacción y movimiento: el impreso no los emite, pero la intención queda resuelta
     { requisitoId: 'dim7.req07', porque: 'El equivalente estático de cada interacción: el impreso no emite interacción (taxonomía §7: «un perfil estático puede no emitir interacción, pero la intención permanece resuelta»).' },
     { requisitoId: 'dim8.req07', porque: 'La versión estática del movimiento: cómo se comunican cambio y jerarquía sin animación.' },
@@ -112,8 +119,8 @@ export const NUCLEO_EDITORIAL: NucleoDeMundoV0 = {
       id: 'editorial.cuerpo-documento-12pt',
       requisitoId: 'dim2.req02',
       nombre: 'En un documento corrido, el cuerpo va a 12 pt (16 px) o más, con interlínea entre 1,5 y 1,65',
-      cita: 'Claude Design, print.md (Type, tables, ink): «body 16px (12pt) at line-height 1.5–1.65». Condicionada: el folleto real de Santa Luisa (página fija, imprenta) usa 10 pt y se imprimió bien.',
-      condicion: SOLO_DOCUMENTO_CORRIDO,
+      cita: 'Claude Design, print.md (Type, tables, ink): «body 16px (12pt) at line-height 1.5–1.65». Condicionada a que el sistema soporte contenido corrido: el folleto real de Santa Luisa (sólo página fija, imprenta) usa 10 pt y se imprimió bien.',
+      condicion: SOLO_SI_SOPORTA_CONTENIDO_CORRIDO,
       clausulas: [
         each(
           p('roleStyles'),
@@ -129,7 +136,7 @@ export const NUCLEO_EDITORIAL: NucleoDeMundoV0 = {
       requisitoId: 'dim2.req02',
       nombre: 'En un documento corrido, notas y leyendas van a 9 pt (12 px) o más',
       cita: 'Claude Design, print.md: «captions and footnotes ≥12px (9pt), nothing smaller». Condicionada: el folleto real usa 8 pt en placeholders y tablas.',
-      condicion: SOLO_DOCUMENTO_CORRIDO,
+      condicion: SOLO_SI_SOPORTA_CONTENIDO_CORRIDO,
       clausulas: [
         each(
           p('roleStyles'),

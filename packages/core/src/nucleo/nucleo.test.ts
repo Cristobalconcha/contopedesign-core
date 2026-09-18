@@ -153,22 +153,22 @@ describe('núcleo del mundo editorial impreso', () => {
     ]);
     const payloads = new Map<string, unknown>([
       ['dim2.req02', { roleStyles: [{ role: 'cuerpo', fontSize: cuerpoPx, lineHeight }, { role: 'nota', fontSize: '12px', lineHeight: 1.3 }] }],
-      ['dim3.req08', { formato: 'letter', orientacion: 'vertical', modo }],
+      ['dim3.req08', { formatos: [{ nombre: 'carta', formato: 'letter', orientacion: 'vertical', modo }] }],
     ]);
     return { resultados, payloads };
   }
 
-  it('una pieza de página fija (el folleto real, cuerpo 10 pt) NO cae por las reglas de documento de Claude Design: no aplican', () => {
+  it('un sistema que sólo soporta página fija (el folleto real, cuerpo 10 pt) NO cae por las reglas de documento de Claude Design: no aplican', () => {
     const { resultados, payloads } = setTipografico('pagina-fija', '10pt', 1.2);
     const ev = evaluarNucleo({ nucleo: NUCLEO_EDITORIAL, resultados, payloads, manifests: TODOS, rectoras: emptyRectoras() });
     const cuerpo = ev.reglas.find((r) => r.reglaId === 'editorial.cuerpo-documento-12pt');
     const notas = ev.reglas.find((r) => r.reglaId === 'editorial.notas-documento-9pt');
     expect(cuerpo?.resultado).toBe('no-aplica');
     expect(notas?.resultado).toBe('no-aplica');
-    expect(cuerpo?.motivos[0]?.mensaje).toContain('dim3.req08.modo = contenido-corrido');
+    expect(cuerpo?.motivos[0]?.mensaje).toContain('dim3.req08.formatos.*.modo = contenido-corrido');
   });
 
-  it('en un documento corrido, un cuerpo de 10 pt no cumple la regla de 12 pt; uno de 16 px a 1,5 sí', () => {
+  it('si el sistema soporta contenido corrido, un cuerpo de 10 pt no cumple la regla de 12 pt; uno de 16 px a 1,5 sí', () => {
     const malo = setTipografico('contenido-corrido', '10pt', 1.2);
     const evMalo = evaluarNucleo({ nucleo: NUCLEO_EDITORIAL, resultados: malo.resultados, payloads: malo.payloads, manifests: TODOS, rectoras: emptyRectoras() });
     expect(evMalo.reglas.find((r) => r.reglaId === 'editorial.cuerpo-documento-12pt')?.resultado).toBe('no-cumple');

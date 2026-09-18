@@ -71,42 +71,47 @@ function resolvedDim6Payloads(): Map<string, unknown> {
     ],
   });
 
-  // Adenda C1: estructura física de un tríptico (insumos 10 y 11).
+  // Adenda C1: estructuras físicas que el sistema puede producir (insumos 10 y 11).
+  const panelesFolleto = Array.from({ length: 12 }, (_, i) => ({
+    nombre: i === 0 ? 'portada' : i === 11 ? 'contraportada' : `página ${i + 1}`,
+    rol: i === 0 ? 'portada' : i === 11 ? 'contraportada' : 'interior',
+    orden: i + 1,
+  }));
+
   m.set('dim6.req08', {
-    paneles: [
+    estructuras: [
       {
-        nombre: 'cara exterior · solapa interior',
-        contenido: 'resumen del programa y datos de contacto',
-        orden: 1,
+        nombre: 'folleto de 12',
+        paneles: panelesFolleto,
+        plegado: 'grapado a caballo con dos corchetes al centro',
+        ordenDespliegue: ['portada', 'páginas interiores 2-11', 'contraportada'],
+        repetidosPorHoja: ['folio', 'cabecera de sección'],
       },
       {
-        nombre: 'cara exterior · contraportada',
-        contenido: 'mapa de acceso y código QR de inscripción',
-        orden: 2,
-      },
-      { nombre: 'cara exterior · portada', contenido: 'titular del evento y fecha', orden: 3 },
-      {
-        nombre: 'cara interior · pliego',
-        contenido: 'programa completo, leído de izquierda a derecha',
-        orden: 4,
+        nombre: 'tríptico',
+        paneles: [
+          { nombre: 'cara exterior · solapa', rol: 'solapa', orden: 1 },
+          { nombre: 'cara exterior · contraportada', rol: 'contraportada', orden: 2 },
+          { nombre: 'cara exterior · portada', rol: 'portada', orden: 3 },
+        ],
+        plegado: 'plegado en Z con dos dobleces verticales',
+        ordenDespliegue: ['portada', 'solapa', 'pliego interior', 'contraportada'],
+        repetidosPorHoja: ['ninguno'],
       },
     ],
-    plegado: 'tríptico en rollo con dos pliegues verticales',
-    ordenDespliegue: ['portada', 'pliego interior', 'solapa interior', 'contraportada'],
-    repetidosPorHoja: ['número de página', 'cabecera de sección', 'membrete'],
   });
 
-  // Adenda C1: flyer de lectura a distancia (insumos 7 y 8). "Feria del libro 2026" = 4 palabras.
+  // Adenda C1: sistema que sí soporta lectura a distancia (insumos 7 y 8).
   m.set('dim6.req09', {
-    dominante: 'Feria del libro 2026',
-    palabrasDominante: 4,
-    tamanoDominante: '96px',
+    tratamientoDominante: 'una sola línea dominante a 96 px, sin adornos, sobre fondo plano',
+    palabrasMaximo: 4,
+    tamanoMinimo: '96px',
     cincoPreguntas: [
-      { pregunta: 'que', contenido: 'feria del libro independiente' },
-      { pregunta: 'cuando', contenido: 'viernes 25 y sábado 26 de septiembre' },
-      { pregunta: 'donde', contenido: 'plaza central, entrada por calle Arturo Prat' },
-      { pregunta: 'cuanto', contenido: 'entrada liberada' },
-      { pregunta: 'como-actuar', contenido: 'escanea el código QR o llama al +56 9 5555 5555' },
+      { pregunta: 'que', tratamiento: 'feria del libro independiente' },
+      { pregunta: 'cuando', tratamiento: 'viernes 25 y sábado 26 de septiembre' },
+      { pregunta: 'donde', tratamiento: 'plaza central, entrada por calle Arturo Prat' },
+      { pregunta: 'cuanto', tratamiento: 'entrada liberada' },
+      { pregunta: 'como-actuar', tratamiento: 'escanea el código QR o llama al +56 9 5555 5555' },
     ],
   });
 
@@ -213,7 +218,7 @@ describe('manifiesto v0 de Dimensión 6 — fidelidad a la spec C1-dim6 §3', ()
   });
 });
 
-describe('adenda C1 del núcleo editorial (2026-09-18) — dim6.req08 y dim6.req09', () => {
+describe('adenda C1 del núcleo editorial (2026-09-18) — dim6.req08 y dim6.req09 a nivel de sistema', () => {
   it('el documento sigue parseando limpio y la versión sube a 1.1 / revisión 2', () => {
     const result = parseRequirementManifest(DIM6_MANIFEST_V0);
     expect(result.ok).toBe(true);
@@ -256,14 +261,51 @@ describe('adenda C1 del núcleo editorial (2026-09-18) — dim6.req08 y dim6.req
     }
   });
 
-  it('el umbral del flyer vive en el schema: palabrasDominante declara max 6 y noAplica es el canal de ausencia', () => {
+  it('req08 declara la estructura anidada: paneles con nombre, rol y orden, más plegado, despliegue y repetidos', () => {
+    const req08 = DIM6_REQUIREMENTS_V0.find((r) => r.id === 'dim6.req08')!;
+    const estructuras = req08.payloadSchema['estructuras']!.type;
+    expect(estructuras.kind).toBe('lista');
+    if (estructuras.kind !== 'lista') throw new Error('estructuras debe ser una lista');
+    const estructura = estructuras.of;
+    expect(estructura.kind).toBe('objeto');
+    if (estructura.kind !== 'objeto') throw new Error('cada estructura debe ser un objeto');
+    for (const campo of ['nombre', 'paneles', 'plegado', 'ordenDespliegue', 'repetidosPorHoja']) {
+      expect(estructura.fields[campo]?.optional ?? false, campo).toBe(false);
+    }
+    const paneles = estructura.fields['paneles']!.type;
+    expect(paneles.kind).toBe('lista');
+    if (paneles.kind !== 'lista') throw new Error('paneles debe ser una lista');
+    const panel = paneles.of;
+    expect(panel.kind).toBe('objeto');
+    if (panel.kind !== 'objeto') throw new Error('cada panel debe ser un objeto');
+    expect(Object.keys(panel.fields).sort()).toEqual(['nombre', 'orden', 'rol']);
+  });
+
+  it('req09 deja todo opcional: el umbral vive en el schema y el predicado decide la rama', () => {
     const req09 = DIM6_REQUIREMENTS_V0.find((r) => r.id === 'dim6.req09')!;
     const campos = req09.payloadSchema;
-    expect(campos['palabrasDominante']?.type).toEqual({ kind: 'numero', max: 6 });
-    expect(campos['tamanoDominante']?.type).toEqual({ kind: 'longitud-css' });
-    expect(campos['noAplica']?.optional).toBe(true);
-    // Opcional (integrador, 18-09): si la pieza se lee de cerca, noAplica basta y no hay dominante que escribir.
-    expect(campos['dominante']?.optional).toBe(true);
+    for (const campo of [
+      'tratamientoDominante',
+      'palabrasMaximo',
+      'tamanoMinimo',
+      'cincoPreguntas',
+      'noAplica',
+    ]) {
+      expect(campos[campo]?.optional, campo).toBe(true);
+    }
+    expect(campos['palabrasMaximo']?.type).toEqual({ kind: 'numero', max: 6 });
+    expect(campos['tamanoMinimo']?.type).toEqual({ kind: 'longitud-css' });
+    const cinco = campos['cincoPreguntas']!.type;
+    expect(cinco.kind).toBe('lista');
+    if (cinco.kind !== 'lista') throw new Error('cincoPreguntas debe ser una lista');
+    const pregunta = cinco.of;
+    expect(pregunta.kind).toBe('objeto');
+    if (pregunta.kind !== 'objeto') throw new Error('cada pregunta debe ser un objeto');
+    expect(pregunta.fields['pregunta']?.type).toEqual({
+      kind: 'enum',
+      values: ['que', 'cuando', 'donde', 'cuanto', 'como-actuar'],
+    });
+    expect(pregunta.fields['tratamiento']?.optional ?? false).toBe(false);
   });
 });
 
@@ -325,13 +367,20 @@ describe('evaluación de la Dimensión 6 completa', () => {
     );
   });
 
-  it('req08 completitud: un panel mudo (sin contenido) ⇒ no-resuelto', () => {
+  it('req08 completitud: una estructura declarada sin paneles ⇒ no-resuelto', () => {
     const payloads = resolvedDim6Payloads();
     const req08 = payloads.get('dim6.req08') as Record<string, unknown>;
-    const paneles = req08['paneles'] as Array<Record<string, unknown>>;
+    const estructuras = req08['estructuras'] as Array<Record<string, unknown>>;
     payloads.set('dim6.req08', {
-      ...req08,
-      paneles: [{ nombre: 'cara exterior · portada', orden: 1 }, ...paneles.slice(1)],
+      estructuras: [
+        estructuras[0],
+        {
+          nombre: 'tríptico',
+          plegado: 'plegado en Z con dos dobleces verticales',
+          ordenDespliegue: ['portada', 'solapa', 'contraportada'],
+          repetidosPorHoja: ['ninguno'],
+        },
+      ],
     });
     const evaluation = evaluateManifest({
       manifest: DIM6_MANIFEST_V0,
@@ -344,10 +393,37 @@ describe('evaluación de la Dimensión 6 completa', () => {
     );
   });
 
-  it('umbral roto en req09: siete palabras en la dominante ⇒ no-resuelto (cita «≤ 6 palabras»)', () => {
+  it('req08 completitud: un panel sin rol ⇒ no-resuelto', () => {
+    const payloads = resolvedDim6Payloads();
+    const req08 = payloads.get('dim6.req08') as Record<string, unknown>;
+    const estructuras = req08['estructuras'] as Array<Record<string, unknown>>;
+    const panelesTriptico = estructuras[1]!['paneles'] as Array<Record<string, unknown>>;
+    payloads.set('dim6.req08', {
+      estructuras: [
+        estructuras[0],
+        {
+          ...estructuras[1],
+          paneles: panelesTriptico.map((panel, i) =>
+            i === 0 ? { nombre: panel['nombre'], orden: panel['orden'] } : panel,
+          ),
+        },
+      ],
+    });
+    const evaluation = evaluateManifest({
+      manifest: DIM6_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim6.req08')?.resultado).toBe(
+      'no-resuelto',
+    );
+  });
+
+  it('umbral roto en req09: el sistema se permite siete palabras ⇒ no-resuelto (cita «≤ 6 palabras»)', () => {
     const payloads = resolvedDim6Payloads();
     const req09 = payloads.get('dim6.req09') as Record<string, unknown>;
-    payloads.set('dim6.req09', { ...req09, palabrasDominante: 7 });
+    payloads.set('dim6.req09', { ...req09, palabrasMaximo: 7 });
     const evaluation = evaluateManifest({
       manifest: DIM6_MANIFEST_V0,
       payloads,
@@ -359,10 +435,10 @@ describe('evaluación de la Dimensión 6 completa', () => {
     );
   });
 
-  it('umbral roto en req09: dominante de 40 px ⇒ no-resuelto (cita «80 px / 60 pt o más»)', () => {
+  it("umbral roto en req09: tamaño mínimo de '60px' ⇒ no-resuelto (cita «80 px / 60 pt o más»)", () => {
     const payloads = resolvedDim6Payloads();
     const req09 = payloads.get('dim6.req09') as Record<string, unknown>;
-    payloads.set('dim6.req09', { ...req09, tamanoDominante: '40px' });
+    payloads.set('dim6.req09', { ...req09, tamanoMinimo: '60px' });
     const evaluation = evaluateManifest({
       manifest: DIM6_MANIFEST_V0,
       payloads,
@@ -393,7 +469,8 @@ describe('evaluación de la Dimensión 6 completa', () => {
   it('canal de ausencia de req09: sólo la razón escrita (noAplica) ⇒ resuelto', () => {
     const payloads = resolvedDim6Payloads();
     payloads.set('dim6.req09', {
-      noAplica: 'es una carta formal que se lee en la mano, no desde el otro lado de la sala',
+      noAplica:
+        'este sistema no soporta lectura a distancia: es una carta formal que se lee en la mano, no desde el otro lado de la sala',
     });
     const evaluation = evaluateManifest({
       manifest: DIM6_MANIFEST_V0,
@@ -407,12 +484,26 @@ describe('evaluación de la Dimensión 6 completa', () => {
     );
   });
 
-  it('canal de ausencia de req09 mezclado con contenido (noAplica + dominante) ⇒ no-resuelto por exclusión mutua', () => {
+  it('canal de ausencia de req09 mezclado con contenido (noAplica + tratamientoDominante) ⇒ no-resuelto por exclusión mutua', () => {
     const payloads = resolvedDim6Payloads();
     payloads.set('dim6.req09', {
-      noAplica: 'es una carta formal que se lee en la mano',
-      dominante: 'Feria del libro 2026',
+      noAplica: 'este sistema no soporta lectura a distancia',
+      tratamientoDominante: 'una sola línea dominante a 96 px',
     });
+    const evaluation = evaluateManifest({
+      manifest: DIM6_MANIFEST_V0,
+      payloads,
+      rectoras: emptyRectoras(),
+    });
+    expect(evaluation.resultado).toBe('no-resuelto');
+    expect(evaluation.resultados.find((r) => r.requisitoId === 'dim6.req09')?.resultado).toBe(
+      'no-resuelto',
+    );
+  });
+
+  it('req09 sin ninguna de las dos ramas (payload vacío) ⇒ no-resuelto', () => {
+    const payloads = resolvedDim6Payloads();
+    payloads.set('dim6.req09', {});
     const evaluation = evaluateManifest({
       manifest: DIM6_MANIFEST_V0,
       payloads,
