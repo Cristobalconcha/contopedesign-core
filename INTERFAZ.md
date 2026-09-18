@@ -9,8 +9,7 @@ Prototipo navegable:
 **Construida el 14 de septiembre de 2026** en `packages/desktop`, sobre el
 núcleo real: las pantallas 1, 2 y 3 tal como están descritas abajo, la
 pantalla 5 aprobada, y tres instrumentos más un editor estructurado que cubre
-a los 43 requisitos de entonces (73 desde el 18 de septiembre, cuando el
-manifiesto completó las nueve dimensiones; ver `MAPA.md` §5). La pantalla 4 sigue sin dibujar, a propósito. Lo que se
+a los 43 requisitos de entonces (84 desde el 18 de septiembre, en diez dimensiones; ver `MAPA.md` §5). La pantalla 4 sigue sin dibujar, a propósito. Lo que se
 construyó, y qué decisiones se tomaron sin preguntar, está al final, en
 [«Lo construido»](#lo-construido-14-de-septiembre).
 
@@ -89,7 +88,7 @@ La completitud es binaria y se ve: sin todo resuelto no se habilita la
 armonización.
 
 En el prototipo eran los **43 requisitos reales** del manifiesto, en cinco
-dimensiones; desde el 18 de septiembre son 73, en las nueve. Tres de las cuatro
+dimensiones; desde el 18 de septiembre son 84, en diez. Tres de las cuatro
 dimensiones nuevas (interacción, movimiento, patrones) se muestran como texto,
 porque no tienen primitiva visual propia todavía; forma usa la primitiva de
 radio, que todavía no lee el payload.
@@ -214,7 +213,7 @@ las pantallas de arriba, esto es lo que cambia y lo que no:
 | pantalla | qué cambia |
 |---|---|
 | 1. Inicio | Se queda como está (elegir mundo, abrir, recientes). Pero **ya no salta a Recolección**: pasa a una pantalla nueva. |
-| **1b. Alcance** (nueva) | Una línea para describir el trabajo al que va el sistema, y el desglose de las dimensiones del mundo con casillas: las del núcleo marcadas y fijas, las demás a elección. Lo marcado es el paquete de definiciones, y Definición mide contra él. |
+| **1b. Alcance** (construida el 18-09, commit `8b7187d`) | Una línea para describir el trabajo al que va el sistema, y el desglose de las dimensiones del mundo con casillas: las del núcleo marcadas y fijas, las demás a elección. Lo marcado es el paquete de definiciones, y Definición mide contra él. |
 | 2. Recolección | El paso 2 del ciclo («qué se toma de este insumo») **estaba diseñado y no se construyó**; pasa a ser obligatorio y se hace sobre el mismo desglose de dimensiones. Y la zona de incorporar se parte en **dos carriles**: referentes (entran como propuesta) y cortapisas (entran como rectora, con qué se toma y qué queda abierto). |
 | 3. Definición | Se ordena en dos momentos: primero **asignar los rieles** a todos los vacíos, después **definir**. Lo asignado al diseñador abre el instrumento del parámetro; GrapesJS entra como instrumento opcional que abre en el apartado de la variable. Sólo se exigen las preguntas del paquete. |
 | 4. Armonización | Sigue sin dibujar. Lo que sí quedó definido es quién arbitra: **sistemas de referencia por universo**, con cita y condición, nunca uno para todo. |
@@ -291,10 +290,9 @@ se puedan revertir sabiendo por qué existían.
 
 ### Lo que falta, en orden de lo que más pesa
 
-0. La pantalla de alcance (el paquete de definiciones por casillas) y los dos
-   carriles de recolección con la marca de «qué tomo de este insumo». Son del
-   flujo del 18 de septiembre y van primero porque sin ellos la completitud se
-   mide contra el manifiesto entero y las cortapisas no existen.
+0. ~~La pantalla de alcance~~ (hecha el 18-09) y los dos carriles de
+   recolección con la marca de «qué tomo de este insumo». Son del flujo del 18
+   de septiembre y van primero porque sin ellos las cortapisas no existen.
 1. La pantalla 4: el editor visual y el artefacto de exhibición para la
    armonización. Sin conversarla, no.
 2. Instrumentos visuales para el resto de los parámetros (roles de color,

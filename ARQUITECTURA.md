@@ -108,9 +108,10 @@ Desde ahí, la completitud se mide contra ese paquete y no contra el manifiesto
 entero (decisión del 13 de septiembre). Lo que no está en el paquete no es una
 ausencia: es algo que este sistema no declara.
 
-*Estado:* el catálogo existe (79 preguntas en nueve dimensiones) y los núcleos
-de dos mundos también (`packages/core/src/nucleo/`). **La pantalla no existe:**
-Inicio elige el mundo y salta directo a Recolección, sin desglose ni casillas.
+*Estado:* **construida el 18 de septiembre** (`pantallas/Alcance.tsx`, commit
+`8b7187d`): la línea de propósito, el desglose con casillas, las del núcleo
+fijas, y Definición mide contra el paquete. El catálogo tiene 84 preguntas en
+diez dimensiones; los núcleos de dos mundos viven en `packages/core/src/nucleo/`.
 
 ### 1. Insumos, en dos carriles
 
@@ -198,7 +199,9 @@ imposición real, por ejemplo) vuelve como verificación, no como cambio del set
 
 Consecuencia sobre la décima dimensión: si materialidad, acabado, terminaciones
 y encuadernación entran como declaraciones, la dimensión es barata: preguntas
-con payload `texto`, sin predicados que inventar.
+con payload `texto`, sin predicados que inventar. **Hecho el mismo día**
+(`dim10`, «Salida física», cinco preguntas, commit `0d37e33`): la primera vez
+que el formato de ids cambió, como decía la spec que pasaría.
 
 **Cristóbal estuvo de acuerdo, y agregó el marco:** esto es la versión alfa,
 cero. Se parte con un set de dimensiones, y cuando se note que faltaban cosas,
@@ -208,7 +211,7 @@ no es una verdad del diseño, es el estado del catálogo hoy. Lo que sí es fijo
 es la forma de agregar una (MAPA.md, «cómo se agrega una dimensión») y que una
 dimensión nueva es un cambio mayor del formato, no un parche.
 
-*Estado:* Definición muestra las 79 preguntas con su explicación; hay tres
+*Estado:* Definición muestra las 84 preguntas con su explicación; hay tres
 instrumentos visuales y un editor estructurado por campo para el resto. Las
 primitivas de las cuatro dimensiones nuevas se muestran como texto. **GrapesJS
 no está en el escritorio.**
