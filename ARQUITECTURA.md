@@ -166,6 +166,41 @@ la definición con el universo web, donde ya hay un destino real que lee esas
 mismas variables. Es compatible con el principio de INTERFAZ.md: un instrumento
 por tipo de parámetro, que se abre desde el parámetro.
 
+#### Tres formas de definir, según lo que se define — propuesta mía, para revisión
+
+Cristóbal puso el caso límite: *«Libro de 48 páginas en pliegos de 8 con
+corchete y hotmelt»*. Una primitiva que exprese el sistema de encuadernación
+abarca demasiadas cosas indefinidas; tendría la complejidad de todo el sistema.
+Su intuición: esas definiciones **pasan como prompt**, y el destino (InDesign)
+guarda esas definiciones en una memoria propia. Lo que propongo es darle forma
+a eso sin inventar nada nuevo en el core:
+
+| forma | qué define | cómo se muestra | cómo se comprueba | dónde vive en el core |
+|---|---|---|---|---|
+| **Por variable** | color, tipografía, espacio, borde, retícula, imagen: lo que se reduce a valores con rol | primitiva e instrumento propios; GrapesJS para el subconjunto que es CSS | predicado del manifiesto (máquina) | los payloads de hoy |
+| **Por declaración** | encuadernación, materialidad, acabado, terminaciones, plegado, y todo lo que no cabe en un valor | una tarjeta con el texto, tal cual, junto a las demás primitivas | no la valida un predicado: la lee la IA en la armonización (que es la etapa que trabaja con IA, decisión 23) y la confirma el diseñador | payload `texto` + cláusula `verified`, que ya existen |
+| **Por referencia** | «como en el sistema anterior», «como en este referente» | la primitiva del referente, marcada como tomada | `ref` + presencia | los referentes y las cortapisas del paso 1 |
+
+Lo que hace que la declaración no sea texto suelto son dos campos, además del
+texto: **qué acota** (las preguntas o dimensiones sobre las que manda: el
+libro de 48 en pliegos de 8 acota los formatos, las estructuras físicas y las
+zonas seguras) y **quién la ejecuta** (el destino). Con eso, la armonización
+puede cruzarla contra lo definido por variable, y la IA puede señalar si la
+zona segura o el sangrado no calzan con lo que la declaración exige.
+
+**La memoria en el destino ya tiene nombre:** la cápsula. `DESIGN.md` es el
+canal en prosa y `design-contract.json` el canal por variable; el plugin de
+destino (InDesign, WordPress) guarda la cápsula y le entrega las declaraciones
+a la IA que opera ahí. Eso calza con el mandato de siempre: la IA opera la
+herramienta real, y con «pliegos de 8, corchete y hotmelt» arma el documento
+como lo armaría un diseñador. Lo que el destino aprenda al ejecutar (la
+imposición real, por ejemplo) vuelve como verificación, no como cambio del set.
+
+Consecuencia sobre la décima dimensión: si materialidad, acabado, terminaciones
+y encuadernación entran como declaraciones, la dimensión es barata: preguntas
+con payload `texto`, sin predicados que inventar. Sigue siendo decisión de
+Cristóbal si es una décima o entra en las nueve.
+
 *Estado:* Definición muestra las 79 preguntas con su explicación; hay tres
 instrumentos visuales y un editor estructurado por campo para el resto. Las
 primitivas de las cuatro dimensiones nuevas se muestran como texto. **GrapesJS
