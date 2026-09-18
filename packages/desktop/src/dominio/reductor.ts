@@ -22,6 +22,11 @@
  * - Aprobar no cambia el valor; reabrir no lo borra.
  * - Declarar el alcance reemplaza el anterior entero: es una decisión de
  *   contorno (qué preguntas exige el sistema), no un ajuste parcial.
+ * - Lo que la IA propone (`traer-propuesta`) entra como entrada de ContOpe en
+ *   `propuesta` y `explorable`, lo más débil; sobre algo ya resuelto por una
+ *   persona o un insumo NO pisa: queda como conflicto de origen. Una propuesta
+ *   nueva reemplaza a la anterior mientras siga siendo propuesta. Aprobarla
+ *   resuelve la tarea; quitarla la rechaza.
  * - La armonización es una etapa con pasadas (decisión 23): resolver una señal
  *   la marca como validada o anotada en la pasada actual; reabrirla borra esa
  *   decisión; una pasada nueva sólo sube el contador, las decisiones quedan.
@@ -65,7 +70,8 @@ export type Accion =
   | { tipo: 'registrar-capsula'; contrato: DesignContractV1 }
   | { tipo: 'resolver-senal'; senalId: string; estado: 'validada' | 'anotada'; nota?: string }
   | { tipo: 'reabrir-senal'; senalId: string }
-  | { tipo: 'nueva-pasada' };
+  | { tipo: 'nueva-pasada' }
+  | { tipo: 'traer-propuesta'; requirementId: string; payload: Record<string, unknown>; nota?: string };
 
 function esRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -361,7 +367,17 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
       const entries = sistema.designSet.entries.map((e) =>
         e.requirementId === accion.requirementId ? { ...e, cicloDeVida: 'aprobada' as const, fuerza: accion.fuerza } : e,
       );
-      return { ...sistema, designSet: { ...sistema.designSet, entries } };
+      // Aprobar una propuesta de ContOpe cierra su tarea: enlazada por una persona.
+      const aprobada = entries.find((e) => e.requirementId === accion.requirementId);
+      const tareas =
+        aprobada?.resolutionPath === 'contope'
+          ? sistema.tareas.map((t) =>
+              t.state === 'proposed' && t.definitionId.startsWith(`${accion.requirementId}.`)
+                ? { ...t, state: 'resolved' as const, resolvedDefinitionId: aprobada.effectiveDefinitionId, reviewedAt: ahora }
+                : t,
+            )
+          : sistema.tareas;
+      return { ...sistema, designSet: { ...sistema.designSet, entries }, tareas };
     }
 
     case 'reabrir': {
@@ -372,8 +388,16 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
     }
 
     case 'quitar-definicion': {
+      const quitada = sistema.designSet.entries.find((e) => e.requirementId === accion.requirementId);
       const entries = sistema.designSet.entries.filter((e) => e.requirementId !== accion.requirementId);
-      return { ...sistema, designSet: { ...sistema.designSet, entries } };
+      // Quitar una propuesta de ContOpe es rechazarla: la tarea lo registra.
+      const tareas =
+        quitada?.resolutionPath === 'contope'
+          ? sistema.tareas.map((t) =>
+              t.state === 'proposed' && t.definitionId.startsWith(`${accion.requirementId}.`) ? { ...t, state: 'rejected' as const, reviewedAt: ahora } : t,
+            )
+          : sistema.tareas;
+      return { ...sistema, designSet: { ...sistema.designSet, entries }, tareas };
     }
 
     case 'encargar-a-contope': {
@@ -430,5 +454,57 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
     }
     case 'nueva-pasada':
       return { ...sistema, armonizacion: { ...sistema.armonizacion, pasadas: sistema.armonizacion.pasadas + 1 } };
+    case 'traer-propuesta':
+      return traerPropuesta(sistema, accion.requirementId, accion.payload, ahora);
   }
+}
+
+/**
+ * Una propuesta de la IA entra como entrada de ContOpe, `propuesta` y
+ * `explorable`. Si la pregunta ya está resuelta por otra vía (o por una
+ * propuesta ya aprobada), no la pisa: queda como conflicto de origen con
+ * `insumoId: 'contope'`, y la decide la armonización. Si lo que había era
+ * otra propuesta de ContOpe sin aprobar, la reemplaza subiendo la revisión.
+ * La tarea activa del encargo pasa a `proposed` con la candidata enlazada.
+ */
+function traerPropuesta(sistema: Sistema, requirementId: string, payload: Record<string, unknown>, ahora: string): Sistema {
+  const req = requisito(requirementId);
+  if (!req) return sistema;
+  const set = conManifestRef(sistema.designSet, req.id);
+  const existente = set.entries.find((e) => e.requirementId === req.id);
+  if (existente && !(existente.resolutionPath === 'contope' && existente.cicloDeVida !== 'aprobada')) {
+    const conflicto: Conflicto = {
+      id: nuevoId('conflicto'),
+      requirementId: req.id,
+      insumoId: 'contope',
+      candidatoId: '',
+      fragmento: payload,
+      registradoEn: ahora,
+    };
+    return { ...sistema, designSet: set, conflictos: [...sistema.conflictos, conflicto] };
+  }
+  const entrada: DesignSetEntryV0 = existente
+    ? {
+        ...existente,
+        effectiveDefinitionId: idDefinicion(req.id, existente.revision + 1),
+        payload,
+        provenance: provenanceDe('contope'),
+        fuerza: 'explorable',
+        cicloDeVida: 'propuesta',
+        revision: existente.revision + 1,
+      }
+    : crearEntrada(req, payload, 'contope', provenanceDe('contope'), 'explorable', 'propuesta');
+  const entries = existente ? set.entries.map((e) => (e === existente ? entrada : e)) : [...set.entries, entrada];
+  const tareas = sistema.tareas.map((t) =>
+    (t.state === 'active' || t.state === 'proposed') && t.definitionId.startsWith(`${req.id}.`)
+      ? {
+          ...t,
+          state: 'proposed' as const,
+          candidateDefinitionIds: t.candidateDefinitionIds.includes(entrada.effectiveDefinitionId)
+            ? t.candidateDefinitionIds
+            : [...t.candidateDefinitionIds, entrada.effectiveDefinitionId],
+        }
+      : t,
+  );
+  return { ...sistema, designSet: { ...set, entries }, caminos: sinCamino(sistema.caminos, req.id), tareas };
 }

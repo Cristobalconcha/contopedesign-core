@@ -15,6 +15,7 @@ const puente = {
   registrarReciente: (ruta: string, nombre: string, vistazo: unknown) =>
     ipcRenderer.invoke('recientes:registrar', ruta, nombre, vistazo),
   abrirInsumos: () => ipcRenderer.invoke('dialogo:abrir-insumos'),
+  abrirPropuestas: () => ipcRenderer.invoke('dialogo:abrir-propuestas'),
   exportarCapsula: (archivos: Array<{ nombre: string; texto: string }>) =>
     ipcRenderer.invoke('dialogo:exportar-capsula', archivos),
   listarRecientes: () => ipcRenderer.invoke('recientes:listar'),

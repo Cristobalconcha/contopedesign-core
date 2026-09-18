@@ -107,6 +107,11 @@ export function puenteNavegador(): Puente {
         })),
       );
     },
+    async abrirPropuestas(): Promise<ArchivoDeSistema | null> {
+      const [archivo] = await elegirArchivos({ multiple: false, aceptar: '.json' });
+      if (!archivo) return null;
+      return { ruta: null, nombre: archivo.name, texto: await archivo.text() };
+    },
     async exportarCapsula(archivos) {
       for (const a of archivos) descargar(a.nombre, a.texto);
       return 'descargas del navegador';

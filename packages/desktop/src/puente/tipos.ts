@@ -52,6 +52,8 @@ export interface Puente {
   guardarSistemaComo(sugerido: string, texto: string, vistazo: Vistazo): Promise<{ ruta: string | null; nombre: string } | null>;
   registrarReciente(ruta: string | null, nombre: string, vistazo: Vistazo): Promise<void>;
   abrirInsumos(): Promise<ArchivoDeInsumo[]>;
+  /** Un archivo `*.propuestas.json` hecho por la IA para este sistema; no entra a recientes. */
+  abrirPropuestas(): Promise<ArchivoDeSistema | null>;
   exportarCapsula(archivos: Array<{ nombre: string; texto: string }>): Promise<string | null>;
   listarRecientes(): Promise<Reciente[]>;
   descargarCatalogo(): Promise<string>;
@@ -65,6 +67,7 @@ export interface PuenteElectron {
   guardarSistemaComo(sugerido: string, texto: string, vistazo: Vistazo): Promise<{ ruta: string; nombre: string } | null>;
   registrarReciente(ruta: string, nombre: string, vistazo: Vistazo): Promise<void>;
   abrirInsumos(): Promise<Array<{ ruta: string; nombre: string; extension: string; bytes: string }>>;
+  abrirPropuestas(): Promise<{ ruta: string; nombre: string; texto: string } | null>;
   exportarCapsula(archivos: Array<{ nombre: string; texto: string }>): Promise<string | null>;
   listarRecientes(): Promise<Reciente[]>;
   descargarCatalogo(): Promise<string>;

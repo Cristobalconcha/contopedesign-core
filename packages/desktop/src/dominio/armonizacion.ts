@@ -87,7 +87,7 @@ export function senalesDe(sistema: Sistema, evaluacion: Evaluacion): Senal[] {
   for (const c of sistema.conflictos) {
     const entrada = findEntry(sistema.designSet, c.requirementId);
     const insumoOrigen = sistema.insumos.find((i) => i.id === c.insumoId);
-    const origen = insumoOrigen?.nombre ?? c.insumoId;
+    const origen = insumoOrigen?.nombre ?? (c.insumoId === 'contope' ? 'una propuesta de ContOpe' : c.insumoId);
     const desplazado =
       insumoOrigen !== undefined
         ? `lo que venía de ${origen}`

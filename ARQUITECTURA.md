@@ -241,8 +241,17 @@ siendo cuando hay datos. Los datos ya existen en el formato del taller
 cápsulas), y la regla de fuerza del set (`human-confirmed` contra
 `model-proposal`) es justo la etiqueta que un entrenamiento así necesita.
 
-*Estado:* el encargo existe; **traer de vuelta lo que la IA proponga no está
-construido**, y el modo sombra no está ni diseñado. Lo que sí está es el registro
+*Estado:* el encargo existe, y desde la tarde del 18-09 **traer de vuelta lo
+que la IA proponga tiene su primer dibujo**: la IA devuelve un archivo
+`*.propuestas.json` (`kind: contope/propuestas`, `schemaVersion: 1`, el
+`designId` del contrato que leyó, la revisión, y una lista de
+`{ requirementId, payload, nota }`; el skill `leer-contrato-de-diseno` dice
+cómo). Construcción lo trae: cada propuesta entra como entrada de ContOpe en
+`propuesta` y `explorable`, la tarea pasa a `proposed` con la candidata
+enlazada, y en Definición se mira, se aprueba (la tarea queda `resolved`) o se
+quita (`rejected`). Sobre una pregunta ya resuelta por una persona o un insumo
+la propuesta **no pisa nada**: queda como conflicto de origen para la
+armonización. El modo sombra no está ni diseñado. Lo que sí está es el registro
 de lo que el diseñador resuelve, que es su materia prima.
 
 ### 5. Armonización, con árbitros por universo

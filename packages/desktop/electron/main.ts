@@ -138,6 +138,16 @@ function registrarIpc(): void {
     );
   });
 
+  ipcMain.handle('dialogo:abrir-propuestas', async () => {
+    const r = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [{ name: 'Propuestas de ContOpe', extensions: ['json'] }],
+    });
+    if (r.canceled || r.filePaths[0] === undefined) return null;
+    const ruta = r.filePaths[0];
+    return { ruta, nombre: basename(ruta), texto: await readFile(ruta, 'utf8') };
+  });
+
   ipcMain.handle('dialogo:exportar-capsula', async (_e, archivos: Array<{ nombre: string; texto: string }>) => {
     const r = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'], title: 'Carpeta para la cápsula' });
     if (r.canceled || r.filePaths[0] === undefined) return null;

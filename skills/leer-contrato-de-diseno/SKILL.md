@@ -122,6 +122,39 @@ que falta, bajo sus `constraintDefinitionIds`. **No es invención libre.**
 - Cerrar la tarea sólo enlazando una definición revisada (`resolved`) o con un
   rechazo explícito (`rejected`). **Nunca convertirla en silencio a `open`.**
 
+## Devolver las propuestas al taller
+
+Lo que se construya para una tarea de desarrollar vuelve a ContOpe Design
+Desktop en un archivo `<nombre>.propuestas.json`, que Construcción trae con
+«Traer propuestas de la IA…». Es la única forma de entrar: una propuesta nunca
+se escribe dentro del `*.contope.json` ni del contrato.
+
+```json
+{
+  "kind": "contope/propuestas",
+  "schemaVersion": 1,
+  "designId": "<design.id del contrato leído>",
+  "contractRevision": 3,
+  "por": "quién propone (modelo, sesión)",
+  "generadaEn": "2026-09-18T16:30:00.000Z",
+  "propuestas": [
+    {
+      "requirementId": "dim3.req01",
+      "payload": { "…": "con la forma exacta del payloadSchema de esa pregunta" },
+      "nota": "por qué se propone así, con la evidencia y las restricciones que se respetaron"
+    }
+  ]
+}
+```
+
+Reglas: `designId` es el del contrato leído, tal cual (si no calza, el taller
+rechaza el archivo entero). `requirementId` es el id de la pregunta del
+manifiesto (el `definitionId` de la tarea sin el sufijo `.defN`). El `payload`
+sigue el `payloadSchema` de esa pregunta: el taller lo evalúa con el mismo
+evaluador que todo lo demás. Lo que entra queda como **propuesta explorable de
+ContOpe**; si la pregunta ya estaba resuelta por una persona o un insumo, la
+propuesta no la pisa y queda como conflicto para la armonización.
+
 ## Al terminar
 
 Decir qué se aplicó, **qué definiciones del contrato lo justifican**, en qué

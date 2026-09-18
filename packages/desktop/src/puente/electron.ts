@@ -24,6 +24,7 @@ export function puenteElectron(nativo: PuenteElectron): Puente {
         extension: a.extension,
         bytes: deBase64(a.bytes),
       })),
+    abrirPropuestas: () => nativo.abrirPropuestas(),
     exportarCapsula: (archivos) => nativo.exportarCapsula(archivos),
     listarRecientes: () => nativo.listarRecientes(),
     descargarCatalogo: () => nativo.descargarCatalogo(),
