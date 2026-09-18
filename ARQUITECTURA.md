@@ -198,8 +198,15 @@ imposición real, por ejemplo) vuelve como verificación, no como cambio del set
 
 Consecuencia sobre la décima dimensión: si materialidad, acabado, terminaciones
 y encuadernación entran como declaraciones, la dimensión es barata: preguntas
-con payload `texto`, sin predicados que inventar. Sigue siendo decisión de
-Cristóbal si es una décima o entra en las nueve.
+con payload `texto`, sin predicados que inventar.
+
+**Cristóbal estuvo de acuerdo, y agregó el marco:** esto es la versión alfa,
+cero. Se parte con un set de dimensiones, y cuando se note que faltaban cosas,
+se agregan en su momento. Es un sistema propietario; se mejora a medida que
+surgen necesidades. Dicho de otro modo: que las dimensiones sean nueve, o diez,
+no es una verdad del diseño, es el estado del catálogo hoy. Lo que sí es fijo
+es la forma de agregar una (MAPA.md, «cómo se agrega una dimensión») y que una
+dimensión nueva es un cambio mayor del formato, no un parche.
 
 *Estado:* Definición muestra las 79 preguntas con su explicación; hay tres
 instrumentos visuales y un editor estructurado por campo para el resto. Las

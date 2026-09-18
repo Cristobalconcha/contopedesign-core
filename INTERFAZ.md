@@ -158,6 +158,23 @@ cuántas quedaron fuera por no declarar el campo**, no sólo cuántas calzaron.
 Condensed, Asap Condensed). Filtrar por ancho sin leer el nombre pierde fuentes
 evidentes.
 
+### Ver de cerca: el espécimen — pedido el 18 de septiembre
+
+Cristóbal, recordando que el selector ya existe y que sólo llama a lo que Google
+genera: *«sería interesante que ampliáramos la posibilidad de abrir una
+tipografía que uno pinche y se abra la ventana de la primitiva que muestra cómo
+se despliega esa tipografía con un texto que uno escriba, agrandando o
+reduciendo el tamaño, aplicándole o quitándole color. Eso nos permitiría hacer
+una definición que sirva, menos experimental.»*
+
+Es la página de detalle de una familia en fonts.google.com, dentro del selector:
+desde cada tarjeta, «ver de cerca» abre el espécimen de esa familia con texto
+propio, tamaño de 12 a 160 px, todos los pesos y la itálica que la familia trae,
+y color de texto y de fondo tomados de la paleta ya definida en el set (o
+libres). Desde ahí se elige la familia o se vuelve a la lista. Para verla
+completa hay que cargar todos sus pesos de Google Fonts, no sólo el regular que
+carga la lista.
+
 ### Lo que esto reemplaza
 
 La v1 se construyó el 13 de agosto: `TypographyFontPicker`, commit `a786216`,
