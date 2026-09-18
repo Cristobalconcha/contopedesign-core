@@ -127,9 +127,10 @@ pasadas adversariales. Lo que sigue **sin** existir en el núcleo, a propósito:
 el núcleo por mundo (packaging, editorial, campaña) es investigación que se
 cierra midiendo proyectos reales, no código; ver la decisión 11 del vault.
 Y dos límites del formato que salieron medidos esa noche: una dependencia o una
-referencia hacia **otra dimensión** no se puede verificar dentro del manifiesto
-(el evaluador arma su contexto por dimensión), así que esas relaciones viven en
-prosa y se resuelven en el set; y un valor cerrado sólo entra si tiene cita, por
+referencia hacia **otra dimensión** no se puede **resolver** dentro del manifiesto
+(el validador comprueba a qué requisito apunta, pero el evaluador arma su contexto
+por dimensión y no la navega), así que esas relaciones viven en prosa y se resuelven
+en el set; y un valor cerrado sólo entra si tiene cita, por
 lo que los roles geométricos de la dimensión 4 los declara cada set y no el
 manifiesto. [`MAPA.md`](MAPA.md) dice dónde vive cada cosa.
 

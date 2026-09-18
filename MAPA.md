@@ -203,9 +203,9 @@ brecha en todos sus requisitos; la 7 proyecta `form` en req05 y
 - **`dim1.req03` menciona `dim7.req10`** en el `valueNotes` de su
   `mapsToKinds` de `button` (`manifest-v0-dim1.ts:269`: «El puente completo
   se exige en dim7.req10 (implícito I1)»). La spec de dim7 tiene siete
-  requisitos: ese id **no va a existir**. Es una referencia a corregir al
-  implementar dim7 (decir a cuál requisito real apunta, o que no apunta a
-  ninguno). *La primera versión de este mapa decía `req13`: lo escribí sin
+  requisitos: ese id **no iba a existir**. *Corregida el 18-09 al integrar dim7:
+  la nota apunta a `dim7.req08` y `DIM1_MANIFEST_V0` subió a 1.1 / revisión 2
+  (commit `29a8cbc`).* *La primera versión de este mapa decía `req13`: lo escribí sin
   medir y lo pilló la auditoría hostil del plan. Medido el 18-09.*
 - **`DIMENSIONES` se deriva del primer requisito de cada manifiesto** y
   `dimensionDe` cae en `dim1` si el id no tiene punto. No usar ids raros.

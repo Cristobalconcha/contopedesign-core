@@ -2,8 +2,9 @@
 // Uso: node scripts/integrar-dimension.mjs <N> "<Nombre en pantalla>" <carpeta con los 3 archivos>
 // La carpeta trae manifest-v0-dimN.ts, manifest-v0-dimN.test.ts y explicaciones-dimN.snippet.ts
 // (el snippet exporta EXPLICACIONES_DIMN con una entrada por requisito).
-// Toca exactamente los registros que lista MAPA.md §6: index.ts, manifiesto.ts,
-// explicaciones.ts y los dos conteos. No corre pruebas: eso lo hace el integrador.
+// Toca exactamente los registros que lista MAPA.md §6 (pasos 2 a 7b): index.ts,
+// manifiesto.ts, explicaciones.ts, los dos conteos y el prefijo en primitivas.ts.
+// No corre pruebas: eso lo hace el integrador.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,7 +33,9 @@ const idxPath = path.join(RM, 'index.ts');
 let idx = read(idxPath);
 const linea = `export * from './manifest-v0-dim${N}.js';`;
 if (!idx.includes(linea)) {
-  const lines = idx.split('\n');
+  // Los archivos del repo pueden venir con CRLF: se parte por cualquiera de los dos
+  // (el 18-09 la versión anterior no reconoció las líneas con \r y dejó dim4 al final).
+  const lines = idx.split(/\r?\n/);
   const exportsManifest = lines.filter((l) => /^export \* from '\.\/manifest-v0-dim\d\.js';$/.test(l));
   const resto = lines.filter((l) => !/^export \* from '\.\/manifest-v0-dim\d\.js';$/.test(l));
   exportsManifest.push(linea);

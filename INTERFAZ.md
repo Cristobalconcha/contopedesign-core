@@ -89,9 +89,10 @@ La completitud es binaria y se ve: sin todo resuelto no se habilita la
 armonización.
 
 En el prototipo eran los **43 requisitos reales** del manifiesto, en cinco
-dimensiones; desde el 18 de septiembre son 73, en las nueve. Las cuatro
-dimensiones nuevas (forma, interacción, movimiento, patrones) se muestran como
-texto: no tienen primitiva visual propia todavía.
+dimensiones; desde el 18 de septiembre son 73, en las nueve. Tres de las cuatro
+dimensiones nuevas (interacción, movimiento, patrones) se muestran como texto,
+porque no tienen primitiva visual propia todavía; forma usa la primitiva de
+radio, que todavía no lee el payload.
 
 **Cada requisito lleva su explicación.** Cristóbal la pidió mirando la pantalla:
 *«¿qué quiere decir que cuenta con un fundamento de color efectivo? Eso necesita
