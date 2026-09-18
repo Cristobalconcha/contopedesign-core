@@ -88,10 +88,15 @@ La completitud es binaria y se ve: sin todo resuelto no se habilita la
 armonización.
 
 En el prototipo eran los **43 requisitos reales** del manifiesto, en cinco
-dimensiones; desde el 18 de septiembre son 84, en diez. Tres de las cuatro
-dimensiones nuevas (interacción, movimiento, patrones) se muestran como texto,
-porque no tienen primitiva visual propia todavía; forma usa la primitiva de
-radio, que todavía no lee el payload.
+dimensiones; desde el 18 de septiembre son 84, en diez. Las cuatro dimensiones
+que llegaron después del prototipo tienen primitiva propia desde la tarde del
+18-09: **forma** es un recuadro que lee el payload (radio, filete con su ancho,
+estilo y color, sombra si hay profundidad); **interacción** muestra los estados y
+el feedback como pastillas con su tono (éxito, error, aviso, acento, neutro);
+**movimiento** dibuja cada duración como una barra proporcional a sus
+milisegundos, resolviendo la referencia a la escala; **patrones** muestra los
+arquetipos como cuadritos, con un punto por slot, punteados si la anatomía no
+aplica. La salida física (dim10) se muestra como texto: es una declaración.
 
 **Cada requisito lleva su explicación.** Cristóbal la pidió mirando la pantalla:
 *«¿qué quiere decir que cuenta con un fundamento de color efectivo? Eso necesita
@@ -307,7 +312,8 @@ se puedan revertir sabiendo por qué existían.
    armonización. Sin conversarla, no.
 2. Instrumentos visuales para el resto de los parámetros (roles de color,
    superficies, estados, roles tipográficos, retícula, imagen…). Hoy los
-   resuelve el editor estructurado.
+   resuelve el editor estructurado. Las primitivas (cómo se muestran) ya
+   cubren las diez dimensiones; lo que falta es cómo se definen.
 3. El caso 3 del selector tipográfico (sólo muestra visual) y la lectura de
    PDF.
 4. Traer al archivo las propuestas que la IA de escritorio haga sobre los
