@@ -14,22 +14,9 @@
  * el reductor (`traer-propuesta`); acá sólo se lee.
  */
 import { findEntry } from '@contope/core';
+import { refsDe } from './apoyos.js';
 import { requisito } from './manifiesto.js';
 import type { Sistema } from './sistema.js';
-
-/**
- * Los `refReqId` que aparecen en cualquier profundidad del payload: una ref a
- * una pregunta sin entrada en el set dejaría el sistema imposible de guardar
- * (`validateDesignSetShape` la rechaza), así que se rechaza acá, antes.
- */
-function refsDe(v: unknown, salida: string[] = []): string[] {
-  if (Array.isArray(v)) for (const x of v) refsDe(x, salida);
-  else if (esRecord(v)) {
-    if (typeof v['refReqId'] === 'string') salida.push(v['refReqId']);
-    for (const x of Object.values(v)) refsDe(x, salida);
-  }
-  return salida;
-}
 
 export const KIND_PROPUESTAS = 'contope/propuestas';
 export const SCHEMA_PROPUESTAS = 1;

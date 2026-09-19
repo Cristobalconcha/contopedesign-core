@@ -46,6 +46,7 @@ import type {
   VerificationRecordV0,
 } from '@contope/core';
 import type { Alcance } from './alcance.js';
+import { apoyadasEn } from './apoyos.js';
 import { manifiestoDe, requisito, dimensionDe } from './manifiesto.js';
 import { nuevoId, type Candidato, type Conflicto, type Insumo, type Sistema } from './sistema.js';
 import type { DesignContractV1 } from '@contope/core';
@@ -68,7 +69,7 @@ export type Accion =
     }
   | { tipo: 'aprobar'; requirementId: string; fuerza: Fuerza }
   | { tipo: 'reabrir'; requirementId: string }
-  | { tipo: 'quitar-definicion'; requirementId: string }
+  | { tipo: 'quitar-definicion'; requirementId: string; enCascada?: boolean }
   | { tipo: 'encargar-a-contope'; requirementId: string }
   | { tipo: 'registrar-verificacion'; registro: VerificationRecordV0 }
   | { tipo: 'registrar-capsula'; contrato: DesignContractV1 }
@@ -142,6 +143,30 @@ export function unirFragmento(
     }
   }
   return salida;
+}
+
+/** Quita UNA definición con todo lo que cuelga de ella en el sistema (tarea, conflictos, camino, marca imperativa). */
+function quitarUna(sistema: Sistema, requirementId: string, ahora: string): Sistema {
+  const quitada = sistema.designSet.entries.find((e) => e.requirementId === requirementId);
+  if (!quitada) return sistema;
+  const entries = sistema.designSet.entries.filter((e) => e.requirementId !== requirementId);
+  // Quitar una propuesta de ContOpe es rechazarla: la tarea lo registra.
+  const tareas = sistema.tareas.map((t) =>
+    t.definitionId.startsWith(`${requirementId}.`) && t.state !== 'rejected' && (t.state !== 'active' || quitada.resolutionPath === 'contope')
+      ? cerrarTarea(t, ahora)
+      : t,
+  );
+  // Sin entrada no hay dos orígenes que arbitrar: los conflictos de esa
+  // pregunta se van con ella (auditoría 18-09, hallazgo 11).
+  const conflictos = sistema.conflictos.filter((c) => c.requirementId !== requirementId);
+  return {
+    ...sistema,
+    designSet: { ...sistema.designSet, entries },
+    tareas,
+    conflictos,
+    caminos: sinCamino(sistema.caminos, requirementId),
+    imperativas: conImperativa(sistema, requirementId, null, ahora),
+  };
 }
 
 /** Una tarea de encargo cerrada como rechazada: sin candidatas ni resolución que apunten a lo que ya no existe. */
@@ -420,25 +445,15 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
     }
 
     case 'quitar-definicion': {
-      const quitada = sistema.designSet.entries.find((e) => e.requirementId === accion.requirementId);
-      const entries = sistema.designSet.entries.filter((e) => e.requirementId !== accion.requirementId);
-      // Quitar una propuesta de ContOpe es rechazarla: la tarea lo registra.
-      const tareas = sistema.tareas.map((t) =>
-        t.definitionId.startsWith(`${accion.requirementId}.`) && t.state !== 'rejected' && (t.state !== 'active' || quitada?.resolutionPath === 'contope')
-          ? cerrarTarea(t, ahora)
-          : t,
-      );
-      // Sin entrada no hay dos orígenes que arbitrar: los conflictos de esa
-      // pregunta se van con ella (auditoría 18-09, hallazgo 11).
-      const conflictos = sistema.conflictos.filter((c) => c.requirementId !== accion.requirementId);
-      return {
-        ...sistema,
-        designSet: { ...sistema.designSet, entries },
-        tareas,
-        conflictos,
-        caminos: sinCamino(sistema.caminos, accion.requirementId),
-        imperativas: conImperativa(sistema, accion.requirementId, null, ahora),
-      };
+      // Quitar algo en lo que otras definiciones se apoyan (refs reales)
+      // dejaría el archivo sin poder guardarse. La acción se rechaza; la
+      // pantalla ofrece REEMPLAZAR o REDUCIR, y reducir es esto mismo en
+      // cascada: se quita también lo que se apoyaba (Cristóbal, 19-09).
+      const apoyadas = apoyadasEn(sistema, accion.requirementId);
+      if (apoyadas.length && accion.enCascada !== true) return sistema;
+      let salida = sistema;
+      for (const id of [...apoyadas].reverse()) salida = quitarUna(salida, id, ahora);
+      return quitarUna(salida, accion.requirementId, ahora);
     }
 
     case 'encargar-a-contope': {

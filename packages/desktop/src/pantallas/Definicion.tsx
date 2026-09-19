@@ -20,6 +20,7 @@ import { Primitiva } from '../componentes/Primitiva.js';
 import { EXPLICACIONES } from '../dominio/explicaciones.js';
 import { DIMENSIONES, NOMBRE_DIMENSION, REQUISITOS, dependientesDe } from '../dominio/manifiesto.js';
 import { mundo as mundoDe } from '../dominio/mundos.js';
+import { apoyadasEn } from '../dominio/apoyos.js';
 import { enNucleo } from '../dominio/nucleos.js';
 import { muestraDePayload } from '../dominio/primitivas.js';
 import { esCortapisa } from '../dominio/reductor.js';
@@ -38,6 +39,7 @@ export function Definicion() {
   const { sistema, evaluacion, despachar, abrir, ir } = useTaller();
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
   const [aprobando, setAprobando] = useState<string | null>(null);
+  const [quitando, setQuitando] = useState<string | null>(null);
 
   const entradas = sistema.designSet.entries;
   const cuenta = {
@@ -138,6 +140,8 @@ export function Definicion() {
                 const muestra = muestraDePayload(sistema.designSet, r.id);
                 const abierta = abiertas.has(r.id);
                 const dependientes = dependientesDe(r.id);
+                const apoyadas = entrada ? apoyadasEn(sistema, r.id) : [];
+                const nuclear = enNucleo(sistema.mundo, r.id);
                 const motivosPropios = (resultado?.motivos ?? []).filter((m) => !m.codigo.startsWith('dependencia-'));
                 const motivosDeps = (resultado?.motivos ?? []).filter((m) => m.codigo.startsWith('dependencia-'));
                 const enPaquete = evaluacion.paquete.has(r.id);
@@ -211,9 +215,14 @@ export function Definicion() {
                         )}
                         <button
                           className="via peligro"
+                          aria-pressed={quitando === r.id}
                           onClick={() => {
-                            if (deCortapisa) {
-                              if (window.confirm(avisoCortapisa)) despachar({ tipo: 'quitar-definicion', requirementId: r.id });
+                            if (deCortapisa && !window.confirm(avisoCortapisa)) return;
+                            // Dos escenarios (Cristóbal, 19-09): una definición suelta se
+                            // quita sin más; una nuclear, o con otras apoyadas en ella, se
+                            // reemplaza o se reduce. El panel de abajo ofrece las dos.
+                            if (apoyadas.length || nuclear) {
+                              setQuitando(quitando === r.id ? null : r.id);
                               return;
                             }
                             const aviso = dependientes.length
@@ -306,6 +315,50 @@ export function Definicion() {
                       <div className="expl" style={{ borderLeftColor: 'var(--bronce)' }}>
                         <b>Viene de una cortapisa.</b> {nombreCortapisa} entra como referente que no se discute: la definición queda aprobada e
                         inamovible, y si algo choca con ella se redefine el resto. Se puede tocar igual, pero el sistema pide confirmarlo.
+                      </div>
+                    ) : null}
+
+                    {quitando === r.id && entrada ? (
+                      <div className="expl" style={{ borderLeftColor: 'var(--error)' }}>
+                        <b>{nuclear ? 'Es una pregunta del núcleo del mundo: no puede quedar sin responder. ' : ''}</b>
+                        {apoyadas.length
+                          ? `Otras definiciones se apoyan en esta: ${apoyadas.join(', ')}. Al quitarla hay que reemplazarla, o reducir el set quitando también ${apoyadas.length === 1 ? 'esa' : 'esas ' + apoyadas.length}.`
+                          : 'Al quitarla hay que reemplazarla por otra.'}
+                        <div className="caminos" style={{ marginTop: '0.5rem' }}>
+                          <button
+                            className="via v-ok"
+                            onClick={() => {
+                              setQuitando(null);
+                              abrir(instrumento(r.id));
+                            }}
+                          >
+                            Reemplazar →
+                          </button>
+                          {apoyadas.length ? (
+                            <button
+                              className="via peligro"
+                              onClick={() => {
+                                setQuitando(null);
+                                despachar({ tipo: 'quitar-definicion', requirementId: r.id, enCascada: true });
+                              }}
+                            >
+                              Reducir: quitar también {apoyadas.length === 1 ? 'esa' : `esas ${apoyadas.length}`}
+                            </button>
+                          ) : (
+                            <button
+                              className="via peligro"
+                              onClick={() => {
+                                setQuitando(null);
+                                despachar({ tipo: 'quitar-definicion', requirementId: r.id });
+                              }}
+                            >
+                              Quitar igual
+                            </button>
+                          )}
+                          <button className="via" onClick={() => setQuitando(null)}>
+                            Cancelar
+                          </button>
+                        </div>
                       </div>
                     ) : null}
 
