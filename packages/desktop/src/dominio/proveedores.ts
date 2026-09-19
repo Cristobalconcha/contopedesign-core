@@ -230,6 +230,15 @@ export const PREAJUSTES: ReadonlyArray<{
     claveDeEntorno: 'DEEPSEEK_API_KEY',
   },
   {
+    nombre: 'DeepSeek Flash Vision (exp)',
+    clase: 'openai-chat',
+    baseUrl: 'https://api.deepseek.com/v1',
+    modelo: 'deepseek-v4-flash-vision-exp',
+    credencial: 'clave',
+    nota: 'clave de API de DeepSeek (modelo experimental, con visión; medido y responde aunque no aparece en la lista de modelos) — la IA del taller sólo le manda texto por ahora — si DEEPSEEK_API_KEY existe en este equipo, no hace falta pegarla',
+    claveDeEntorno: 'DEEPSEEK_API_KEY',
+  },
+  {
     nombre: 'Z.ai',
     clase: 'openai-chat',
     baseUrl: 'https://api.z.ai/api/paas/v4',

@@ -174,12 +174,13 @@ describe('mascaraDe', () => {
 });
 
 describe('PREAJUSTES', () => {
-  it('ofrece las siete familias que el taller conoce', () => {
-    expect(PREAJUSTES).toHaveLength(7);
+  it('ofrece las ocho familias que el taller conoce', () => {
+    expect(PREAJUSTES).toHaveLength(8);
     expect(PREAJUSTES.map((p) => p.clase)).toEqual([
       'anthropic',
       'anthropic',
       'codex',
+      'openai-chat',
       'openai-chat',
       'openai-chat',
       'openai-chat',
@@ -199,6 +200,14 @@ describe('PREAJUSTES', () => {
     expect(flash?.modelo).toBe('deepseek-flash');
     expect(flash?.clase).toBe('openai-chat');
     expect(flash?.credencial).toBe('clave');
+  });
+
+  it('DeepSeek Flash Vision (exp) trae claveDeEntorno DEEPSEEK_API_KEY y modelo experimental', () => {
+    const flashVision = PREAJUSTES.find((p) => p.nombre === 'DeepSeek Flash Vision (exp)');
+    expect(flashVision?.claveDeEntorno).toBe('DEEPSEEK_API_KEY');
+    expect(flashVision?.modelo).toBe('deepseek-v4-flash-vision-exp');
+    expect(flashVision?.clase).toBe('openai-chat');
+    expect(flashVision?.credencial).toBe('clave');
   });
 });
 
