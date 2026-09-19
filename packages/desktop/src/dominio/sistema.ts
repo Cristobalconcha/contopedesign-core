@@ -128,6 +128,13 @@ export interface Sistema {
   capsulaAnterior: DesignContractV1 | null;
   /** Pasadas de armonización y lo decidido sobre cada señal (etapa, decisión 23). */
   armonizacion: Armonizacion;
+  /**
+   * La nota con que la IA justificó cada propuesta traída, por id de la
+   * pregunta (la última propuesta manda). Es la evidencia que la armonización
+   * lee y la materia prima del modo sombra (decisión 22); no viaja en el
+   * DesignSet porque el núcleo no tiene campo para ella.
+   */
+  notasDePropuesta: Record<string, { texto: string; en: string }>;
 }
 
 export function nuevoId(prefijo: string): string {
@@ -158,5 +165,6 @@ export function nuevoSistema(mundo: MundoId, nombre: string, ahora = new Date().
     verificaciones: [],
     capsulaAnterior: null,
     armonizacion: armonizacionVacia(),
+    notasDePropuesta: {},
   };
 }

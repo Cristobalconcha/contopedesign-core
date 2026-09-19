@@ -35,6 +35,7 @@ import type {
   DesignSetEntryV0,
   DesignSetV0,
   DimensionId,
+  EditContextDevelopmentTask,
   Fuerza,
   ProvenanceV0,
   RequirementV0,
@@ -138,6 +139,12 @@ export function unirFragmento(
     }
   }
   return salida;
+}
+
+/** Una tarea de encargo cerrada como rechazada: sin candidatas ni resolución que apunten a lo que ya no existe. */
+function cerrarTarea(t: EditContextDevelopmentTask, ahora: string): EditContextDevelopmentTask {
+  const { resolvedDefinitionId: _r, ...resto } = t;
+  return { ...resto, state: 'rejected', candidateDefinitionIds: [], reviewedAt: ahora };
 }
 
 function provenanceDe(camino: ResolutionPath, insumoId?: string): ProvenanceV0 {
@@ -354,7 +361,11 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
           }
         : crearEntrada(req, accion.payload, accion.camino, provenanceDe(accion.camino), accion.fuerza, cicloDeVida);
       const entries = existente ? set.entries.map((e) => (e === existente ? entrada : e)) : [...set.entries, entrada];
-      const tareas = sistema.tareas.filter((t) => t.definitionId !== idDefinicion(req.id, existente?.revision ?? 1));
+      // Si la persona define lo que estaba encargado (o lo que la IA propuso y
+      // ella aprobó), el encargo se cierra como rechazado, con fecha, y sin
+      // referencias a definiciones que ya no existen (SKILL.md: nunca cerrar
+      // una tarea en silencio; auditoría 18-09, hallazgos 2 y 7).
+      const tareas = sistema.tareas.map((t) => (t.definitionId.startsWith(`${req.id}.`) && t.state !== 'rejected' ? cerrarTarea(t, ahora) : t));
       return {
         ...sistema,
         designSet: { ...set, entries },
@@ -373,7 +384,15 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
         aprobada?.resolutionPath === 'contope'
           ? sistema.tareas.map((t) =>
               t.state === 'proposed' && t.definitionId.startsWith(`${accion.requirementId}.`)
-                ? { ...t, state: 'resolved' as const, resolvedDefinitionId: aprobada.effectiveDefinitionId, reviewedAt: ahora }
+                ? {
+                    ...t,
+                    state: 'resolved' as const,
+                    candidateDefinitionIds: t.candidateDefinitionIds.includes(aprobada.effectiveDefinitionId)
+                      ? t.candidateDefinitionIds
+                      : [...t.candidateDefinitionIds, aprobada.effectiveDefinitionId],
+                    resolvedDefinitionId: aprobada.effectiveDefinitionId,
+                    reviewedAt: ahora,
+                  }
                 : t,
             )
           : sistema.tareas;
@@ -391,19 +410,21 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
       const quitada = sistema.designSet.entries.find((e) => e.requirementId === accion.requirementId);
       const entries = sistema.designSet.entries.filter((e) => e.requirementId !== accion.requirementId);
       // Quitar una propuesta de ContOpe es rechazarla: la tarea lo registra.
-      const tareas =
-        quitada?.resolutionPath === 'contope'
-          ? sistema.tareas.map((t) =>
-              t.state === 'proposed' && t.definitionId.startsWith(`${accion.requirementId}.`) ? { ...t, state: 'rejected' as const, reviewedAt: ahora } : t,
-            )
-          : sistema.tareas;
-      return { ...sistema, designSet: { ...sistema.designSet, entries }, tareas };
+      const tareas = sistema.tareas.map((t) =>
+        t.definitionId.startsWith(`${accion.requirementId}.`) && t.state !== 'rejected' && (t.state !== 'active' || quitada?.resolutionPath === 'contope')
+          ? cerrarTarea(t, ahora)
+          : t,
+      );
+      // Sin entrada no hay dos orígenes que arbitrar: los conflictos de esa
+      // pregunta se van con ella (auditoría 18-09, hallazgo 11).
+      const conflictos = sistema.conflictos.filter((c) => c.requirementId !== accion.requirementId);
+      return { ...sistema, designSet: { ...sistema.designSet, entries }, tareas, conflictos, caminos: sinCamino(sistema.caminos, accion.requirementId) };
     }
 
     case 'encargar-a-contope': {
       const req = requisito(accion.requirementId);
       if (!req) return sistema;
-      const yaEncargado = sistema.tareas.some((t) => t.definitionId === idDefinicion(req.id, 1) && t.state === 'active');
+      const yaEncargado = sistema.tareas.some((t) => t.definitionId.startsWith(`${req.id}.`) && (t.state === 'active' || t.state === 'proposed'));
       if (yaEncargado) return sistema;
       // Un encargo es una definición declarada y sin resolver: la tarea
       // apunta al id que tendrá cuando exista, y el contrato la proyecta
@@ -454,8 +475,12 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
     }
     case 'nueva-pasada':
       return { ...sistema, armonizacion: { ...sistema.armonizacion, pasadas: sistema.armonizacion.pasadas + 1 } };
-    case 'traer-propuesta':
-      return traerPropuesta(sistema, accion.requirementId, accion.payload, ahora);
+    case 'traer-propuesta': {
+      const siguiente = traerPropuesta(sistema, accion.requirementId, accion.payload, ahora);
+      const nota = accion.nota?.trim() ?? '';
+      if (siguiente === sistema || nota === '') return siguiente;
+      return { ...siguiente, notasDePropuesta: { ...siguiente.notasDePropuesta, [accion.requirementId]: { texto: nota, en: ahora } } };
+    }
   }
 }
 
@@ -472,7 +497,9 @@ function traerPropuesta(sistema: Sistema, requirementId: string, payload: Record
   if (!req) return sistema;
   const set = conManifestRef(sistema.designSet, req.id);
   const existente = set.entries.find((e) => e.requirementId === req.id);
-  if (existente && !(existente.resolutionPath === 'contope' && existente.cicloDeVida !== 'aprobada')) {
+  // Sólo se reemplaza una propuesta de ContOpe que sigue siendo propuesta.
+  // Una reabierta la está revisando una persona: no se pisa (auditoría 18-09, 13).
+  if (existente && !(existente.resolutionPath === 'contope' && existente.cicloDeVida === 'propuesta')) {
     const conflicto: Conflicto = {
       id: nuevoId('conflicto'),
       requirementId: req.id,
@@ -495,15 +522,12 @@ function traerPropuesta(sistema: Sistema, requirementId: string, payload: Record
       }
     : crearEntrada(req, payload, 'contope', provenanceDe('contope'), 'explorable', 'propuesta');
   const entries = existente ? set.entries.map((e) => (e === existente ? entrada : e)) : [...set.entries, entrada];
+  // La candidata enlazada es la vigente y nada más: la anterior ya no existe
+  // en el set, y un contrato con una referencia colgante no lo lee ningún
+  // destino (auditoría 18-09, hallazgo 2).
   const tareas = sistema.tareas.map((t) =>
     (t.state === 'active' || t.state === 'proposed') && t.definitionId.startsWith(`${req.id}.`)
-      ? {
-          ...t,
-          state: 'proposed' as const,
-          candidateDefinitionIds: t.candidateDefinitionIds.includes(entrada.effectiveDefinitionId)
-            ? t.candidateDefinitionIds
-            : [...t.candidateDefinitionIds, entrada.effectiveDefinitionId],
-        }
+      ? { ...t, state: 'proposed' as const, candidateDefinitionIds: [entrada.effectiveDefinitionId] }
       : t,
   );
   return { ...sistema, designSet: { ...set, entries }, caminos: sinCamino(sistema.caminos, req.id), tareas };

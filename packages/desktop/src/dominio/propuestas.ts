@@ -13,8 +13,23 @@
  * insumo, queda como conflicto de origen para la armonización. Eso lo hace
  * el reductor (`traer-propuesta`); acá sólo se lee.
  */
+import { findEntry } from '@contope/core';
 import { requisito } from './manifiesto.js';
 import type { Sistema } from './sistema.js';
+
+/**
+ * Los `refReqId` que aparecen en cualquier profundidad del payload: una ref a
+ * una pregunta sin entrada en el set dejaría el sistema imposible de guardar
+ * (`validateDesignSetShape` la rechaza), así que se rechaza acá, antes.
+ */
+function refsDe(v: unknown, salida: string[] = []): string[] {
+  if (Array.isArray(v)) for (const x of v) refsDe(x, salida);
+  else if (esRecord(v)) {
+    if (typeof v['refReqId'] === 'string') salida.push(v['refReqId']);
+    for (const x of Object.values(v)) refsDe(x, salida);
+  }
+  return salida;
+}
 
 export const KIND_PROPUESTAS = 'contope/propuestas';
 export const SCHEMA_PROPUESTAS = 1;
@@ -64,12 +79,21 @@ export function leerPropuestas(texto: string, sistema: Sistema): LecturaDePropue
   }
   if (!Array.isArray(valor['propuestas'])) return { ok: false, motivo: "'propuestas' debe ser una lista" };
   const propuestas: Propuesta[] = [];
+  const vistas = new Set<string>();
   for (const [i, p] of valor['propuestas'].entries()) {
     if (!esRecord(p)) return { ok: false, motivo: `la propuesta ${i + 1} debe ser un objeto` };
     const requirementId = p['requirementId'];
     if (typeof requirementId !== 'string') return { ok: false, motivo: `la propuesta ${i + 1} no dice a qué pregunta responde` };
     if (!requisito(requirementId)) return { ok: false, motivo: `la propuesta ${i + 1} apunta a una pregunta que no existe: ${requirementId}` };
     if (!esRecord(p['payload'])) return { ok: false, motivo: `la propuesta ${i + 1} (${requirementId}) no trae un payload` };
+    if (vistas.has(requirementId)) {
+      return { ok: false, motivo: `hay dos propuestas para ${requirementId}; el formato admite una por pregunta (varias candidatas es una decisión pendiente)` };
+    }
+    vistas.add(requirementId);
+    const colgantes = refsDe(p['payload']).filter((id) => id !== requirementId && !findEntry(sistema.designSet, id));
+    if (colgantes.length) {
+      return { ok: false, motivo: `la propuesta ${i + 1} (${requirementId}) referencia preguntas sin entrada en este sistema: ${[...new Set(colgantes)].join(', ')}` };
+    }
     if (p['nota'] !== undefined && typeof p['nota'] !== 'string') return { ok: false, motivo: `la nota de la propuesta ${i + 1} debe ser texto` };
     propuestas.push({ requirementId, payload: p['payload'], ...(typeof p['nota'] === 'string' ? { nota: p['nota'] } : {}) });
   }

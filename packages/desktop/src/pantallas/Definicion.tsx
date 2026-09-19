@@ -309,6 +309,12 @@ export function Definicion() {
                       </div>
                     ) : null}
 
+                    {entrada?.resolutionPath === 'contope' && sistema.notasDePropuesta[r.id] ? (
+                      <div className="expl" style={{ borderLeftColor: 'var(--ia)' }}>
+                        <b>Por qué lo propuso ContOpe.</b> {sistema.notasDePropuesta[r.id]?.texto}
+                      </div>
+                    ) : null}
+
                     {tarea ? (
                       <div className="expl" style={{ borderLeftColor: 'var(--ia)' }}>
                         <b>Encargado a ContOpe.</b> Queda como tarea activa en la cápsula

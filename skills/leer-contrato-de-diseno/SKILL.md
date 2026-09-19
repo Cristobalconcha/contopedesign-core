@@ -148,7 +148,10 @@ se escribe dentro del `*.contope.json` ni del contrato.
 ```
 
 Reglas: `designId` es el del contrato leído, tal cual (si no calza, el taller
-rechaza el archivo entero). `requirementId` es el id de la pregunta del
+rechaza el archivo entero). **Una propuesta por pregunta** (dos con el mismo
+`requirementId` rechazan el archivo; varias candidatas es una decisión pendiente).
+Las `ref` del payload sólo pueden apuntar a preguntas que ya tienen entrada en
+el set: una referencia colgante rechaza el archivo. `requirementId` es el id de la pregunta del
 manifiesto (el `definitionId` de la tarea sin el sufijo `.defN`). El `payload`
 sigue el `payloadSchema` de esa pregunta: el taller lo evalúa con el mismo
 evaluador que todo lo demás. Lo que entra queda como **propuesta explorable de

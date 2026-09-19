@@ -15,8 +15,11 @@
  *
  * Y `armonizacion` (desde la tarde del 18-09): si falta, el archivo abre con
  * cero pasadas y sin señales decididas; si viene con otra forma, se rechaza.
+ * `capsulaAnterior` pasa por `parseDesignContract` del núcleo (auditoría del
+ * 18-09, hallazgo 6): un contrato roto rechaza el archivo en vez de reventar
+ * al exportar. `notasDePropuesta` se completa vacío si falta.
  */
-import { DIMENSION_IDS, validateDesignSetShape, type DimensionId } from '@contope/core';
+import { DIMENSION_IDS, parseDesignContract, validateDesignSetShape, type DesignContractV1, type DimensionId } from '@contope/core';
 import type { Alcance } from './alcance.js';
 import { armonizacionVacia, type Armonizacion, type DecisionSobreSenal } from './armonizacion.js';
 import { esMundoId } from './mundos.js';
@@ -83,6 +86,32 @@ function normalizarInsumos(valor: unknown): { ok: true; insumos: Insumo[] } | { 
   return { ok: true, insumos };
 }
 
+/** Claves que un objeto literal no puede usar como diccionario sin cambiar de forma. */
+function esClavePeligrosa(clave: string): boolean {
+  return clave === '__proto__' || clave === 'constructor' || clave === 'prototype';
+}
+
+function validarCapsulaAnterior(valor: unknown): { ok: true; capsula: DesignContractV1 | null } | { ok: false; motivo: string } {
+  if (valor === undefined || valor === null) return { ok: true, capsula: null };
+  const capsula = parseDesignContract(valor);
+  if (capsula === null) return { ok: false, motivo: "'capsulaAnterior' no es un contrato de diseño legible" };
+  return { ok: true, capsula };
+}
+
+function validarNotas(valor: unknown): { ok: true; notas: Record<string, { texto: string; en: string }> } | { ok: false; motivo: string } {
+  if (valor === undefined || valor === null) return { ok: true, notas: {} };
+  if (!esRecord(valor)) return { ok: false, motivo: "'notasDePropuesta' debe ser un objeto" };
+  const notas: Record<string, { texto: string; en: string }> = {};
+  for (const [id, n] of Object.entries(valor)) {
+    if (esClavePeligrosa(id)) return { ok: false, motivo: `id de nota no permitido: '${id}'` };
+    if (!esRecord(n) || typeof n['texto'] !== 'string' || typeof n['en'] !== 'string') {
+      return { ok: false, motivo: `la nota de '${id}' necesita 'texto' y 'en'` };
+    }
+    notas[id] = { texto: n['texto'], en: n['en'] };
+  }
+  return { ok: true, notas };
+}
+
 function validarArmonizacion(valor: unknown): { ok: true; armonizacion: Armonizacion } | { ok: false; motivo: string } {
   if (valor === undefined || valor === null) return { ok: true, armonizacion: armonizacionVacia() };
   if (!esRecord(valor)) return { ok: false, motivo: "'armonizacion' debe ser un objeto" };
@@ -93,10 +122,12 @@ function validarArmonizacion(valor: unknown): { ok: true; armonizacion: Armoniza
   if (!esRecord(valor['senales'])) return { ok: false, motivo: "'armonizacion.senales' debe ser un objeto" };
   const senales: Record<string, DecisionSobreSenal> = {};
   for (const [id, d] of Object.entries(valor['senales'])) {
+    if (esClavePeligrosa(id)) return { ok: false, motivo: `id de señal no permitido: '${id}'` };
     if (!esRecord(d)) return { ok: false, motivo: `la señal '${id}' debe ser un objeto` };
     const estado = d['estado'];
     if (estado !== 'validada' && estado !== 'anotada') return { ok: false, motivo: `estado desconocido en la señal '${id}': ${String(estado)}` };
     if (typeof d['en'] !== 'string' || typeof d['pasada'] !== 'number') return { ok: false, motivo: `la señal '${id}' necesita 'en' y 'pasada'` };
+    if (!Number.isInteger(d['pasada']) || d['pasada'] < 1) return { ok: false, motivo: `la pasada de la señal '${id}' debe ser un entero desde 1` };
     if (d['nota'] !== undefined && typeof d['nota'] !== 'string') return { ok: false, motivo: `la nota de la señal '${id}' debe ser texto` };
     senales[id] = { estado, en: d['en'], pasada: d['pasada'], ...(typeof d['nota'] === 'string' ? { nota: d['nota'] } : {}) };
   }
@@ -119,6 +150,10 @@ export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } |
   if (!insumos.ok) return { ok: false, motivo: insumos.motivo };
   const armonizacion = validarArmonizacion(valor['armonizacion']);
   if (!armonizacion.ok) return { ok: false, motivo: armonizacion.motivo };
+  const capsula = validarCapsulaAnterior(valor['capsulaAnterior']);
+  if (!capsula.ok) return { ok: false, motivo: capsula.motivo };
+  const notas = validarNotas(valor['notasDePropuesta']);
+  if (!notas.ok) return { ok: false, motivo: notas.motivo };
   const set = validateDesignSetShape(valor['designSet']);
   if (!set.ok) return { ok: false, motivo: `DesignSet inválido: ${set.errores.map((e) => e.mensaje).join('; ')}` };
   return {
@@ -128,6 +163,8 @@ export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } |
       alcance: alcance.alcance,
       insumos: insumos.insumos,
       armonizacion: armonizacion.armonizacion,
+      capsulaAnterior: capsula.capsula,
+      notasDePropuesta: notas.notas,
     },
   };
 }

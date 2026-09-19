@@ -54,6 +54,54 @@ describe('reducir · traer-propuesta', () => {
     expect(t?.state).toBe('proposed');
     expect(t?.candidateDefinitionIds).toEqual([e?.effectiveDefinitionId]);
     expect(s.conflictos).toHaveLength(0);
+    expect(s.notasDePropuesta['dim3.req01']).toEqual({ texto: 'n', en: AHORA });
+  });
+
+  it('rechaza dos propuestas para la misma pregunta y una ref a una pregunta sin entrada', () => {
+    const s = nuevoSistema('digital', 'x', AHORA);
+    const dos = archivo(s.id, [
+      { requirementId: 'dim3.req01', payload: { unidad: '4px' } },
+      { requirementId: 'dim3.req01', payload: { unidad: '8px' } },
+    ]);
+    expect(leerPropuestas(dos, s)).toMatchObject({ ok: false, motivo: expect.stringContaining('dos propuestas') });
+    const colgante = archivo(s.id, [
+      { requirementId: 'dim3.req02', payload: { roleSpacing: [{ role: 'x', value: { refReqId: 'dim3.req01', refPath: ['escala', 0] } }] } },
+    ]);
+    expect(leerPropuestas(colgante, s)).toMatchObject({ ok: false, motivo: expect.stringContaining('dim3.req01') });
+  });
+
+  it('una entrada de ContOpe reabierta no se pisa: la propuesta nueva queda como conflicto', () => {
+    let s = nuevoSistema('digital', 'x', AHORA);
+    s = reducir(s, { tipo: 'encargar-a-contope', requirementId: 'dim3.req01' }, AHORA);
+    s = reducir(s, { tipo: 'traer-propuesta', requirementId: 'dim3.req01', payload: { unidad: '4px' } }, AHORA);
+    s = reducir(s, { tipo: 'aprobar', requirementId: 'dim3.req01', fuerza: 'prioritaria' }, AHORA);
+    s = reducir(s, { tipo: 'reabrir', requirementId: 'dim3.req01' }, AHORA);
+    s = reducir(s, { tipo: 'traer-propuesta', requirementId: 'dim3.req01', payload: { unidad: '2px' } }, AHORA);
+    expect(findEntry(s.designSet, 'dim3.req01')?.payload).toEqual({ unidad: '4px' });
+    expect(s.conflictos).toHaveLength(1);
+  });
+
+  it('no hay dos encargos vivos para la misma pregunta; definir cierra el encargo como rechazado', () => {
+    let s = nuevoSistema('digital', 'x', AHORA);
+    s = reducir(s, { tipo: 'encargar-a-contope', requirementId: 'dim3.req01' }, AHORA);
+    s = reducir(s, { tipo: 'traer-propuesta', requirementId: 'dim3.req01', payload: { unidad: '4px' } }, AHORA);
+    s = reducir(s, { tipo: 'encargar-a-contope', requirementId: 'dim3.req01' }, AHORA);
+    expect(s.tareas).toHaveLength(1);
+    s = reducir(s, { tipo: 'definir', requirementId: 'dim3.req01', payload: { unidad: '8px' }, camino: 'diseñador', fuerza: 'explorable' }, AHORA);
+    expect(s.tareas[0]).toMatchObject({ state: 'rejected', candidateDefinitionIds: [], reviewedAt: AHORA });
+    expect(s.tareas[0]?.resolvedDefinitionId).toBeUndefined();
+    s = reducir(s, { tipo: 'quitar-definicion', requirementId: 'dim3.req01' }, AHORA);
+    s = reducir(s, { tipo: 'encargar-a-contope', requirementId: 'dim3.req01' }, AHORA);
+    expect(s.tareas.map((t) => t.state)).toEqual(['rejected', 'active']);
+  });
+
+  it('quitar la definición se lleva sus conflictos', () => {
+    let s = nuevoSistema('digital', 'x', AHORA);
+    s = reducir(s, { tipo: 'definir', requirementId: 'dim3.req01', payload: { unidad: '8px' }, camino: 'diseñador', fuerza: 'inamovible' }, AHORA);
+    s = reducir(s, { tipo: 'traer-propuesta', requirementId: 'dim3.req01', payload: { unidad: '4px' } }, AHORA);
+    expect(s.conflictos).toHaveLength(1);
+    s = reducir(s, { tipo: 'quitar-definicion', requirementId: 'dim3.req01' }, AHORA);
+    expect(s.conflictos).toHaveLength(0);
   });
 
   it('sobre una pregunta ya resuelta por una persona: no la pisa, queda como conflicto', () => {

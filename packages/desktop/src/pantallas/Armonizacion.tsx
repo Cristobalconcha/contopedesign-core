@@ -128,11 +128,13 @@ export function Armonizacion() {
                 </span>
                 <b>{senal.titulo}</b>
                 {decision.nota ? <p className="arm-nota">{decision.nota}</p> : null}
-                <div className="arm-acciones">
-                  <button className="btn chico" onClick={() => despachar({ tipo: 'reabrir-senal', senalId: senal.id })}>
-                    Reabrir
-                  </button>
-                </div>
+                {evaluacion.completo ? (
+                  <div className="arm-acciones">
+                    <button className="btn chico" onClick={() => despachar({ tipo: 'reabrir-senal', senalId: senal.id })}>
+                      Reabrir
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

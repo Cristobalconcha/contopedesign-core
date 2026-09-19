@@ -88,3 +88,33 @@ describe('proyectarCapsula', () => {
     expect(segunda.contrato.design.updatedAt).toBe('2026-09-15T00:00:00.000Z');
   });
 });
+
+describe('la cápsula sigue siendo legible después de las secuencias de encargo', () => {
+  const AHORA2 = '2026-09-18T23:00:00.000Z';
+  function legible(s: ReturnType<typeof nuevoSistema>): boolean {
+    return parseDesignContract(JSON.parse(proyectarCapsula(s).archivos[0]!.texto)) !== null;
+  }
+  it('encargar → traer → traer otra → editar a mano', () => {
+    let s = nuevoSistema('digital', 'x', AHORA2);
+    s = reducir(s, { tipo: 'encargar-a-contope', requirementId: 'dim3.req01' }, AHORA2);
+    s = reducir(s, { tipo: 'traer-propuesta', requirementId: 'dim3.req01', payload: { unidad: '4px' } }, AHORA2);
+    expect(legible(s)).toBe(true);
+    s = reducir(s, { tipo: 'traer-propuesta', requirementId: 'dim3.req01', payload: { unidad: '6px' } }, AHORA2);
+    expect(legible(s)).toBe(true);
+    s = reducir(s, { tipo: 'definir', requirementId: 'dim3.req01', payload: { unidad: '8px' }, camino: 'diseñador', fuerza: 'explorable' }, AHORA2);
+    expect(legible(s)).toBe(true);
+  });
+  it('encargar → traer → aprobar → editar a mano → quitar → encargar', () => {
+    let s = nuevoSistema('digital', 'x', AHORA2);
+    s = reducir(s, { tipo: 'encargar-a-contope', requirementId: 'dim3.req01' }, AHORA2);
+    s = reducir(s, { tipo: 'traer-propuesta', requirementId: 'dim3.req01', payload: { unidad: '4px' } }, AHORA2);
+    s = reducir(s, { tipo: 'aprobar', requirementId: 'dim3.req01', fuerza: 'prioritaria' }, AHORA2);
+    expect(legible(s)).toBe(true);
+    s = reducir(s, { tipo: 'definir', requirementId: 'dim3.req01', payload: { unidad: '8px' }, camino: 'diseñador', fuerza: 'explorable' }, AHORA2);
+    expect(legible(s)).toBe(true);
+    s = reducir(s, { tipo: 'quitar-definicion', requirementId: 'dim3.req01' }, AHORA2);
+    expect(legible(s)).toBe(true);
+    s = reducir(s, { tipo: 'encargar-a-contope', requirementId: 'dim3.req01' }, AHORA2);
+    expect(legible(s)).toBe(true);
+  });
+});

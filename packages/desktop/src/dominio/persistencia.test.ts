@@ -96,3 +96,19 @@ describe('persistencia · armonización', () => {
     expect(() => parsearSistema(JSON.stringify(raro))).toThrow(/estado desconocido/);
   });
 });
+
+describe('persistencia · frontera hostil (auditoría 18-09)', () => {
+  it('rechaza una cápsula anterior ilegible, una pasada no entera y una clave __proto__', () => {
+    const base = nuevoSistema('digital', 'x') as unknown as Record<string, unknown>;
+    expect(() => parsearSistema(JSON.stringify({ ...base, capsulaAnterior: { schemaVersion: 1 } }))).toThrow(/capsulaAnterior/);
+    const pasadaRara = { ...base, armonizacion: { pasadas: 1, senales: { 'regla:x': { estado: 'validada', en: 'hoy', pasada: -7.5 } } } };
+    expect(() => parsearSistema(JSON.stringify(pasadaRara))).toThrow(/entero desde 1/);
+    const proto = { ...base, armonizacion: { pasadas: 1, senales: { __proto__: { estado: 'validada', en: 'hoy', pasada: 1 } } } };
+    expect(() => parsearSistema(JSON.stringify(proto).replace('"senales":{}', '"senales":{"__proto__":{"estado":"validada","en":"hoy","pasada":1}}'))).toThrow(/no permitido/);
+  });
+  it('un archivo sin notas de propuesta abre con el diccionario vacío', () => {
+    const base = nuevoSistema('digital', 'x') as unknown as Record<string, unknown>;
+    const { notasDePropuesta: _sin, ...viejo } = base;
+    expect(parsearSistema(JSON.stringify(viejo)).notasDePropuesta).toEqual({});
+  });
+});
