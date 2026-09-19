@@ -179,6 +179,7 @@ export function App() {
     <div className="app">
       <header className="barra">
         <button className="marca" onClick={() => (taller.sistema ? cerrarSistema() : undefined)} title="Volver al inicio">
+          <img src="./images/marca.svg" alt="" />
           ContOpe Design
         </button>
         {taller.sistema && contexto ? (

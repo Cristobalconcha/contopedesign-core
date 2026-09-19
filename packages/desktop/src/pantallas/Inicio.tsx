@@ -48,6 +48,7 @@ export function Inicio({ recientes, entorno, onNuevo, onAbrir, onAbrirReciente, 
     <section className="inicio">
       <div className="inicio-cuerpo">
         <div className="inicio-main">
+          <img className="inicio-logo" src="./images/marca.svg" alt="ContOpe Design" />
           <h1 className="pregunta-grande">¿En qué vas a trabajar?</h1>
           <p className="sub">
             Cada mundo trae su propio núcleo de definiciones: lo que no puede faltar para poder construir. Los cuatro
