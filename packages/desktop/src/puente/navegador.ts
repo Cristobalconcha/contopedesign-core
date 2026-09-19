@@ -5,7 +5,8 @@
  * localStorage (guardando el texto entero, porque un navegador no puede
  * volver a leer una ruta del disco).
  */
-import type { ArchivoDeInsumo, ArchivoDeSistema, Puente, Reciente, Vistazo } from './tipos.js';
+import { configuracionVacia, validarConfiguracion, type ConfiguracionDeIA } from '../dominio/proveedores.js';
+import type { ArchivoDeInsumo, ArchivoDeSistema, EstadoDeIA, Puente, PuenteDeIA, Reciente, Vistazo } from './tipos.js';
 
 const CLAVE_RECIENTES = 'contope.recientes';
 const MAX_RECIENTES = 6;
@@ -69,9 +70,63 @@ function recordar(nombre: string, texto: string, vistazo?: Vistazo): void {
   }
 }
 
+const CLAVE_IA = 'contope.ia';
+
+/**
+ * En el navegador la configuración de la IA vive en localStorage y SIN cifrar
+ * (es para revisar la pantalla, no para trabajar). Las llamadas al modelo no
+ * están disponibles: los proveedores no aceptan llamadas desde una página.
+ */
+function iaNavegador(): PuenteDeIA {
+  const leer = (): ConfiguracionDeIA => {
+    try {
+      const v = validarConfiguracion(JSON.parse(localStorage.getItem(CLAVE_IA) ?? 'null'));
+      return v.ok ? v.configuracion : configuracionVacia();
+    } catch {
+      return configuracionVacia();
+    }
+  };
+  const guardar = (c: ConfiguracionDeIA): EstadoDeIA => {
+    try {
+      localStorage.setItem(CLAVE_IA, JSON.stringify(c));
+    } catch {
+      // Sin almacenamiento no hay configuración; no es un error del trabajo.
+    }
+    return { configuracion: c, codex: { sesion: false, email: null }, puedeCifrar: false };
+  };
+  return {
+    async estado() {
+      return { configuracion: leer(), codex: { sesion: false, email: null }, puedeCifrar: false };
+    },
+    async guardarProveedor(proveedor) {
+      const c = leer();
+      return guardar({ ...c, proveedores: [...c.proveedores.filter((p) => p.id !== proveedor.id), proveedor], activo: c.activo ?? proveedor.id });
+    },
+    async quitarProveedor(id) {
+      const c = leer();
+      const proveedores = c.proveedores.filter((p) => p.id !== id);
+      return guardar({ ...c, proveedores, activo: c.activo === id ? (proveedores[0]?.id ?? null) : c.activo });
+    },
+    async activar(id) {
+      const c = leer();
+      return guardar({ ...c, activo: id !== null && c.proveedores.some((p) => p.id === id) ? id : null });
+    },
+    async iniciarSesionCodex() {
+      throw new Error('La sesión de ChatGPT sólo se inicia en la aplicación de escritorio.');
+    },
+    async cerrarSesionCodex() {
+      return { configuracion: leer(), codex: { sesion: false, email: null }, puedeCifrar: false };
+    },
+    async pedir() {
+      return { ok: false, motivo: 'Pedirle al modelo sólo funciona en la aplicación de escritorio.' };
+    },
+  };
+}
+
 export function puenteNavegador(): Puente {
   return {
     entorno: 'navegador',
+    ia: iaNavegador(),
     async abrirSistema(): Promise<ArchivoDeSistema | null> {
       const [archivo] = await elegirArchivos({ multiple: false, aceptar: '.json' });
       if (!archivo) return null;

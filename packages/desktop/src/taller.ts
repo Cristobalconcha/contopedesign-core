@@ -33,6 +33,8 @@ export interface Taller {
   pantalla: Pantalla;
   instrumento: Instrumento | null;
   aviso: { texto: string; tono: 'normal' | 'error' } | null;
+  /** La pantalla de la IA del taller está abierta (con o sin sistema). */
+  configurandoIA: boolean;
 }
 
 export interface Contexto {
@@ -42,6 +44,7 @@ export interface Contexto {
   puente: Puente;
   despachar(accion: Accion): void;
   ir(pantalla: Pantalla): void;
+  configurarIA(): void;
   abrir(instrumento: Instrumento): void;
   cerrarInstrumento(): void;
   avisar(texto: string, tono?: 'normal' | 'error'): void;

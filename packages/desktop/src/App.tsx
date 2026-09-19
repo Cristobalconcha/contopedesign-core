@@ -11,6 +11,7 @@ import { Armonizacion } from './pantallas/Armonizacion.js';
 import { Construccion } from './pantallas/Construccion.js';
 import { Definicion } from './pantallas/Definicion.js';
 import { Inicio } from './pantallas/Inicio.js';
+import { Proveedores } from './pantallas/Proveedores.js';
 import { Recoleccion } from './pantallas/Recoleccion.js';
 import { obtenerPuente, type Reciente, type Vistazo } from './puente/index.js';
 import { ContextoTaller, type Archivo, type Contexto, type Instrumento, type Pantalla, type Taller } from './taller.js';
@@ -22,9 +23,10 @@ type Evento =
   | { tipo: 'guardado'; archivo: Archivo; guardadoEn: string }
   | { tipo: 'ir'; pantalla: Pantalla }
   | { tipo: 'instrumento'; instrumento: Instrumento | null }
-  | { tipo: 'aviso'; aviso: Taller['aviso'] };
+  | { tipo: 'aviso'; aviso: Taller['aviso'] }
+  | { tipo: 'ia'; abierta: boolean };
 
-const INICIAL: Taller = { sistema: null, archivo: null, guardadoEn: null, pantalla: 'inicio', instrumento: null, aviso: null };
+const INICIAL: Taller = { sistema: null, archivo: null, guardadoEn: null, pantalla: 'inicio', instrumento: null, aviso: null, configurandoIA: false };
 
 function reducirTaller(t: Taller, e: Evento): Taller {
   switch (e.tipo) {
@@ -42,6 +44,8 @@ function reducirTaller(t: Taller, e: Evento): Taller {
       return { ...t, instrumento: e.instrumento };
     case 'aviso':
       return { ...t, aviso: e.aviso };
+    case 'ia':
+      return { ...t, configurandoIA: e.abierta, instrumento: null };
   }
 }
 
@@ -158,6 +162,7 @@ export function App() {
           puente,
           despachar: (accion) => emitir({ tipo: 'accion', accion }),
           ir: (pantalla) => emitir({ tipo: 'ir', pantalla }),
+          configurarIA: () => emitir({ tipo: 'ia', abierta: true }),
           abrir: (instrumento) => emitir({ tipo: 'instrumento', instrumento }),
           cerrarInstrumento: () => emitir({ tipo: 'instrumento', instrumento: null }),
           avisar,
@@ -228,7 +233,9 @@ export function App() {
       </header>
 
       <main className="lienzo">
-        {taller.sistema && contexto ? (
+        {taller.configurandoIA ? (
+          <Proveedores puente={puente} onVolver={() => emitir({ tipo: 'ia', abierta: false })} />
+        ) : taller.sistema && contexto ? (
           <ContextoTaller.Provider value={contexto}>
             {taller.pantalla === 'alcance' ? <Alcance /> : null}
             {taller.pantalla === 'recoleccion' ? <Recoleccion /> : null}
@@ -245,6 +252,7 @@ export function App() {
             onNuevo={(sistema) => emitir({ tipo: 'sistema', sistema, archivo: null, pantalla: 'alcance' })}
             onAbrir={() => void abrirDesde(() => puente.abrirSistema())}
             onAbrirReciente={(r) => void abrirDesde(() => puente.abrirReciente(r))}
+            onConfigurarIA={() => emitir({ tipo: 'ia', abierta: true })}
           />
         )}
       </main>

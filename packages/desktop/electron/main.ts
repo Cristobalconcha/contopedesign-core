@@ -8,9 +8,10 @@
  * `--smoke`: abre la ventana, espera a que cargue y sale con código 0. Sirve
  * para comprobar en una terminal que el programa arranca, sin mirar.
  */
-import { app, BrowserWindow, dialog, ipcMain, net, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, net, safeStorage, shell } from 'electron';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
+import { registrarIpcDeIA } from './ia.js';
 
 const FILTRO_SISTEMA = [{ name: 'Sistema de ContOpe Design', extensions: ['contope.json', 'json'] }];
 const FILTRO_INSUMOS = [
@@ -171,6 +172,8 @@ function registrarIpc(): void {
 
 void app.whenReady().then(() => {
   registrarIpc();
+  // net.fetch respeta el proxy del sistema; su firma difiere del fetch estándar sólo en el tipo del primer argumento.
+  registrarIpcDeIA({ app, ipcMain, shell, safeStorage, fetchFn: net.fetch as unknown as typeof fetch });
   const ventana = crearVentana();
   if (ES_SMOKE) {
     ventana.webContents.once('did-finish-load', () => {

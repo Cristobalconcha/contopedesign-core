@@ -135,8 +135,17 @@ septiembre, es la **armonización como etapa** (decisiones 20, 21 y 23), en
 - **Lo que no está construido, dicho en la pantalla**: la lectura de las
   declaraciones por la IA. Cuando esté, sus señales entran por el mismo formato.
 
-Es un dibujo para conversarlo, no una decisión tomada. Construcción sigue como
-estaba (estado por dimensión, encargos, conflictos).
+Es un dibujo para conversarlo, no una decisión tomada. Construcción muestra el
+estado por dimensión, los encargos con su estado, y desde la madrugada del
+19-09 **«Pedir a ContOpe»**: la IA del taller (decisión 32) resuelve los
+encargos con el proveedor que la persona configuró. La pantalla **«IA del
+taller»** (`pantallas/Proveedores.tsx`, desde Inicio o desde Construcción)
+lista los proveedores, permite crear uno desde un preajuste (Claude, Claude por
+Claude Code, ChatGPT/Codex, DeepSeek, Z.ai, Ollama local) o escribirlo, elegir
+cuál está en uso, iniciar la sesión de ChatGPT, probarlo con un mensaje trivial
+y quitarlo. La clave se ve sólo como máscara; el secreto lo guarda cifrado el
+proceso principal. En el navegador la pantalla se puede revisar, pero las
+llamadas al modelo sólo funcionan en la aplicación de escritorio, y lo dice.
 
 ## 5. Elegir tipografía — **aprobado**
 

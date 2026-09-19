@@ -21,6 +21,7 @@ interface Props {
   onNuevo(sistema: Sistema): void;
   onAbrir(): void;
   onAbrirReciente(r: Reciente): void;
+  onConfigurarIA(): void;
 }
 
 function cuando(iso: string): string {
@@ -33,7 +34,7 @@ function cuando(iso: string): string {
     : d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
 }
 
-export function Inicio({ recientes, entorno, onNuevo, onAbrir, onAbrirReciente }: Props) {
+export function Inicio({ recientes, entorno, onNuevo, onAbrir, onAbrirReciente, onConfigurarIA }: Props) {
   const [elegido, setElegido] = useState<MundoId | null>(null);
   const [nombre, setNombre] = useState('');
   const conVistazo = recientes.filter((r) => r.vistazo !== undefined);
@@ -90,6 +91,13 @@ export function Inicio({ recientes, entorno, onNuevo, onAbrir, onAbrirReciente }
               <path d="M1.5 4.5v-2a1 1 0 0 1 1-1h3l1.5 2" />
             </svg>
             Abrir un sistema
+          </button>
+          <button className="abrir" onClick={onConfigurarIA} title="Qué modelo resuelve lo que le asignas a ContOpe">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="8" cy="8" r="2.5" />
+              <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />
+            </svg>
+            IA del taller
           </button>
           <p className="rot">Recientes</p>
           {recientes.length === 0 ? (

@@ -20,6 +20,15 @@ const puente = {
     ipcRenderer.invoke('dialogo:exportar-capsula', archivos),
   listarRecientes: () => ipcRenderer.invoke('recientes:listar'),
   descargarCatalogo: () => ipcRenderer.invoke('catalogo:descargar'),
+  ia: {
+    estado: () => ipcRenderer.invoke('ia:estado'),
+    guardarProveedor: (proveedor: unknown, secreto: string | null) => ipcRenderer.invoke('ia:guardar-proveedor', proveedor, secreto),
+    quitarProveedor: (id: string) => ipcRenderer.invoke('ia:quitar-proveedor', id),
+    activar: (id: string | null) => ipcRenderer.invoke('ia:activar', id),
+    iniciarSesionCodex: () => ipcRenderer.invoke('ia:codex-iniciar-sesion'),
+    cerrarSesionCodex: () => ipcRenderer.invoke('ia:codex-cerrar-sesion'),
+    pedir: (proveedorId: string, mensajes: unknown) => ipcRenderer.invoke('ia:pedir', proveedorId, mensajes),
+  },
 };
 
 contextBridge.exposeInMainWorld('contope', puente);

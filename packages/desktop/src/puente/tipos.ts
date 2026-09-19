@@ -4,6 +4,29 @@
  * el catálogo. Dos implementaciones: Electron (por IPC al proceso
  * principal) y navegador (para revisar la interfaz sin ventana nativa).
  */
+import type { ConfiguracionDeIA, Mensajes, Proveedor } from '../dominio/proveedores.js';
+
+/** Lo que la pantalla de la IA del taller necesita saber, sin ningún secreto. */
+export interface EstadoDeIA {
+  configuracion: ConfiguracionDeIA;
+  codex: { sesion: boolean; email: string | null };
+  puedeCifrar: boolean;
+}
+
+export type RespuestaDeIA = { ok: true; texto: string } | { ok: false; motivo: string };
+
+/** La IA del taller (decisión 32): proveedores configurados por la persona y la llamada al modelo. */
+export interface PuenteDeIA {
+  estado(): Promise<EstadoDeIA>;
+  /** `secreto` null = conservar la guardada (o ninguna). Nunca vuelve al renderizador. */
+  guardarProveedor(proveedor: Proveedor, secreto: string | null): Promise<EstadoDeIA>;
+  quitarProveedor(id: string): Promise<EstadoDeIA>;
+  activar(id: string | null): Promise<EstadoDeIA>;
+  iniciarSesionCodex(): Promise<EstadoDeIA>;
+  cerrarSesionCodex(): Promise<EstadoDeIA>;
+  pedir(proveedorId: string, mensajes: Mensajes): Promise<RespuestaDeIA>;
+}
+
 export interface ArchivoDeSistema {
   ruta: string | null;
   nombre: string;
@@ -57,6 +80,7 @@ export interface Puente {
   exportarCapsula(archivos: Array<{ nombre: string; texto: string }>): Promise<string | null>;
   listarRecientes(): Promise<Reciente[]>;
   descargarCatalogo(): Promise<string>;
+  ia: PuenteDeIA;
 }
 
 /** La forma exacta que expone el preload de Electron en `window.contope`. */
@@ -71,6 +95,7 @@ export interface PuenteElectron {
   exportarCapsula(archivos: Array<{ nombre: string; texto: string }>): Promise<string | null>;
   listarRecientes(): Promise<Reciente[]>;
   descargarCatalogo(): Promise<string>;
+  ia: PuenteDeIA;
 }
 
 declare global {

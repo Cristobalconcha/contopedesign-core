@@ -251,16 +251,28 @@ los manifiestos, las reglas incorporadas (Claude Design) y los referentes y
 cortapisas del sistema abierto. Especificación y decisión pendiente en el
 vault: `spec-ia-del-taller-2026-09-19.md`.
 
-*Estado:* el encargo existe. Lo que sí está construido (18-09) es el **camino
-de entrada** de las propuestas: el formato `contope/propuestas` (una por
+*Estado (madrugada del 19-09):* **la IA del taller existe.** Desde Inicio
+(«IA del taller») o desde Construcción se configuran proveedores —Claude por
+clave o por token de Claude Code, ChatGPT/Codex iniciando sesión (OAuth con
+PKCE), DeepSeek, Z.ai, Ollama, o cualquier servicio compatible con OpenAI— con
+la clave cifrada en este equipo (`safeStorage`) y nunca en el archivo del
+sistema. «Pedir a ContOpe» arma el prompt (`dominio/encargo.ts`: el sistema y
+su propósito, el núcleo del mundo con sus reglas y citas, lo ya definido con las
+imperativas marcadas, las declaraciones, cada encargo con su `payloadSchema` y
+sus restricciones), lo manda por el proveedor activo (`electron/ia.ts`) y lee
+la respuesta al formato de propuestas. Medido el 19-09 con DeepSeek por las dos
+clases de API: una propuesta válida para dim3.req02, resuelta por el evaluador,
+en ~22 s. Sin medir todavía: el OAuth real de ChatGPT y el token de Claude Code.
+Escrito sin código ni librería del fork (decisión 32). Lo construido el 18-09 es
+el **camino de entrada** de las propuestas, que esto reutiliza: el formato `contope/propuestas` (una por
 pregunta, con nota), su validación en la frontera y la acción del reductor que
 las hace entrar como entrada de ContOpe en `propuesta` y `explorable`, con la
 tarea en `proposed`; en Definición se aprueban (`resolved`) o se quitan
 (`rejected`), y sobre una pregunta ya resuelta por una persona o un insumo
-la propuesta **no pisa nada**: queda como conflicto de origen. Ese camino lo
-usará la IA del taller cuando exista la conexión con modelos; mientras tanto
-Construcción lo expone como «Traer propuestas…» desde un archivo, que es una
-vía de prueba, no el diseño. El modo sombra no está ni diseñado.
+la propuesta **no pisa nada**: queda como conflicto de origen. Construcción
+conserva «Traer desde un archivo…» como vía de prueba. El modo sombra no está
+ni diseñado; la lectura de las declaraciones en la armonización usará el mismo
+proveedor.
 
 ### 5. Armonización, con árbitros por universo
 

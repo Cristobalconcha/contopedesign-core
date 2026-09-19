@@ -28,5 +28,6 @@ export function puenteElectron(nativo: PuenteElectron): Puente {
     exportarCapsula: (archivos) => nativo.exportarCapsula(archivos),
     listarRecientes: () => nativo.listarRecientes(),
     descargarCatalogo: () => nativo.descargarCatalogo(),
+    ia: nativo.ia,
   };
 }
