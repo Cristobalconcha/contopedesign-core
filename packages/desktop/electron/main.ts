@@ -9,6 +9,7 @@
  * para comprobar en una terminal que el programa arranca, sin mirar.
  */
 import { app, BrowserWindow, dialog, ipcMain, net, safeStorage, shell } from 'electron';
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import { registrarIpcDeIA } from './ia.js';
@@ -52,8 +53,16 @@ async function registrarReciente(ruta: string, nombre: string, vistazo?: unknown
   await writeFile(rutaRecientes(), JSON.stringify(lista.slice(0, 12), null, 2));
 }
 
+/** El logotipo en PNG (public/images/contope.png, hecho con scripts/rasterizar-logo.cjs): en dist tras compilar, en public en desarrollo. */
+function rutaDelIcono(): string | undefined {
+  const candidatas = [join(__dirname, '..', 'images', 'contope.png'), join(app.getAppPath(), 'public', 'images', 'contope.png')];
+  return candidatas.find((r) => existsSync(r));
+}
+
 function crearVentana(): BrowserWindow {
+  const icono = rutaDelIcono();
   const ventana = new BrowserWindow({
+    ...(icono !== undefined ? { icon: icono } : {}),
     width: 1280,
     height: 820,
     minWidth: 900,
