@@ -26,6 +26,8 @@ export interface EstadoDeIA {
   codex: { sesion: boolean; email: string | null };
   /** El proceso principal puede cifrar; si no (Linux sin llavero), se dice y no se guardan claves. */
   puedeCifrar: boolean;
+  /** Por id de proveedor: si su `claveDeEntorno` existe (y no está vacía) en este equipo. */
+  entorno: Record<string, boolean>;
 }
 
 export type RespuestaDeIA = { ok: true; texto: string } | { ok: false; motivo: string };
@@ -40,6 +42,16 @@ interface Dependencias {
 
 function esRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** Una variable de entorno del equipo, sólo si existe y no está vacía. */
+function varDeEntorno(nombre: string): string | null {
+  const valor = process.env[nombre];
+  return valor === undefined || valor === '' ? null : valor;
+}
+
+function varDeEntornoPresente(nombre: string): boolean {
+  return varDeEntorno(nombre) !== null;
 }
 
 async function escribirAtomico(ruta: string, texto: string): Promise<void> {
@@ -96,10 +108,16 @@ export function registrarIpcDeIA(deps: Dependencias): void {
   }
   async function estado(): Promise<EstadoDeIA> {
     const sesion = await codex().leer();
+    const configuracion = await leerConfiguracion();
+    const entorno: Record<string, boolean> = {};
+    for (const p of configuracion.proveedores) {
+      if (p.claveDeEntorno !== undefined) entorno[p.id] = varDeEntornoPresente(p.claveDeEntorno);
+    }
     return {
-      configuracion: await leerConfiguracion(),
+      configuracion,
       codex: { sesion: sesion !== null, email: sesion?.email ?? null },
       puedeCifrar: safeStorage.isEncryptionAvailable(),
+      entorno,
     };
   }
 
@@ -156,8 +174,16 @@ export function registrarIpcDeIA(deps: Dependencias): void {
       secreto = tokens.accessToken;
       if (tokens.cuentaId !== null) cuentaId = tokens.cuentaId;
     } else if (proveedor.credencial !== 'ninguna') {
-      const s = await secretoDe(proveedor.id);
-      if (s === null) return { ok: false, motivo: `Falta la credencial de ${proveedor.nombre}: vuelve a guardarla en la configuración de la IA.` };
+      const guardado = await secretoDe(proveedor.id);
+      const delEntorno = guardado === null && proveedor.claveDeEntorno !== undefined ? varDeEntorno(proveedor.claveDeEntorno) : null;
+      const s = guardado ?? delEntorno;
+      if (s === null) {
+        const mencion =
+          proveedor.claveDeEntorno !== undefined
+            ? `, ni está definida la variable de entorno ${proveedor.claveDeEntorno} en este equipo`
+            : '';
+        return { ok: false, motivo: `Falta la credencial de ${proveedor.nombre}: vuelve a guardarla en la configuración de la IA${mencion}.` };
+      }
       secreto = s;
     }
     const peticion = peticionDe(proveedor, mensajes, { ...(secreto !== undefined ? { secreto } : {}), ...(cuentaId !== undefined ? { cuentaId } : {}) });

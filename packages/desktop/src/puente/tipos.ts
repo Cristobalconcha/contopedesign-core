@@ -11,6 +11,8 @@ export interface EstadoDeIA {
   configuracion: ConfiguracionDeIA;
   codex: { sesion: boolean; email: string | null };
   puedeCifrar: boolean;
+  /** Por id de proveedor: si su `claveDeEntorno` existe en este equipo. Vacío en el navegador. */
+  entorno: Record<string, boolean>;
 }
 
 export type RespuestaDeIA = { ok: true; texto: string } | { ok: false; motivo: string };

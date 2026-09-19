@@ -129,6 +129,33 @@ describe('validarConfiguracion', () => {
     if (!r.ok) throw new Error(r.motivo);
     expect(r.configuracion.activo).toBeNull();
   });
+
+  it('acepta claveDeEntorno cuando es texto', () => {
+    const r = validarConfiguracion({
+      schemaVersion: 1,
+      proveedores: [{ ...DEEPSEEK, claveDeEntorno: 'DEEPSEEK_API_KEY' }],
+      activo: null,
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) throw new Error(r.motivo);
+    expect(r.configuracion.proveedores[0]?.claveDeEntorno).toBe('DEEPSEEK_API_KEY');
+  });
+
+  it('rechaza claveDeEntorno cuando no es texto', () => {
+    const r = validarConfiguracion({
+      schemaVersion: 1,
+      proveedores: [{ ...DEEPSEEK, claveDeEntorno: 7 }],
+      activo: null,
+    });
+    expect(r).toMatchObject({ ok: false, motivo: expect.stringContaining('entorno') });
+  });
+
+  it('sin claveDeEntorno, el proveedor queda sin ese campo', () => {
+    const r = validarConfiguracion({ schemaVersion: 1, proveedores: [DEEPSEEK], activo: null });
+    expect(r.ok).toBe(true);
+    if (!r.ok) throw new Error(r.motivo);
+    expect(r.configuracion.proveedores[0]?.claveDeEntorno).toBeUndefined();
+  });
 });
 
 describe('mascaraDe', () => {
@@ -147,8 +174,8 @@ describe('mascaraDe', () => {
 });
 
 describe('PREAJUSTES', () => {
-  it('ofrece las seis familias que el taller conoce', () => {
-    expect(PREAJUSTES).toHaveLength(6);
+  it('ofrece las siete familias que el taller conoce', () => {
+    expect(PREAJUSTES).toHaveLength(7);
     expect(PREAJUSTES.map((p) => p.clase)).toEqual([
       'anthropic',
       'anthropic',
@@ -156,10 +183,22 @@ describe('PREAJUSTES', () => {
       'openai-chat',
       'openai-chat',
       'openai-chat',
+      'openai-chat',
     ]);
     const ollama = PREAJUSTES.find((p) => p.nombre.startsWith('Ollama'));
     expect(ollama?.credencial).toBe('ninguna');
     expect(PREAJUSTES.find((p) => p.nombre === 'Claude')?.credencial).toBe('clave');
+  });
+
+  it('DeepSeek y DeepSeek Flash traen claveDeEntorno DEEPSEEK_API_KEY', () => {
+    const deepseek = PREAJUSTES.find((p) => p.nombre === 'DeepSeek');
+    const flash = PREAJUSTES.find((p) => p.nombre === 'DeepSeek Flash');
+    expect(deepseek?.claveDeEntorno).toBe('DEEPSEEK_API_KEY');
+    expect(deepseek?.modelo).toBe('deepseek-v4-pro');
+    expect(flash?.claveDeEntorno).toBe('DEEPSEEK_API_KEY');
+    expect(flash?.modelo).toBe('deepseek-flash');
+    expect(flash?.clase).toBe('openai-chat');
+    expect(flash?.credencial).toBe('clave');
   });
 });
 

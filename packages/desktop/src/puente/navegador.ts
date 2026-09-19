@@ -92,11 +92,11 @@ function iaNavegador(): PuenteDeIA {
     } catch {
       // Sin almacenamiento no hay configuración; no es un error del trabajo.
     }
-    return { configuracion: c, codex: { sesion: false, email: null }, puedeCifrar: false };
+    return { configuracion: c, codex: { sesion: false, email: null }, puedeCifrar: false, entorno: {} };
   };
   return {
     async estado() {
-      return { configuracion: leer(), codex: { sesion: false, email: null }, puedeCifrar: false };
+      return { configuracion: leer(), codex: { sesion: false, email: null }, puedeCifrar: false, entorno: {} };
     },
     async guardarProveedor(proveedor) {
       const c = leer();
@@ -115,7 +115,7 @@ function iaNavegador(): PuenteDeIA {
       throw new Error('La sesión de ChatGPT sólo se inicia en la aplicación de escritorio.');
     },
     async cerrarSesionCodex() {
-      return { configuracion: leer(), codex: { sesion: false, email: null }, puedeCifrar: false };
+      return { configuracion: leer(), codex: { sesion: false, email: null }, puedeCifrar: false, entorno: {} };
     },
     async pedir() {
       return { ok: false, motivo: 'Pedirle al modelo sólo funciona en la aplicación de escritorio.' };

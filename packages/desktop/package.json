@@ -13,7 +13,25 @@
     "smoke": "node scripts/empaquetar-electron.mjs && electron . --smoke",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.electron.json",
     "test": "vitest run --passWithNoTests",
-    "catalogo": "node scripts/actualizar-catalogo-tipografico.mjs"
+    "catalogo": "node scripts/actualizar-catalogo-tipografico.mjs",
+    "empaquetar": "vite build && node scripts/empaquetar-electron.mjs && electron-builder --win"
+  },
+  "build": {
+    "appId": "cl.contope.design",
+    "productName": "ContOpe Design",
+    "files": ["dist/**", "package.json"],
+    "directories": {
+      "output": "release"
+    },
+    "icon": "public/images/contope.png",
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "language": "3082"
+    }
   },
   "dependencies": {
     "@contope/core": "workspace:*",
@@ -27,6 +45,7 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.0",
     "electron": "^44.0.0",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.28.0",
     "typescript": "^5.9.2",
     "vite": "^8.0.0",

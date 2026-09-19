@@ -40,6 +40,12 @@ export interface Proveedor {
   credencial: 'clave' | 'token-claude' | 'sesion-codex' | 'ninguna';
   /** Sólo para mostrar: 'sk-ant-***xyz9'. El secreto real NUNCA está acá. */
   mascara?: string;
+  /**
+   * Nombre de una variable de entorno del equipo (ej. `DEEPSEEK_API_KEY`) que,
+   * si existe, sirve de credencial cuando no hay clave guardada. Sólo tiene
+   * sentido con `credencial: 'clave'`.
+   */
+  claveDeEntorno?: string;
   creadoEn: string;
 }
 
@@ -133,6 +139,10 @@ export function validarConfiguracion(valor: unknown): { ok: true; configuracion:
     if (mascara !== undefined && typeof mascara !== 'string') {
       return { ok: false, motivo: `la máscara del proveedor ${n} debe ser texto` };
     }
+    const claveDeEntorno = crudo['claveDeEntorno'];
+    if (claveDeEntorno !== undefined && typeof claveDeEntorno !== 'string') {
+      return { ok: false, motivo: `la variable de entorno del proveedor ${n} debe ser texto` };
+    }
     proveedores.push({
       id,
       nombre,
@@ -141,6 +151,7 @@ export function validarConfiguracion(valor: unknown): { ok: true; configuracion:
       modelo,
       credencial,
       ...(typeof mascara === 'string' ? { mascara } : {}),
+      ...(typeof claveDeEntorno === 'string' && claveDeEntorno !== '' ? { claveDeEntorno } : {}),
       creadoEn,
     });
   }
@@ -174,6 +185,7 @@ export const PREAJUSTES: ReadonlyArray<{
   modelo: string;
   credencial: Proveedor['credencial'];
   nota: string;
+  claveDeEntorno?: string;
 }> = [
   {
     nombre: 'Claude',
@@ -205,7 +217,17 @@ export const PREAJUSTES: ReadonlyArray<{
     baseUrl: 'https://api.deepseek.com/v1',
     modelo: 'deepseek-v4-pro',
     credencial: 'clave',
-    nota: 'clave de API de DeepSeek',
+    nota: 'clave de API de DeepSeek — si DEEPSEEK_API_KEY existe en este equipo, no hace falta pegarla',
+    claveDeEntorno: 'DEEPSEEK_API_KEY',
+  },
+  {
+    nombre: 'DeepSeek Flash',
+    clase: 'openai-chat',
+    baseUrl: 'https://api.deepseek.com/v1',
+    modelo: 'deepseek-flash',
+    credencial: 'clave',
+    nota: 'clave de API de DeepSeek (modelo más barato) — si DEEPSEEK_API_KEY existe en este equipo, no hace falta pegarla',
+    claveDeEntorno: 'DEEPSEEK_API_KEY',
   },
   {
     nombre: 'Z.ai',

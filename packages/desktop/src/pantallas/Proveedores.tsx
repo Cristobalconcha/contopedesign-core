@@ -10,6 +10,21 @@ import { useEffect, useState } from 'react';
 import { PREAJUSTES, mascaraDe, nuevoIdDeProveedor, type Proveedor } from '../dominio/proveedores.js';
 import type { EstadoDeIA, Puente } from '../puente/tipos.js';
 
+/** Qué mostrar por la credencial de un proveedor en la lista, sin secretos. */
+function textoDeCredencial(p: Proveedor, estado: EstadoDeIA): string {
+  if (p.credencial === 'sesion-codex') {
+    return estado.codex.sesion ? `sesión de ChatGPT${estado.codex.email ? ` · ${estado.codex.email}` : ''}` : 'sin sesión de ChatGPT';
+  }
+  if (p.credencial === 'ninguna') return 'sin clave';
+  if (p.mascara !== undefined) return p.mascara;
+  if (p.credencial === 'clave' && p.claveDeEntorno !== undefined) {
+    return estado.entorno[p.id] === true
+      ? `clave del equipo (${p.claveDeEntorno})`
+      : `sin clave: pégala en Editar o define ${p.claveDeEntorno}`;
+  }
+  return 'clave guardada';
+}
+
 export function Proveedores({ puente, onVolver }: { puente: Puente; onVolver: () => void }) {
   const [estado, setEstado] = useState<EstadoDeIA | null>(null);
   const [editando, setEditando] = useState<Proveedor | null>(null);
@@ -53,6 +68,7 @@ export function Proveedores({ puente, onVolver }: { puente: Puente; onVolver: ()
       baseUrl: p.baseUrl,
       modelo: p.modelo,
       credencial: p.credencial,
+      ...(p.claveDeEntorno !== undefined ? { claveDeEntorno: p.claveDeEntorno } : {}),
       creadoEn: new Date().toISOString(),
     });
   };
@@ -118,15 +134,7 @@ export function Proveedores({ puente, onVolver }: { puente: Puente; onVolver: ()
                 <b>{p.nombre}</b>
                 <span className="mono">{p.modelo}</span>
                 <span className="tenue">{p.baseUrl}</span>
-                <span className="mono tenue">
-                  {p.credencial === 'sesion-codex'
-                    ? estado.codex.sesion
-                      ? `sesión de ChatGPT${estado.codex.email ? ` · ${estado.codex.email}` : ''}`
-                      : 'sin sesión de ChatGPT'
-                    : p.credencial === 'ninguna'
-                      ? 'sin clave'
-                      : (p.mascara ?? 'clave guardada')}
-                </span>
+                <span className="mono tenue">{textoDeCredencial(p, estado)}</span>
               </div>
               <div className="caminos">
                 {activo === p.id ? (
@@ -192,7 +200,13 @@ export function Proveedores({ puente, onVolver }: { puente: Puente; onVolver: ()
               <input
                 type="password"
                 value={secreto}
-                placeholder={editando.mascara ? `guardada: ${editando.mascara} (escribe otra para reemplazarla)` : ''}
+                placeholder={
+                  editando.mascara
+                    ? `guardada: ${editando.mascara} (escribe otra para reemplazarla)`
+                    : editando.claveDeEntorno
+                      ? `opcional: si no la pegas, se usa ${editando.claveDeEntorno} del equipo`
+                      : ''
+                }
                 onChange={(e) => setSecreto(e.target.value)}
                 aria-label="Clave"
               />

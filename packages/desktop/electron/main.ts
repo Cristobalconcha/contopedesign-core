@@ -76,6 +76,10 @@ function crearVentana(): BrowserWindow {
       sandbox: true,
     },
   });
+  // No se pide alwaysOnTop en ningún lado de este archivo, pero se fija en false de todos
+  // modos: es la garantía explícita contra la ventana quedando fija encima de las demás
+  // (reportado 2026-09-19), sin costo si ya estaba en false por omisión.
+  ventana.setAlwaysOnTop(false);
   const urlDesarrollo = process.env['VITE_DEV_SERVER_URL'];
   if (urlDesarrollo !== undefined) {
     void ventana.loadURL(urlDesarrollo);
