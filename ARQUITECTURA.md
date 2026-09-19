@@ -241,18 +241,26 @@ siendo cuando hay datos. Los datos ya existen en el formato del taller
 cápsulas), y la regla de fuerza del set (`human-confirmed` contra
 `model-proposal`) es justo la etiqueta que un entrenamiento así necesita.
 
-*Estado:* el encargo existe, y desde la tarde del 18-09 **traer de vuelta lo
-que la IA proponga tiene su primer dibujo**: la IA devuelve un archivo
-`*.propuestas.json` (`kind: contope/propuestas`, `schemaVersion: 1`, el
-`designId` del contrato que leyó, la revisión, y una lista de
-`{ requirementId, payload, nota }`; el skill `leer-contrato-de-diseno` dice
-cómo). Construcción lo trae: cada propuesta entra como entrada de ContOpe en
-`propuesta` y `explorable`, la tarea pasa a `proposed` con la candidata
-enlazada, y en Definición se mira, se aprueba (la tarea queda `resolved`) o se
-quita (`rejected`). Sobre una pregunta ya resuelta por una persona o un insumo
-la propuesta **no pisa nada**: queda como conflicto de origen para la
-armonización. El modo sombra no está ni diseñado. Lo que sí está es el registro
-de lo que el diseñador resuelve, que es su materia prima.
+**Quién es esta IA (corrección de Cristóbal, 19-09).** No es la IA de
+escritorio. Son dos: la de escritorio, externa, toma el modelo de diseño
+terminado y hace el trabajo en el destino; la que construye las definiciones
+asignadas por el diseñador **vive dentro de este programa**, con un modelo
+configurado en la app (OAuth de Claude, Codex u otro, como lo hacía Open
+CoDesign) y trabaja con la base de conocimiento propia: los núcleos medidos,
+los manifiestos, las reglas incorporadas (Claude Design) y los referentes y
+cortapisas del sistema abierto. Especificación y decisión pendiente en el
+vault: `spec-ia-del-taller-2026-09-19.md`.
+
+*Estado:* el encargo existe. Lo que sí está construido (18-09) es el **camino
+de entrada** de las propuestas: el formato `contope/propuestas` (una por
+pregunta, con nota), su validación en la frontera y la acción del reductor que
+las hace entrar como entrada de ContOpe en `propuesta` y `explorable`, con la
+tarea en `proposed`; en Definición se aprueban (`resolved`) o se quitan
+(`rejected`), y sobre una pregunta ya resuelta por una persona o un insumo
+la propuesta **no pisa nada**: queda como conflicto de origen. Ese camino lo
+usará la IA del taller cuando exista la conexión con modelos; mientras tanto
+Construcción lo expone como «Traer propuestas…» desde un archivo, que es una
+vía de prueba, no el diseño. El modo sombra no está ni diseñado.
 
 ### 5. Armonización, con árbitros por universo
 

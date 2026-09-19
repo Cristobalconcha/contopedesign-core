@@ -91,8 +91,13 @@ del linaje.
   obligación que este repositorio existe para no tener. La compatibilidad se
   sigue verificando allá; acá se comprueba lo que le toca a este código.
 - Las once secciones de prompts, que describen el producto anterior.
-- La conexión con modelos y el bucle del agente, que este programa no necesita:
-  la IA con la que trabaja es la de escritorio, y lee la cápsula por un skill.
+- La conexión con modelos y el bucle del agente. **Corregido el 19-09-2026:** esa
+  frase mezclaba dos IA. La de escritorio (externa) toma el modelo de diseño
+  terminado y hace el trabajo en el destino, leyendo la cápsula por un skill. Pero
+  la que resuelve las preguntas asignadas a ContOpe vive DENTRO de este programa,
+  con un proveedor configurado en la app (OAuth de Claude, Codex u otro), como lo
+  hacía Open CoDesign. Cómo se trae esa conexión sin volver a cargar código del
+  fork está en el vault (`spec-ia-del-taller-2026-09-19.md`).
 
 ## Cómo funciona
 

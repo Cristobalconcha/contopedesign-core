@@ -90,14 +90,14 @@ export function Construccion() {
         </ul>
       )}
       <p className="tenue">
-        La IA que construye los encargos no vive dentro de este programa: se exporta la cápsula y la IA de escritorio la lee
-        con el skill <span className="mono">leer-contrato-de-diseno</span>. Lo que proponga vuelve en un archivo{' '}
-        <span className="mono">*.propuestas.json</span> (el skill dice cómo) y entra acá como propuesta: nada de lo que traiga
-        pisa lo que una persona ya resolvió.
+        La IA que resuelve estos encargos es la del taller: vive en este programa, con un modelo que se configura acá
+        (Claude, Codex u otro) y trabaja con la base de conocimiento propia. Esa conexión todavía no está construida. Mientras
+        tanto, sus propuestas se pueden traer desde un archivo <span className="mono">*.propuestas.json</span> (vía de
+        prueba): entran como propuesta y nada de lo que traigan pisa lo que una persona ya resolvió.
       </p>
       <p>
-        <button className="btn fuerte" onClick={() => void traerPropuestas()} title="Un archivo *.propuestas.json hecho para este sistema">
-          Traer propuestas de la IA…
+        <button className="btn" onClick={() => void traerPropuestas()} title="Vía de prueba: un archivo *.propuestas.json hecho para este sistema">
+          Traer propuestas desde un archivo…
         </button>
       </p>
 

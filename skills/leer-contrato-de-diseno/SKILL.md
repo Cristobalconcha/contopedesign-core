@@ -122,12 +122,19 @@ que falta, bajo sus `constraintDefinitionIds`. **No es invención libre.**
 - Cerrar la tarea sólo enlazando una definición revisada (`resolved`) o con un
   rechazo explícito (`rejected`). **Nunca convertirla en silencio a `open`.**
 
-## Devolver las propuestas al taller
+## Las tareas de desarrollar no son para esta IA
 
-Lo que se construya para una tarea de desarrollar vuelve a ContOpe Design
-Desktop en un archivo `<nombre>.propuestas.json`, que Construcción trae con
-«Traer propuestas de la IA…». Es la única forma de entrar: una propuesta nunca
-se escribe dentro del `*.contope.json` ni del contrato.
+**Corrección del 19-09-2026.** Quien lee este skill es la IA del escritorio: toma
+el modelo de diseño terminado y hace el trabajo en el destino. Las tareas de
+desarrollar (las preguntas que el diseñador asignó a ContOpe) las resuelve **la
+IA del taller**, que vive dentro de ContOpe Design Desktop con su propio modelo
+configurado. Esta IA no las construye ni devuelve propuestas; si una tarea sigue
+`active` en el contrato, se respeta como definición declarada y sin resolver.
+
+El formato de abajo es el contrato interno entre la IA del taller y el reductor
+(y una vía de prueba por archivo); se documenta acá sólo por referencia.
+
+### Formato `contope/propuestas` (referencia)
 
 ```json
 {
