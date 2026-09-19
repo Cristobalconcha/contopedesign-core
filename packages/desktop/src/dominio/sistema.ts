@@ -135,6 +135,15 @@ export interface Sistema {
    * DesignSet porque el núcleo no tiene campo para ella.
    */
   notasDePropuesta: Record<string, { texto: string; en: string }>;
+  /**
+   * Qué preguntas quedaron resueltas por el canal imperativo (Cristóbal,
+   * 19-09: «un canal imperativo que haga lo mismo que cargar un insumo pero se
+   * marca como imperativo: manual de estilos del cliente, branding del
+   * cliente»). La marca se estampa al incorporar desde una cortapisa y vive
+   * acá, en el sistema: sobrevive a quitar el insumo. Se borra sólo cuando
+   * una persona redefine o quita esa definición.
+   */
+  imperativas: Record<string, { insumoId: string; nombre: string; en: string }>;
 }
 
 export function nuevoId(prefijo: string): string {
@@ -166,5 +175,6 @@ export function nuevoSistema(mundo: MundoId, nombre: string, ahora = new Date().
     capsulaAnterior: null,
     armonizacion: armonizacionVacia(),
     notasDePropuesta: {},
+    imperativas: {},
   };
 }

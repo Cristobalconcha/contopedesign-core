@@ -112,3 +112,32 @@ describe('persistencia · frontera hostil (auditoría 18-09)', () => {
     expect(parsearSistema(JSON.stringify(viejo)).notasDePropuesta).toEqual({});
   });
 });
+
+describe('persistencia · canal imperativo', () => {
+  it('un archivo viejo sin la marca la deriva de los insumos con carril cortapisa', () => {
+    const base = nuevoSistema('digital', 'x') as unknown as Record<string, unknown>;
+    const viejo: Record<string, unknown> = {
+      ...base,
+      insumos: [{ id: 'manual', nombre: 'manual.css', extension: 'css', tipo: 'css', tamanoBytes: 1, incorporadoEn: '2026-09-18T00:00:00.000Z', resumen: '', carril: 'cortapisa', tomar: null, candidatos: [] }],
+      designSet: {
+        ...(base['designSet'] as Record<string, unknown>),
+        entries: [
+          {
+            requirementId: 'dim1.req01',
+            effectiveDefinitionId: 'dim1.req01.def1',
+            resolutionPath: 'insumo',
+            payload: { institucionales: [{ name: 'a', value: '#70745e' }], neutros: [] },
+            provenance: { fuente: 'referente', referenciaId: 'manual' },
+            fuerza: 'inamovible',
+            cicloDeVida: 'aprobada',
+            revision: 1,
+            mapsToKinds: [],
+          },
+        ],
+      },
+    };
+    delete viejo['imperativas'];
+    const s = parsearSistema(JSON.stringify(viejo));
+    expect(s.imperativas['dim1.req01']).toMatchObject({ insumoId: 'manual', nombre: 'manual.css' });
+  });
+});

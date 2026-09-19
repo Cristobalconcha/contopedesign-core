@@ -72,3 +72,16 @@ describe('senalesDe', () => {
     expect(senalesResueltas(s, senales)).toEqual([{ senal: primera, decision: { estado: 'validada', en: AHORA, pasada: 1 } }]);
   });
 });
+
+describe('gana la cortapisa aunque el insumo ya no esté', () => {
+  it('la señal sigue marcada como cortapisa después de quitar el insumo', () => {
+    let s = nuevoSistema('digital', 'x', AHORA);
+    s = reducir(s, { tipo: 'agregar-insumo', insumo: insumo('ref', 'referente', [candidatoColores('r1', ['#70745e'])]) }, AHORA);
+    s = reducir(s, { tipo: 'incorporar', insumoId: 'ref', candidatoIds: ['r1'] }, AHORA);
+    s = reducir(s, { tipo: 'agregar-insumo', insumo: insumo('manual', 'cortapisa', [candidatoColores('m1', ['#cda23d'])]) }, AHORA);
+    s = reducir(s, { tipo: 'incorporar', insumoId: 'manual', candidatoIds: ['m1'] }, AHORA);
+    s = reducir(s, { tipo: 'quitar-insumo', insumoId: 'manual' }, AHORA);
+    const conflicto = senalesDe(s, evaluar(s)).find((x) => x.tipo === 'conflicto');
+    expect(conflicto?.cortapisa).toBe(true);
+  });
+});

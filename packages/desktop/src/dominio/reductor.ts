@@ -16,7 +16,10 @@
  *   reemplazan, dejando el rastro de lo desplazado en `conflictos`. Dos
  *   cortapisas sobre el mismo requisito sí se tratan como dos orígenes: las
  *   decide la armonización.
- * - Una cortapisa se expresa por FUERZA y CICLO DE VIDA, no por tags. Las
+ * - Una cortapisa es un CANAL IMPERATIVO (Cristóbal, 19-09): lo que entra por
+ *   él queda marcado en `Sistema.imperativas` al incorporarse, y esa marca es
+ *   la que leen Definición (pide confirmar antes de tocarla) y la armonización
+ *   (gana la cortapisa). No depende de que el insumo siga en la lista. Las
  *   rectoras del núcleo (descriptor, mood wall) siguen pasándose sin
  *   restricciones: acá no se filtran.
  * - Aprobar no cambia el valor; reabrir no lo borra.
@@ -160,10 +163,15 @@ function provenanceDe(camino: ResolutionPath, insumoId?: string): ProvenanceV0 {
  * wall) siguen pasándose sin restricciones.
  */
 export function esCortapisa(sistema: Sistema, entrada: DesignSetEntryV0): boolean {
-  if (entrada.resolutionPath !== 'insumo') return false;
-  const referenciaId = entrada.provenance.referenciaId;
-  if (referenciaId === undefined) return false;
-  return sistema.insumos.some((i) => i.id === referenciaId && i.carril === 'cortapisa');
+  // La marca imperativa se estampó al incorporar y vive en el sistema
+  // (`imperativas`), no en la lista de insumos: quitar el archivo no la apaga.
+  return sistema.imperativas[entrada.requirementId] !== undefined;
+}
+
+/** Estampa (o quita) la marca imperativa de una pregunta. */
+function conImperativa(sistema: Sistema, requirementId: string, insumo: Insumo | null, ahora: string): Sistema['imperativas'] {
+  const { [requirementId]: _anterior, ...resto } = sistema.imperativas;
+  return insumo === null ? resto : { ...resto, [requirementId]: { insumoId: insumo.id, nombre: insumo.nombre, en: ahora } };
 }
 
 /**
@@ -211,6 +219,7 @@ function incorporarCandidato(
       ...sistema,
       designSet: { ...set, entries: [...set.entries, entrada] },
       caminos: sinCamino(sistema.caminos, req.id),
+      imperativas: cortapisa ? conImperativa(sistema, req.id, insumo, ahora) : sistema.imperativas,
     };
   }
 
@@ -251,6 +260,7 @@ function incorporarCandidato(
       designSet: { ...set, entries: set.entries.map((e) => (e === existente ? reemplazo : e)) },
       caminos: sinCamino(sistema.caminos, req.id),
       conflictos: [...sistema.conflictos, desplazado],
+      imperativas: conImperativa(sistema, req.id, insumo, ahora),
     };
   }
 
@@ -371,6 +381,9 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
         designSet: { ...set, entries },
         caminos: sinCamino(sistema.caminos, req.id),
         tareas,
+        // Redefinir a mano lo que entró por el canal imperativo (Definición
+        // pidió confirmación) lo saca de ese canal: ya no es lo que dijo el manual.
+        imperativas: conImperativa(sistema, req.id, null, ahora),
       };
     }
 
@@ -418,7 +431,14 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
       // Sin entrada no hay dos orígenes que arbitrar: los conflictos de esa
       // pregunta se van con ella (auditoría 18-09, hallazgo 11).
       const conflictos = sistema.conflictos.filter((c) => c.requirementId !== accion.requirementId);
-      return { ...sistema, designSet: { ...sistema.designSet, entries }, tareas, conflictos, caminos: sinCamino(sistema.caminos, accion.requirementId) };
+      return {
+        ...sistema,
+        designSet: { ...sistema.designSet, entries },
+        tareas,
+        conflictos,
+        caminos: sinCamino(sistema.caminos, accion.requirementId),
+        imperativas: conImperativa(sistema, accion.requirementId, null, ahora),
+      };
     }
 
     case 'encargar-a-contope': {

@@ -1,6 +1,6 @@
 import { DIM1_MANIFEST_V0, findEntry } from '@contope/core';
 import { describe, expect, it } from 'vitest';
-import { reducir, unirFragmento } from './reductor.js';
+import { esCortapisa, reducir, unirFragmento } from './reductor.js';
 import { nuevoSistema, type Candidato, type Insumo } from './sistema.js';
 
 const AHORA = '2026-09-14T12:00:00.000Z';
@@ -343,5 +343,27 @@ describe('reducir · armonización', () => {
     expect(s.armonizacion.senales['regla:x']).toEqual({ estado: 'anotada', nota: 'se deja así', en: AHORA, pasada: 1 });
     s = reducir(s, { tipo: 'resolver-senal', senalId: 'regla:y', estado: 'validada' }, AHORA);
     expect(s.armonizacion.senales['regla:y']?.pasada).toBe(2);
+  });
+});
+
+describe('reducir · canal imperativo', () => {
+  it('la marca se estampa al incorporar desde una cortapisa y sobrevive a quitar el insumo', () => {
+    let s = nuevoSistema('digital', 'Prueba', AHORA);
+    s = reducir(s, { tipo: 'agregar-insumo', insumo: { ...insumo('manual', [candidatoColores('m1', ['#70745e'])]), carril: 'cortapisa' } }, AHORA);
+    s = reducir(s, { tipo: 'incorporar', insumoId: 'manual', candidatoIds: ['m1'] }, AHORA);
+    expect(s.imperativas['dim1.req01']).toEqual({ insumoId: 'manual', nombre: 'manual.css', en: AHORA });
+    s = reducir(s, { tipo: 'quitar-insumo', insumoId: 'manual' }, AHORA);
+    const e = findEntry(s.designSet, 'dim1.req01');
+    expect(e && esCortapisa(s, e)).toBe(true);
+  });
+
+  it('redefinir a mano o quitar la definición saca la pregunta del canal imperativo', () => {
+    let s = nuevoSistema('digital', 'Prueba', AHORA);
+    s = reducir(s, { tipo: 'agregar-insumo', insumo: { ...insumo('manual', [candidatoColores('m1', ['#70745e'])]), carril: 'cortapisa' } }, AHORA);
+    s = reducir(s, { tipo: 'incorporar', insumoId: 'manual', candidatoIds: ['m1'] }, AHORA);
+    const a = reducir(s, { tipo: 'definir', requirementId: 'dim1.req01', payload: { institucionales: [], neutros: [] }, camino: 'diseñador', fuerza: 'explorable' }, AHORA);
+    expect(a.imperativas['dim1.req01']).toBeUndefined();
+    const b = reducir(s, { tipo: 'quitar-definicion', requirementId: 'dim1.req01' }, AHORA);
+    expect(b.imperativas['dim1.req01']).toBeUndefined();
   });
 });

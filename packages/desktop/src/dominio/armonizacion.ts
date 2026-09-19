@@ -61,9 +61,9 @@ export function armonizacionVacia(): Armonizacion {
 
 /** ¿La entrada vino de un insumo que entró como cortapisa? */
 export function vieneDeCortapisa(sistema: Sistema, entrada: DesignSetEntryV0 | undefined): boolean {
-  if (!entrada || entrada.resolutionPath !== 'insumo') return false;
-  const insumo = sistema.insumos.find((i) => i.id === entrada.provenance.referenciaId);
-  return insumo?.carril === 'cortapisa';
+  // El mismo criterio que Definición: la marca del canal imperativo, estampada
+  // al incorporar (auditoría 18-09, hallazgo 4; Cristóbal, 19-09).
+  return entrada !== undefined && sistema.imperativas[entrada.requirementId] !== undefined;
 }
 
 /** Las señales de una pasada: lo que el árbitro del mundo objeta y lo que la recolección dejó en conflicto. */

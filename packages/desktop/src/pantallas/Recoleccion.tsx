@@ -43,7 +43,7 @@ const NOMBRE_TIPO: Record<Insumo['tipo'], string> = {
 
 const AYUDA_CARRIL: Record<Carril, string> = {
   referente: 'Se toma lo que marques; entra como propuesta, para decidir después.',
-  cortapisa: 'Manual, logotipo, paleta institucional o el sistema anterior: lo que tomes entra aprobado e inamovible.',
+  cortapisa: 'Canal imperativo: manual de estilos, branding del cliente, paleta institucional o el sistema anterior. Lo que tomes entra aprobado e inamovible, y queda marcado así aunque quites el archivo.',
 };
 
 export function Recoleccion() {

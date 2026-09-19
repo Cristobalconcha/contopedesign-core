@@ -17,7 +17,9 @@
  * cero pasadas y sin señales decididas; si viene con otra forma, se rechaza.
  * `capsulaAnterior` pasa por `parseDesignContract` del núcleo (auditoría del
  * 18-09, hallazgo 6): un contrato roto rechaza el archivo en vez de reventar
- * al exportar. `notasDePropuesta` se completa vacío si falta.
+ * al exportar. `notasDePropuesta` se completa vacío si falta. `imperativas`
+ * (19-09), si falta, se deriva como lo hacía el código anterior: entradas de
+ * insumo cuyo insumo sigue en la lista con carril cortapisa; si viene, se valida.
  */
 import { DIMENSION_IDS, parseDesignContract, validateDesignSetShape, type DesignContractV1, type DimensionId } from '@contope/core';
 import type { Alcance } from './alcance.js';
@@ -112,6 +114,34 @@ function validarNotas(valor: unknown): { ok: true; notas: Record<string, { texto
   return { ok: true, notas };
 }
 
+type Imperativas = Sistema['imperativas'];
+
+function validarImperativas(valor: unknown, designSet: unknown, insumos: Insumo[]): { ok: true; imperativas: Imperativas } | { ok: false; motivo: string } {
+  if (valor === undefined || valor === null) {
+    const derivadas: Imperativas = {};
+    const lista = esRecord(designSet) && Array.isArray(designSet['entries']) ? designSet['entries'] : [];
+    for (const e of lista) {
+      if (!esRecord(e) || e['resolutionPath'] !== 'insumo' || !esRecord(e['provenance'])) continue;
+      const referenciaId = e['provenance']['referenciaId'];
+      const insumo = insumos.find((i) => i.id === referenciaId && i.carril === 'cortapisa');
+      if (insumo && typeof e['requirementId'] === 'string') {
+        derivadas[e['requirementId']] = { insumoId: insumo.id, nombre: insumo.nombre, en: insumo.incorporadoEn };
+      }
+    }
+    return { ok: true, imperativas: derivadas };
+  }
+  if (!esRecord(valor)) return { ok: false, motivo: "'imperativas' debe ser un objeto" };
+  const imperativas: Imperativas = {};
+  for (const [id, m] of Object.entries(valor)) {
+    if (esClavePeligrosa(id)) return { ok: false, motivo: `id imperativo no permitido: '${id}'` };
+    if (!esRecord(m) || typeof m['insumoId'] !== 'string' || typeof m['nombre'] !== 'string' || typeof m['en'] !== 'string') {
+      return { ok: false, motivo: `la marca imperativa de '${id}' necesita 'insumoId', 'nombre' y 'en'` };
+    }
+    imperativas[id] = { insumoId: m['insumoId'], nombre: m['nombre'], en: m['en'] };
+  }
+  return { ok: true, imperativas };
+}
+
 function validarArmonizacion(valor: unknown): { ok: true; armonizacion: Armonizacion } | { ok: false; motivo: string } {
   if (valor === undefined || valor === null) return { ok: true, armonizacion: armonizacionVacia() };
   if (!esRecord(valor)) return { ok: false, motivo: "'armonizacion' debe ser un objeto" };
@@ -154,6 +184,8 @@ export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } |
   if (!capsula.ok) return { ok: false, motivo: capsula.motivo };
   const notas = validarNotas(valor['notasDePropuesta']);
   if (!notas.ok) return { ok: false, motivo: notas.motivo };
+  const imperativas = validarImperativas(valor['imperativas'], valor['designSet'], insumos.insumos);
+  if (!imperativas.ok) return { ok: false, motivo: imperativas.motivo };
   const set = validateDesignSetShape(valor['designSet']);
   if (!set.ok) return { ok: false, motivo: `DesignSet inválido: ${set.errores.map((e) => e.mensaje).join('; ')}` };
   return {
@@ -165,6 +197,7 @@ export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } |
       armonizacion: armonizacion.armonizacion,
       capsulaAnterior: capsula.capsula,
       notasDePropuesta: notas.notas,
+      imperativas: imperativas.imperativas,
     },
   };
 }
