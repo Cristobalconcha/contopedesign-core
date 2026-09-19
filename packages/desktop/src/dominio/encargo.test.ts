@@ -87,6 +87,61 @@ describe('promptDeEncargo', () => {
     expect(prompt.usuario).toContain('IMPERATIVA');
     expect(prompt.usuario).toContain('NO se contradice');
   });
+
+  it('sin insumos, la sección LOS INSUMOS lo dice y no hay imágenes adjuntas', () => {
+    const prompt = promptDeEncargo(conEncargo(), evaluar(conEncargo()));
+    if (prompt === null) throw new Error('sin prompt');
+    expect(prompt.usuario).toContain('LOS INSUMOS');
+    expect(prompt.usuario).toContain('(ninguno todavía)');
+    expect(prompt.imagenes).toBeUndefined();
+  });
+
+  it('un insumo de imagen con miniatura se adjunta como imagen y se nombra en el texto', () => {
+    const base = conEncargo();
+    const s: Sistema = {
+      ...base,
+      insumos: [
+        {
+          id: 'insumo-img',
+          nombre: 'logo.png',
+          extension: 'png',
+          tipo: 'imagen',
+          tamanoBytes: 100,
+          incorporadoEn: AHORA,
+          miniatura: 'data:image/png;base64,QUJD',
+          resumen: '10x10 px',
+          carril: 'referente',
+          tomar: null,
+          candidatos: [],
+        },
+      ],
+    };
+    const prompt = promptDeEncargo(s, evaluar(s));
+    if (prompt === null) throw new Error('sin prompt');
+    expect(prompt.usuario).toContain('LOS INSUMOS');
+    expect(prompt.usuario).toContain('logo.png');
+    expect(prompt.usuario).toContain('tipo imagen');
+    expect(prompt.usuario).toContain('carril referente');
+    expect(prompt.usuario).toContain('imagen adjunta 1: logo.png');
+    expect(prompt.imagenes).toEqual([{ nombre: 'logo.png', mimeType: 'image/png', base64: 'QUJD' }]);
+  });
+
+  it('un insumo que no es imagen, o una imagen sin miniatura, no agrega adjuntos', () => {
+    const base = conEncargo();
+    const s: Sistema = {
+      ...base,
+      insumos: [
+        { id: 'i1', nombre: 'a.css', extension: 'css', tipo: 'css', tamanoBytes: 1, incorporadoEn: AHORA, resumen: '', carril: 'referente', tomar: null, candidatos: [] },
+        { id: 'i2', nombre: 'b.png', extension: 'png', tipo: 'imagen', tamanoBytes: 1, incorporadoEn: AHORA, resumen: '', carril: 'referente', tomar: null, candidatos: [] },
+      ],
+    };
+    const prompt = promptDeEncargo(s, evaluar(s));
+    if (prompt === null) throw new Error('sin prompt');
+    expect(prompt.usuario).toContain('a.css');
+    expect(prompt.usuario).toContain('b.png');
+    expect(prompt.usuario).not.toContain('imagen adjunta');
+    expect(prompt.imagenes).toBeUndefined();
+  });
 });
 
 describe('jsonDePropuestas', () => {

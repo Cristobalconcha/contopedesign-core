@@ -83,15 +83,55 @@ const INSTRUCCIONES = [
 export function promptDeEncargo(sistema: Sistema, evaluacion: Evaluacion): Mensajes | null {
   const encargos = encargosDe(sistema);
   if (encargos.length === 0) return null;
+  const { texto: seccionInsumosTexto, imagenes } = seccionInsumos(sistema);
   const secciones: string[] = [seccionSistema(sistema)];
   const nucleo = seccionNucleo(sistema);
   if (nucleo !== null) secciones.push(nucleo);
+  secciones.push(seccionInsumosTexto);
   secciones.push(seccionDefinido(sistema));
   secciones.push(seccionDeclaraciones(sistema));
   secciones.push(seccionEncargos(sistema, evaluacion, encargos));
   secciones.push(seccionRestricciones(sistema, encargos));
   secciones.push(seccionRecordatorio(sistema));
-  return { sistema: INSTRUCCIONES, usuario: secciones.join('\n\n') };
+  const mensajes: Mensajes = { sistema: INSTRUCCIONES, usuario: secciones.join('\n\n') };
+  return imagenes.length > 0 ? { ...mensajes, imagenes } : mensajes;
+}
+
+/** El `mimeType` y el `base64` de un data URL (`data:<mime>;base64,<datos>`); undefined si no calza. */
+function partesDeDataUrl(dataUrl: string): { mimeType: string; base64: string } | undefined {
+  const m = /^data:([^;,]+);base64,(.+)$/s.exec(dataUrl);
+  if (m === null) return undefined;
+  const mimeType = m[1];
+  const base64 = m[2];
+  if (mimeType === undefined || base64 === undefined) return undefined;
+  return { mimeType, base64 };
+}
+
+function textoDeTomar(tomar: readonly string[] | null): string {
+  return tomar === null ? 'todas' : tomar.length === 0 ? 'ninguna' : tomar.join(', ');
+}
+
+/**
+ * Los insumos del sistema, en texto (nombre, tipo, carril, qué dimensiones se
+ * toman) y las imágenes que se adjuntan al mensaje (una por insumo de tipo
+ * `imagen` con miniatura). El texto numera cada imagen adjunta para que el
+ * modelo pueda referirse a ella («imagen adjunta N»).
+ */
+function seccionInsumos(sistema: Sistema): { texto: string; imagenes: NonNullable<Mensajes['imagenes']> } {
+  const lineas: string[] = ['LOS INSUMOS'];
+  const imagenes: NonNullable<Mensajes['imagenes']> = [];
+  if (sistema.insumos.length === 0) lineas.push('(ninguno todavía)');
+  for (const insumo of sistema.insumos) {
+    lineas.push(`- ${insumo.nombre} · tipo ${insumo.tipo} · carril ${insumo.carril} · dimensiones que toma: ${textoDeTomar(insumo.tomar)}`);
+    if (insumo.tipo === 'imagen' && insumo.miniatura !== undefined) {
+      const partes = partesDeDataUrl(insumo.miniatura);
+      if (partes !== undefined) {
+        imagenes.push({ nombre: insumo.nombre, mimeType: partes.mimeType, base64: partes.base64 });
+        lineas.push(`  imagen adjunta ${imagenes.length}: ${insumo.nombre}`);
+      }
+    }
+  }
+  return { texto: lineas.join('\n'), imagenes };
 }
 
 function seccionSistema(sistema: Sistema): string {

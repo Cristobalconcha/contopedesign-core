@@ -6,7 +6,14 @@
 import type { ImagenDecodificada } from '../dominio/extractores/index.js';
 
 const LADO_ANALISIS = 160;
-const LADO_MINIATURA = 240;
+/**
+ * Lado máximo de la miniatura que se manda a la IA del taller como imagen
+ * adjunta (`promptDeEncargo`, `dominio/encargo.ts`): 240px es legible para una
+ * persona pero deja poco detalle para que un modelo lea colores o
+ * proporciones finas, así que se sube a 768px (el lado que aceptan sin
+ * volver a escalar los proveedores medidos).
+ */
+const LADO_MINIATURA = 768;
 
 export async function decodificarImagen(bytes: Uint8Array, extension: string): Promise<ImagenDecodificada> {
   const tipo = extension === 'svg' ? 'image/svg+xml' : `image/${extension === 'jpg' ? 'jpeg' : extension}`;
@@ -28,7 +35,7 @@ export async function decodificarImagen(bytes: Uint8Array, extension: string): P
   mini.width = Math.max(1, Math.round(mapa.width * escalaMini));
   mini.height = Math.max(1, Math.round(mapa.height * escalaMini));
   mini.getContext('2d')?.drawImage(mapa, 0, 0, mini.width, mini.height);
-  const miniatura = mini.toDataURL('image/jpeg', 0.8);
+  const miniatura = mini.toDataURL('image/jpeg', 0.85);
   mapa.close();
 
   return { ancho: mapa.width, alto: mapa.height, pixeles, miniatura };

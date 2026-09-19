@@ -13,6 +13,7 @@ import {
   configuracionVacia,
   motivoDeHttp,
   peticionDe,
+  sinImagenesSiNoVe,
   textoDeRespuesta,
   validarConfiguracion,
   type ConfiguracionDeIA,
@@ -31,6 +32,9 @@ export interface EstadoDeIA {
 }
 
 export type RespuestaDeIA = { ok: true; texto: string } | { ok: false; motivo: string };
+
+/** Cuánto se espera la respuesta de un proveedor antes de darla por colgada. */
+const PLAZO_PETICION_MS = 180_000;
 
 interface Dependencias {
   app: App;
@@ -186,12 +190,19 @@ export function registrarIpcDeIA(deps: Dependencias): void {
       }
       secreto = s;
     }
+    const sinVision = sinImagenesSiNoVe(proveedor, mensajes);
+    if (sinVision !== undefined) return { ok: false, motivo: sinVision };
     const peticion = peticionDe(proveedor, mensajes, { ...(secreto !== undefined ? { secreto } : {}), ...(cuentaId !== undefined ? { cuentaId } : {}) });
+    const controlador = new AbortController();
+    const plazo = setTimeout(() => controlador.abort(), PLAZO_PETICION_MS);
     let respuesta: Response;
     try {
-      respuesta = await fetchFn(peticion.url, { method: 'POST', headers: peticion.headers, body: peticion.body });
+      respuesta = await fetchFn(peticion.url, { method: 'POST', headers: peticion.headers, body: peticion.body, signal: controlador.signal });
     } catch (error) {
+      if ((error as Error).name === 'AbortError') return { ok: false, motivo: `${proveedor.nombre} no respondió en 3 minutos.` };
       return { ok: false, motivo: `No se pudo llegar a ${proveedor.nombre}: ${(error as Error).message}` };
+    } finally {
+      clearTimeout(plazo);
     }
     const cuerpo = await respuesta.text();
     if (!respuesta.ok) return { ok: false, motivo: `${proveedor.nombre}: ${motivoDeHttp(respuesta.status, cuerpo)}` };

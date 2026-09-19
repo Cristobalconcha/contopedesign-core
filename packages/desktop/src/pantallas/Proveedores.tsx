@@ -69,6 +69,7 @@ export function Proveedores({ puente, onVolver }: { puente: Puente; onVolver: ()
       modelo: p.modelo,
       credencial: p.credencial,
       ...(p.claveDeEntorno !== undefined ? { claveDeEntorno: p.claveDeEntorno } : {}),
+      ...(p.vision !== undefined ? { vision: p.vision } : {}),
       creadoEn: new Date().toISOString(),
     });
   };
@@ -133,6 +134,7 @@ export function Proveedores({ puente, onVolver }: { puente: Puente; onVolver: ()
               <div className="prov-fila">
                 <b>{p.nombre}</b>
                 <span className="mono">{p.modelo}</span>
+                {p.vision ? <span className="tenue">ve imágenes</span> : null}
                 <span className="tenue">{p.baseUrl}</span>
                 <span className="mono tenue">{textoDeCredencial(p, estado)}</span>
               </div>

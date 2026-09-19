@@ -46,6 +46,8 @@ export interface Proveedor {
    * sentido con `credencial: 'clave'`.
    */
   claveDeEntorno?: string;
+  /** Si el modelo acepta imágenes en el mensaje (medido, no supuesto). */
+  vision?: boolean;
   creadoEn: string;
 }
 
@@ -59,6 +61,8 @@ export interface ConfiguracionDeIA {
 export interface Mensajes {
   sistema: string;
   usuario: string;
+  /** Insumos de imagen que se adjuntan al mensaje de usuario, cuando el proveedor ve imágenes. */
+  imagenes?: Array<{ nombre: string; mimeType: string; base64: string }>;
 }
 
 export interface Peticion {
@@ -186,6 +190,7 @@ export const PREAJUSTES: ReadonlyArray<{
   credencial: Proveedor['credencial'];
   nota: string;
   claveDeEntorno?: string;
+  vision?: boolean;
 }> = [
   {
     nombre: 'Claude',
@@ -194,6 +199,7 @@ export const PREAJUSTES: ReadonlyArray<{
     modelo: 'claude-sonnet-5',
     credencial: 'clave',
     nota: 'clave de API de Anthropic',
+    vision: true,
   },
   {
     nombre: 'Claude (Claude Code)',
@@ -202,6 +208,7 @@ export const PREAJUSTES: ReadonlyArray<{
     modelo: 'claude-sonnet-5',
     credencial: 'token-claude',
     nota: 'token OAuth sk-ant-oat… de una sesión de Claude Code',
+    vision: true,
   },
   {
     nombre: 'ChatGPT / Codex',
@@ -210,32 +217,27 @@ export const PREAJUSTES: ReadonlyArray<{
     modelo: 'gpt-5.5',
     credencial: 'sesion-codex',
     nota: 'inicia sesión con tu cuenta de ChatGPT',
+    vision: true,
   },
   {
-    nombre: 'DeepSeek',
+    nombre: 'DeepSeek 4.1 Flash (con visión)',
+    clase: 'openai-chat',
+    baseUrl: 'https://api.deepseek.com/v1',
+    modelo: 'deepseek-flash',
+    credencial: 'clave',
+    nota:
+      'clave de API de DeepSeek — es V4.1-Flash, con visión nativa; medido el 19-09-2026 (ve imágenes de verdad). ' +
+      '«deepseek-v4-flash-vision-exp» y «deepseek-v4-flash» son alias legados del mismo modelo — si DEEPSEEK_API_KEY existe en este equipo, no hace falta pegarla',
+    claveDeEntorno: 'DEEPSEEK_API_KEY',
+    vision: true,
+  },
+  {
+    nombre: 'DeepSeek V4 Pro',
     clase: 'openai-chat',
     baseUrl: 'https://api.deepseek.com/v1',
     modelo: 'deepseek-v4-pro',
     credencial: 'clave',
     nota: 'clave de API de DeepSeek — si DEEPSEEK_API_KEY existe en este equipo, no hace falta pegarla',
-    claveDeEntorno: 'DEEPSEEK_API_KEY',
-  },
-  {
-    nombre: 'DeepSeek Flash',
-    clase: 'openai-chat',
-    baseUrl: 'https://api.deepseek.com/v1',
-    modelo: 'deepseek-flash',
-    credencial: 'clave',
-    nota: 'clave de API de DeepSeek (modelo más barato) — si DEEPSEEK_API_KEY existe en este equipo, no hace falta pegarla',
-    claveDeEntorno: 'DEEPSEEK_API_KEY',
-  },
-  {
-    nombre: 'DeepSeek Flash Vision (exp)',
-    clase: 'openai-chat',
-    baseUrl: 'https://api.deepseek.com/v1',
-    modelo: 'deepseek-v4-flash-vision-exp',
-    credencial: 'clave',
-    nota: 'clave de API de DeepSeek (modelo experimental, con visión; medido y responde aunque no aparece en la lista de modelos) — la IA del taller sólo le manda texto por ahora — si DEEPSEEK_API_KEY existe en este equipo, no hace falta pegarla',
     claveDeEntorno: 'DEEPSEEK_API_KEY',
   },
   {
@@ -270,6 +272,7 @@ export function peticionDe(
   const maxTokens = opciones.maxTokens ?? MAX_TOKENS_POR_OMISION;
   const secreto = textoPresente(opciones.secreto);
   const cuentaId = textoPresente(opciones.cuentaId);
+  const imagenes = mensajes.imagenes ?? [];
 
   if (proveedor.clase === 'anthropic') {
     const headers: Record<string, string> = {
@@ -285,11 +288,18 @@ export function peticionDe(
     } else if (secreto !== undefined) {
       headers['x-api-key'] = secreto;
     }
+    const contenido: string | unknown[] =
+      imagenes.length === 0
+        ? mensajes.usuario
+        : [
+            { type: 'text', text: mensajes.usuario },
+            ...imagenes.map((img) => ({ type: 'image', source: { type: 'base64', media_type: img.mimeType, data: img.base64 } })),
+          ];
     const body = {
       model: proveedor.modelo,
       max_tokens: maxTokens,
       system: mensajes.sistema,
-      messages: [{ role: 'user', content: mensajes.usuario }],
+      messages: [{ role: 'user', content: contenido }],
     };
     return { url: `${base}/v1/messages`, headers, body: JSON.stringify(body) };
   }
@@ -297,12 +307,19 @@ export function peticionDe(
   if (proveedor.clase === 'openai-chat') {
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (secreto !== undefined) headers['authorization'] = `Bearer ${secreto}`;
+    const contenido: string | unknown[] =
+      imagenes.length === 0
+        ? mensajes.usuario
+        : [
+            { type: 'text', text: mensajes.usuario },
+            ...imagenes.map((img) => ({ type: 'image_url', image_url: { url: `data:${img.mimeType};base64,${img.base64}` } })),
+          ];
     const body = {
       model: proveedor.modelo,
       max_tokens: maxTokens,
       messages: [
         { role: 'system', content: mensajes.sistema },
-        { role: 'user', content: mensajes.usuario },
+        { role: 'user', content: contenido },
       ],
     };
     return { url: `${base}/chat/completions`, headers, body: JSON.stringify(body) };
@@ -318,7 +335,15 @@ export function peticionDe(
   const body = {
     model: proveedor.modelo,
     instructions: mensajes.sistema,
-    input: [{ role: 'user', content: [{ type: 'input_text', text: mensajes.usuario }] }],
+    input: [
+      {
+        role: 'user',
+        content: [
+          { type: 'input_text', text: mensajes.usuario },
+          ...imagenes.map((img) => ({ type: 'input_image', image_url: `data:${img.mimeType};base64,${img.base64}` })),
+        ],
+      },
+    ],
     store: false,
     stream: true,
   };
@@ -453,6 +478,18 @@ export function motivoDeHttp(estado: number, cuerpo: string): string {
   else base = `respuesta HTTP ${estado}`;
   const trozo = recorte(cuerpo);
   return trozo === '' ? base : `${base}: ${trozo}`;
+}
+
+/**
+ * Guarda contra mandar imágenes a un proveedor que no las ve: un modelo sin
+ * visión (Cristóbal, 19-09-2026: medido en ZCode) puede dejar la llamada
+ * trabada o el contexto roto si le llegan bloques de imagen que no entiende.
+ * Si hay imágenes adjuntas y el proveedor no tiene `vision: true`, nunca se
+ * mandan: se devuelve el motivo para que la persona elija otro proveedor.
+ */
+export function sinImagenesSiNoVe(proveedor: Proveedor, mensajes: Mensajes): string | undefined {
+  if ((mensajes.imagenes?.length ?? 0) === 0 || proveedor.vision === true) return undefined;
+  return `El modelo ${proveedor.nombre} no acepta imágenes; elige uno con visión para que la IA vea los insumos.`;
 }
 
 /** Un id estable para un proveedor nuevo (`prov-<tiempo>-<azar>`). */

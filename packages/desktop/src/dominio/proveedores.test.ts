@@ -5,6 +5,7 @@ import {
   mascaraDe,
   motivoDeHttp,
   peticionDe,
+  sinImagenesSiNoVe,
   textoDeRespuesta,
   validarConfiguracion,
   type Proveedor,
@@ -174,13 +175,12 @@ describe('mascaraDe', () => {
 });
 
 describe('PREAJUSTES', () => {
-  it('ofrece las ocho familias que el taller conoce', () => {
-    expect(PREAJUSTES).toHaveLength(8);
+  it('ofrece las siete familias que el taller conoce', () => {
+    expect(PREAJUSTES).toHaveLength(7);
     expect(PREAJUSTES.map((p) => p.clase)).toEqual([
       'anthropic',
       'anthropic',
       'codex',
-      'openai-chat',
       'openai-chat',
       'openai-chat',
       'openai-chat',
@@ -191,23 +191,28 @@ describe('PREAJUSTES', () => {
     expect(PREAJUSTES.find((p) => p.nombre === 'Claude')?.credencial).toBe('clave');
   });
 
-  it('DeepSeek y DeepSeek Flash traen claveDeEntorno DEEPSEEK_API_KEY', () => {
-    const deepseek = PREAJUSTES.find((p) => p.nombre === 'DeepSeek');
-    const flash = PREAJUSTES.find((p) => p.nombre === 'DeepSeek Flash');
-    expect(deepseek?.claveDeEntorno).toBe('DEEPSEEK_API_KEY');
-    expect(deepseek?.modelo).toBe('deepseek-v4-pro');
+  it('Claude, Claude (Claude Code) y ChatGPT / Codex traen vision: true', () => {
+    expect(PREAJUSTES.find((p) => p.nombre === 'Claude')?.vision).toBe(true);
+    expect(PREAJUSTES.find((p) => p.nombre === 'Claude (Claude Code)')?.vision).toBe(true);
+    expect(PREAJUSTES.find((p) => p.nombre === 'ChatGPT / Codex')?.vision).toBe(true);
+  });
+
+  it('DeepSeek 4.1 Flash (con visión) y DeepSeek V4 Pro traen claveDeEntorno DEEPSEEK_API_KEY', () => {
+    const flash = PREAJUSTES.find((p) => p.nombre === 'DeepSeek 4.1 Flash (con visión)');
+    const pro = PREAJUSTES.find((p) => p.nombre === 'DeepSeek V4 Pro');
     expect(flash?.claveDeEntorno).toBe('DEEPSEEK_API_KEY');
     expect(flash?.modelo).toBe('deepseek-flash');
     expect(flash?.clase).toBe('openai-chat');
     expect(flash?.credencial).toBe('clave');
+    expect(flash?.vision).toBe(true);
+    expect(pro?.claveDeEntorno).toBe('DEEPSEEK_API_KEY');
+    expect(pro?.modelo).toBe('deepseek-v4-pro');
+    expect(pro?.vision).toBeUndefined();
   });
 
-  it('DeepSeek Flash Vision (exp) trae claveDeEntorno DEEPSEEK_API_KEY y modelo experimental', () => {
-    const flashVision = PREAJUSTES.find((p) => p.nombre === 'DeepSeek Flash Vision (exp)');
-    expect(flashVision?.claveDeEntorno).toBe('DEEPSEEK_API_KEY');
-    expect(flashVision?.modelo).toBe('deepseek-v4-flash-vision-exp');
-    expect(flashVision?.clase).toBe('openai-chat');
-    expect(flashVision?.credencial).toBe('clave');
+  it('ya no ofrece el alias experimental ni el «DeepSeek» genérico', () => {
+    expect(PREAJUSTES.find((p) => p.nombre === 'DeepSeek Flash Vision (exp)')).toBeUndefined();
+    expect(PREAJUSTES.find((p) => p.nombre === 'DeepSeek')).toBeUndefined();
   });
 });
 
@@ -283,6 +288,56 @@ describe('peticionDe', () => {
     expect(cuerpo.input).toEqual([{ role: 'user', content: [{ type: 'input_text', text: 'resuelve dim3.req02' }] }]);
     expect(cuerpo.store).toBe(false);
     expect(cuerpo.stream).toBe(true);
+  });
+
+  const IMAGEN = { nombre: 'logo.png', mimeType: 'image/png', base64: 'QUJD' };
+  const MENSAJES_CON_IMAGEN = { ...MENSAJES, imagenes: [IMAGEN] };
+
+  it('anthropic con imagen: content se vuelve una lista con el bloque de texto y el de imagen', () => {
+    const p = peticionDe(CLAUDE, MENSAJES_CON_IMAGEN, { secreto: 'sk-ant-api03-abcdefghijk' });
+    const cuerpo = JSON.parse(p.body) as {
+      messages: { role: string; content: Array<{ type: string; text?: string; source?: { type: string; media_type: string; data: string } }> }[];
+    };
+    const contenido = cuerpo.messages[0]?.content;
+    expect(contenido).toEqual([
+      { type: 'text', text: 'resuelve dim3.req02' },
+      { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'QUJD' } },
+    ]);
+  });
+
+  it('openai-chat con imagen: content del user es una lista con text e image_url', () => {
+    const p = peticionDe(DEEPSEEK, MENSAJES_CON_IMAGEN, { secreto: 'sk-deepseek-123' });
+    const cuerpo = JSON.parse(p.body) as { messages: { role: string; content: unknown }[] };
+    expect(cuerpo.messages[1]).toEqual({
+      role: 'user',
+      content: [
+        { type: 'text', text: 'resuelve dim3.req02' },
+        { type: 'image_url', image_url: { url: 'data:image/png;base64,QUJD' } },
+      ],
+    });
+  });
+
+  it('codex con imagen: input_image además de input_text', () => {
+    const p = peticionDe(CODEX, MENSAJES_CON_IMAGEN, { secreto: 'access-token', cuentaId: 'cta-123' });
+    const cuerpo = JSON.parse(p.body) as { input: { role: string; content: unknown[] }[] };
+    expect(cuerpo.input).toEqual([
+      {
+        role: 'user',
+        content: [
+          { type: 'input_text', text: 'resuelve dim3.req02' },
+          { type: 'input_image', image_url: 'data:image/png;base64,QUJD' },
+        ],
+      },
+    ]);
+  });
+
+  it('sin imágenes, el content sigue siendo el string de siempre (no rompe nada)', () => {
+    const anthropic = JSON.parse(peticionDe(CLAUDE, MENSAJES, {}).body) as { messages: { content: unknown }[] };
+    expect(anthropic.messages[0]?.content).toBe('resuelve dim3.req02');
+    const openai = JSON.parse(peticionDe(DEEPSEEK, MENSAJES, {}).body) as { messages: { content: unknown }[] };
+    expect(openai.messages[1]?.content).toBe('resuelve dim3.req02');
+    const codex = JSON.parse(peticionDe(CODEX, MENSAJES, {}).body) as { input: { content: Array<{ type: string }> }[] };
+    expect(codex.input[0]?.content).toEqual([{ type: 'input_text', text: 'resuelve dim3.req02' }]);
   });
 });
 
@@ -376,5 +431,27 @@ describe('motivoDeHttp', () => {
     const motivo = motivoDeHttp(500, largo);
     expect(motivo).toContain('a'.repeat(200));
     expect(motivo.includes('a'.repeat(201))).toBe(false);
+  });
+});
+
+describe('sinImagenesSiNoVe', () => {
+  const IMAGEN = { nombre: 'logo.png', mimeType: 'image/png', base64: 'QUJD' };
+
+  it('sin imágenes adjuntas, nunca hay motivo (el proveedor vea o no)', () => {
+    expect(sinImagenesSiNoVe(DEEPSEEK, MENSAJES)).toBeUndefined();
+    expect(sinImagenesSiNoVe({ ...CLAUDE, vision: true }, MENSAJES)).toBeUndefined();
+  });
+
+  it('con imágenes adjuntas y el proveedor sin vision: true, devuelve el motivo con su nombre', () => {
+    const motivo = sinImagenesSiNoVe(DEEPSEEK, { ...MENSAJES, imagenes: [IMAGEN] });
+    expect(motivo).toBe('El modelo DeepSeek no acepta imágenes; elige uno con visión para que la IA vea los insumos.');
+  });
+
+  it('con imágenes adjuntas y el proveedor con vision: true, no hay motivo', () => {
+    expect(sinImagenesSiNoVe({ ...CLAUDE, vision: true }, { ...MENSAJES, imagenes: [IMAGEN] })).toBeUndefined();
+  });
+
+  it('una lista de imágenes vacía cuenta como «sin imágenes»', () => {
+    expect(sinImagenesSiNoVe(DEEPSEEK, { ...MENSAJES, imagenes: [] })).toBeUndefined();
   });
 });
