@@ -126,6 +126,32 @@ describe('promptDeEncargo', () => {
     expect(prompt.imagenes).toEqual([{ nombre: 'logo.png', mimeType: 'image/png', base64: 'QUJD' }]);
   });
 
+  it('un PDF con miniatura adjunta su primera página y lo dice en el texto', () => {
+    const base = conEncargo();
+    const s: Sistema = {
+      ...base,
+      insumos: [
+        {
+          id: 'insumo-pdf',
+          nombre: 'afiche.pdf',
+          extension: 'pdf',
+          tipo: 'pdf',
+          tamanoBytes: 100,
+          incorporadoEn: AHORA,
+          miniatura: 'data:image/jpeg;base64,QUJD',
+          resumen: '1 página',
+          carril: 'referente',
+          tomar: null,
+          candidatos: [],
+        },
+      ],
+    };
+    const prompt = promptDeEncargo(s, evaluar(s));
+    if (prompt === null) throw new Error('sin prompt');
+    expect(prompt.usuario).toContain('imagen adjunta 1: afiche.pdf (primera página del PDF)');
+    expect(prompt.imagenes).toEqual([{ nombre: 'afiche.pdf', mimeType: 'image/jpeg', base64: 'QUJD' }]);
+  });
+
   it('un insumo que no es imagen, o una imagen sin miniatura, no agrega adjuntos', () => {
     const base = conEncargo();
     const s: Sistema = {

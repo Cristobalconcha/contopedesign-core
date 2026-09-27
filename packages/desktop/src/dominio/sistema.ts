@@ -66,7 +66,7 @@ export interface Insumo {
   tipo: TipoInsumo;
   tamanoBytes: number;
   incorporadoEn: string;
-  /** Miniatura en data URL, sólo para imágenes. */
+  /** Miniatura en data URL: de una imagen, o de la primera página de un PDF. */
   miniatura?: string;
   /** Resumen de lo que el extractor encontró (o por qué no leyó nada). */
   resumen: string;

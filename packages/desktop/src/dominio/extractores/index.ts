@@ -12,6 +12,7 @@ import { nuevoId, type Insumo, type TipoInsumo } from '../sistema.js';
 import { candidatosDeCss, leerCss } from './css.js';
 import { candidatosDeIdml, leerIdml } from './idml.js';
 import { candidatosDeImagen, paletaDePixeles } from './imagen.js';
+import { candidatosDePdf, leerPdf, resumenDePdf } from './pdf.js';
 import { candidatosDeTokens, leerTokens } from './tokens-w3c.js';
 
 export interface ArchivoEntrante {
@@ -30,6 +31,8 @@ export interface ImagenDecodificada {
 export interface OpcionesExtraccion {
   /** Lo pone el navegador: decodificar bytes de imagen a píxeles y miniatura. */
   decodificarImagen?: (bytes: Uint8Array, extension: string) => Promise<ImagenDecodificada>;
+  /** Lo pone el navegador: dibujar la primera página de un PDF a píxeles y miniatura. */
+  rasterizarPdf?: (bytes: Uint8Array) => Promise<ImagenDecodificada>;
   ahora?: string;
 }
 
@@ -104,12 +107,30 @@ export async function extraer(archivo: ArchivoEntrante, opciones: OpcionesExtrac
           candidatos: candidatosDeImagen(paleta, id, archivo.nombre),
         };
       }
-      case 'pdf':
-        return {
-          ...base,
-          resumen: 'PDF registrado como referente. Leer sus tipografías y colores todavía no está construido.',
-          candidatos: [],
-        };
+      case 'pdf': {
+        const lectura = leerPdf(archivo.bytes);
+        const candidatos = candidatosDePdf(lectura, id);
+        let resumen = resumenDePdf(lectura);
+        let miniatura: string | undefined;
+        if (!lectura.cifrado && opciones.rasterizarPdf) {
+          // La miniatura es para mirar y para que la IA del taller vea la pieza.
+          // Su paleta dominante sólo se propone si el PDF no trae colores
+          // vectoriales (un escaneo): donde los hay, son la medición y la
+          // paleta de píxeles sería una aproximación que se mezclaría con ellos.
+          try {
+            const img = await opciones.rasterizarPdf(archivo.bytes);
+            miniatura = img.miniatura;
+            if (!candidatos.some((c) => c.requirementId === 'dim1.req01')) {
+              const paleta = paletaDePixeles(img.pixeles);
+              candidatos.push(...candidatosDeImagen(paleta, id, archivo.nombre));
+              if (paleta.length) resumen += ' Sin colores vectoriales: se propone la paleta dominante de la página dibujada.';
+            }
+          } catch (error) {
+            resumen += ` No se pudo dibujar la página: ${(error as Error).message}.`;
+          }
+        }
+        return { ...base, ...(miniatura !== undefined ? { miniatura } : {}), resumen, candidatos };
+      }
       case 'texto':
       case 'otro':
         return { ...base, resumen: 'Registrado como referente; de este tipo de archivo no se extrae nada todavía.', candidatos: [] };

@@ -114,8 +114,9 @@ function textoDeTomar(tomar: readonly string[] | null): string {
 /**
  * Los insumos del sistema, en texto (nombre, tipo, carril, qué dimensiones se
  * toman) y las imágenes que se adjuntan al mensaje (una por insumo de tipo
- * `imagen` con miniatura). El texto numera cada imagen adjunta para que el
- * modelo pueda referirse a ella («imagen adjunta N»).
+ * `imagen` o `pdf` con miniatura; de un PDF, su primera página). El texto
+ * numera cada imagen adjunta para que el modelo pueda referirse a ella
+ * («imagen adjunta N»).
  */
 function seccionInsumos(sistema: Sistema): { texto: string; imagenes: NonNullable<Mensajes['imagenes']> } {
   const lineas: string[] = ['LOS INSUMOS'];
@@ -123,11 +124,11 @@ function seccionInsumos(sistema: Sistema): { texto: string; imagenes: NonNullabl
   if (sistema.insumos.length === 0) lineas.push('(ninguno todavía)');
   for (const insumo of sistema.insumos) {
     lineas.push(`- ${insumo.nombre} · tipo ${insumo.tipo} · carril ${insumo.carril} · dimensiones que toma: ${textoDeTomar(insumo.tomar)}`);
-    if (insumo.tipo === 'imagen' && insumo.miniatura !== undefined) {
+    if ((insumo.tipo === 'imagen' || insumo.tipo === 'pdf') && insumo.miniatura !== undefined) {
       const partes = partesDeDataUrl(insumo.miniatura);
       if (partes !== undefined) {
         imagenes.push({ nombre: insumo.nombre, mimeType: partes.mimeType, base64: partes.base64 });
-        lineas.push(`  imagen adjunta ${imagenes.length}: ${insumo.nombre}`);
+        lineas.push(`  imagen adjunta ${imagenes.length}: ${insumo.nombre}${insumo.tipo === 'pdf' ? ' (primera página del PDF)' : ''}`);
       }
     }
   }

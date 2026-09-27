@@ -274,7 +274,7 @@ cambia el puente al disco.
 | pantalla | estado | qué hace de verdad |
 |---|---|---|
 | 1. Inicio | construida, pendiente de revisión | Los cuatro mundos (propuesta), abrir, recientes, y la tira de sistemas ya construidos mostrados por sus colores y su familia. Dice en pantalla que el núcleo por mundo no está investigado. |
-| 2. Recolección | construida, pendiente de revisión | Entran archivos reales, por el selector del sistema o arrastrados. Se leen **CSS** (colores, familias, longitudes), **tokens W3C** (color, fontFamily, dimension), **imágenes** (paleta dominante) e **IDML** (muestras de color, familias, estilos de párrafo). PDF y el resto se registran como referente y lo dicen. Cada candidato apunta al requisito que resuelve y declara lo que el insumo no trae (una licencia, por ejemplo). |
+| 2. Recolección | construida, pendiente de revisión | Entran archivos reales, por el selector del sistema o arrastrados. Se leen **CSS** (colores, familias, longitudes), **tokens W3C** (color, fontFamily, dimension), **imágenes** (paleta dominante) e **IDML** (muestras de color, familias, estilos de párrafo). Desde el 27 de septiembre también **PDF**: los colores que pinta con su espacio original (el CMYK de imprenta se conserva), las tintas planas con su nombre y su equivalente, las familias de sus fuentes, la medida al corte y con sangrado, y una miniatura de la primera página que la IA del taller también ve. El resto se registra como referente y lo dice. Cada candidato apunta al requisito que resuelve y declara lo que el insumo no trae (una licencia, por ejemplo). |
 | 3. Definición | construida, pendiente de revisión | Los 43 requisitos reales, evaluados por `evaluateManifest` del núcleo: cada uno resuelto o no, con sus motivos. Tres caminos por pendiente; **Diseñador** abre el instrumento del parámetro, **ContOpe** crea el encargo, **Insumo** manda a recolección. Aprobar pide la fuerza. Explicaciones de las 43. |
 | 4. Construcción y armonización | construcción sin dibujar; armonización con primer dibujo | Construcción muestra el estado real por dimensión, los encargos con su estado, el botón para traer las propuestas de la IA (`*.propuestas.json`, que entran como propuesta y nunca pisan lo resuelto por una persona) y los conflictos de origen. Armonización: puerta hasta completar el paquete, árbitro del mundo, señales de reglas y de conflictos, validar/anotar/redefinir, pasadas guardadas en el archivo. Para conversar. |
 | 5. Elegir tipografía | construida sobre lo aprobado | Las 1.946 familias de Google Fonts con los filtros de Google, muestra viva, contador de las que no declaran trazo, ancho leído del nombre, y el árbol de cuatro casos con prefiltro modificable. |
@@ -351,8 +351,8 @@ se puedan revertir sabiendo por qué existían.
    superficies, estados, roles tipográficos, retícula, imagen…). Hoy los
    resuelve el editor estructurado. Las primitivas (cómo se muestran) ya
    cubren las diez dimensiones; lo que falta es cómo se definen.
-3. El caso 3 del selector tipográfico (sólo muestra visual) y la lectura de
-   PDF.
+3. El caso 3 del selector tipográfico (sólo muestra visual). ~~La lectura de
+   PDF~~ (hecha el 27-09).
 4. Traer al archivo las propuestas que la IA de escritorio haga sobre los
    encargos.
 5. Un instalador. Hoy se corre desde el repositorio.

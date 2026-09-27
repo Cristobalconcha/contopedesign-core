@@ -22,6 +22,7 @@ import { extraer } from '../dominio/extractores/index.js';
 import { NOMBRE_DIMENSION, dimensionDe, requisito } from '../dominio/manifiesto.js';
 import type { Carril, Insumo } from '../dominio/sistema.js';
 import { decodificarImagen } from '../navegador/imagen.js';
+import { rasterizarPdf } from '../navegador/pdf.js';
 import type { ArchivoDeInsumo } from '../puente/index.js';
 import { useTaller } from '../taller.js';
 
@@ -86,7 +87,7 @@ export function Recoleccion() {
     try {
       let ultimo: string | null = null;
       for (const a of archivos) {
-        const nuevo = await extraer({ nombre: a.nombre, extension: a.extension, bytes: a.bytes }, { decodificarImagen });
+        const nuevo = await extraer({ nombre: a.nombre, extension: a.extension, bytes: a.bytes }, { decodificarImagen, rasterizarPdf });
         // El carril lo pone acá quien incorpora, no el extractor: los archivos
         // que entran —por el selector o arrastrados— llevan el del conmutador.
         despachar({ tipo: 'agregar-insumo', insumo: { ...nuevo, carril } });
@@ -184,7 +185,7 @@ export function Recoleccion() {
             <path d="M12 5v14M5 12h14" />
           </svg>
           <b>{leyendo ? 'Leyendo…' : 'Incorporar un insumo'}</b>
-          <span>IDML, CSS, tokens W3C, imagen… o arrástralo aquí</span>
+          <span>IDML, PDF, CSS, tokens W3C, imagen… o arrástralo aquí</span>
         </button>
         <p className="rot" style={{ marginTop: 0 }}>
           Insumos incorporados
