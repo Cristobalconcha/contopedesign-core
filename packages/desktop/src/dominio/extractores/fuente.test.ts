@@ -1,6 +1,8 @@
 import { strToU8, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
+import { proyectarCapsula } from '../capsula.js';
 import { evaluar } from '../evaluacion.js';
+import { serializarSistema } from '../persistencia.js';
 import { reducir } from '../reductor.js';
 import { nuevoSistema } from '../sistema.js';
 import { candidatosDeFuentes, leerFuente, leerFuentes, licenciaCorta, resumenDeFuentes, zipTraeFuentes } from './fuente.js';
@@ -144,5 +146,22 @@ describe('fuente: paquetes', () => {
     let s = reducir(nuevoSistema('marca', 'Prueba', '2026-09-27T00:00:00.000Z'), { tipo: 'agregar-insumo', insumo });
     s = reducir(s, { tipo: 'incorporar', insumoId: insumo.id, candidatoIds: insumo.candidatos.map((c) => c.id) });
     expect(evaluar(s).porRequisito.get('dim2.req01')?.resultado).toBe('resuelto');
+  });
+
+  it('la fuente es un referente: ni el archivo del taller ni la cápsula llevan sus bytes', async () => {
+    const insumo = await extraer({ nombre: 'Tipografias.zip', extension: 'zip', bytes: paquete() });
+    let s = reducir(nuevoSistema('marca', 'Prueba', '2026-09-27T00:00:00.000Z'), { tipo: 'agregar-insumo', insumo });
+    s = reducir(s, { tipo: 'incorporar', insumoId: insumo.id, candidatoIds: insumo.candidatos.map((c) => c.id) });
+    const taller = serializarSistema(s);
+    const capsula = JSON.stringify(proyectarCapsula(s).contrato);
+    expect(insumo.miniatura).toBeUndefined();
+    const guardado = (JSON.parse(taller) as { insumos: Array<Record<string, unknown>> }).insumos[0] ?? {};
+    expect(Object.keys(guardado).sort()).toEqual(
+      ['candidatos', 'carril', 'extension', 'id', 'incorporadoEn', 'nombre', 'resumen', 'tamanoBytes', 'tipo', 'tomar'].sort(),
+    );
+    expect(taller + capsula).not.toMatch(/[A-Za-z0-9+/]{200,}/);
+    expect(proyectarCapsula(s).contrato.sources).toEqual([
+      expect.objectContaining({ technicalKind: 'document', purpose: 'observation', label: 'Tipografias.zip', locator: 'Tipografias.zip' }),
+    ]);
   });
 });

@@ -40,7 +40,8 @@ const KIND_MATERIAL: Record<TipoInsumo, NonNullable<EditContextMaterial['kind']>
   idml: 'idml',
   pdf: 'document',
   ase: 'document',
-  fuente: 'asset',
+  // Una fuente es un referente más, como el PDF: la cápsula nombra el archivo, no lo lleva.
+  fuente: 'document',
   texto: 'text',
   otro: 'document',
 };
