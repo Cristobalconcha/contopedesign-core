@@ -11,6 +11,7 @@
 import { nuevoId, type Insumo, type TipoInsumo } from '../sistema.js';
 import { candidatosDeAse, leerAse, resumenDeAse } from './ase.js';
 import { candidatosDeCss, leerCss } from './css.js';
+import { candidatosDeFuentes, leerFuentes, resumenDeFuentes, zipTraeFuentes } from './fuente.js';
 import { candidatosDeIdml, leerIdml } from './idml.js';
 import { candidatosDeImagen, paletaDePixeles } from './imagen.js';
 import { candidatosDePdf, leerPdf, resumenDePdf } from './pdf.js';
@@ -50,6 +51,9 @@ export function tipoDeArchivo(extension: string, bytes?: Uint8Array): TipoInsumo
   if (e === 'idml') return 'idml';
   if (e === 'pdf') return 'pdf';
   if (e === 'ase') return 'ase';
+  if (['ttf', 'otf', 'ttc', 'woff', 'woff2'].includes(e)) return 'fuente';
+  // Un ZIP es un paquete de fuentes si trae alguna (como los de Google Fonts); si no, un archivo más.
+  if (e === 'zip') return bytes && zipTraeFuentes(bytes) ? 'fuente' : 'otro';
   // Un .ai guardado «compatible con PDF» es un PDF por dentro (con el archivo
   // nativo de Illustrator adentro, que no se lee). Sin eso no se puede leer.
   if (e === 'ai') return bytes && esPdf(bytes) ? 'pdf' : 'otro';
@@ -116,6 +120,10 @@ export async function extraer(archivo: ArchivoEntrante, opciones: OpcionesExtrac
           resumen: `${img.ancho}×${img.alto} px. Paleta dominante de ${paleta.length} colores.`,
           candidatos: candidatosDeImagen(paleta, id, archivo.nombre),
         };
+      }
+      case 'fuente': {
+        const lectura = leerFuentes(archivo.bytes, archivo.nombre);
+        return { ...base, resumen: resumenDeFuentes(lectura), candidatos: candidatosDeFuentes(lectura, id) };
       }
       case 'ase': {
         const lectura = leerAse(archivo.bytes);

@@ -132,7 +132,7 @@ web); lo que cambia es la fuerza con que entra lo que traen.
 referente/cortapisa, los chips de «qué tomo de este insumo» por dimensión, y
 la cortapisa entrando aprobada e inamovible (si desplaza a un referente, lo
 desplazado queda en conflictos para la armonización). Recolección lee CSS,
-tokens W3C, imágenes, IDML, PDF, .ai y paletas .ase (desde el 27-09);
+tokens W3C, imágenes, IDML, PDF, .ai, paletas .ase y fuentes (desde el 27-09);
 páginas web sólo se registran. Las rectoras del núcleo (descriptor, mood wall) siguen sin restricciones: una cortapisa se
 expresa por fuerza y ciclo de vida, no por tags.
 

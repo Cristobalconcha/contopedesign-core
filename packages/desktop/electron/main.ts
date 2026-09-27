@@ -16,7 +16,7 @@ import { registrarIpcDeIA } from './ia.js';
 
 const FILTRO_SISTEMA = [{ name: 'Sistema de ContOpe Design', extensions: ['contope.json', 'json'] }];
 const FILTRO_INSUMOS = [
-  { name: 'Insumos', extensions: ['idml', 'css', 'json', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'pdf', 'ai', 'ase', 'txt', 'md', 'html'] },
+  { name: 'Insumos', extensions: ['idml', 'css', 'json', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'pdf', 'ai', 'ase', 'ttf', 'otf', 'ttc', 'woff', 'woff2', 'zip', 'txt', 'md', 'html'] },
   { name: 'Todos los archivos', extensions: ['*'] },
 ];
 const ORIGEN_CATALOGO = 'https://fonts.google.com/metadata/fonts';
