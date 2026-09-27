@@ -38,9 +38,25 @@ type Requisito = NonNullable<ReturnType<typeof requisito>>;
 
 /** Los encargos vivos: preguntas con tarea `active` o `proposed`, ordenadas por id. */
 export function encargosDe(sistema: Sistema): string[] {
+  return encargosEn(sistema, ['active', 'proposed']);
+}
+
+/**
+ * Lo que «Pedir a ContOpe» pide: los encargos que todavía no tienen propuesta
+ * (`active`); si todos la tienen, todos de nuevo, para una segunda opinión
+ * pedida a propósito. Antes se pedía siempre todo, y el botón contaba como
+ * pendiente lo que ya tenía propuesta (medido el 27-09: «Pedir a ContOpe (66)»
+ * con las 66 propuestas ya traídas).
+ */
+export function encargosAPedir(sistema: Sistema): { ids: string[]; deNuevo: boolean } {
+  const pendientes = encargosEn(sistema, ['active']);
+  return pendientes.length ? { ids: pendientes, deNuevo: false } : { ids: encargosDe(sistema), deNuevo: true };
+}
+
+function encargosEn(sistema: Sistema, estados: ReadonlyArray<string>): string[] {
   const ids = new Set<string>();
   for (const tarea of sistema.tareas) {
-    if (tarea.state !== 'active' && tarea.state !== 'proposed') continue;
+    if (!estados.includes(tarea.state)) continue;
     const id = requisitoDeTarea(tarea.definitionId);
     if (id !== undefined) ids.add(id);
   }
@@ -70,7 +86,7 @@ const INSTRUCCIONES = [
   'Reglas del formato:',
   '- Una propuesta por pregunta encargada, y para TODAS las preguntas encargadas.',
   '- El payload sigue EXACTAMENTE el payloadSchema de esa pregunta: los mismos nombres de campo, los mismos valores de enum, las mismas listas.',
-  '- Los `ref` a otras preguntas sólo pueden apuntar a preguntas que ya tienen definición en el sistema (te las listamos en LO YA DEFINIDO).',
+  '- Los `ref` a otras preguntas pueden apuntar a preguntas que ya tienen definición en el sistema (te las listamos en LO YA DEFINIDO) o a otras preguntas encargadas que propones en esta misma respuesta. Una propuesta que apunte a cualquier otra cosa se descarta.',
   '- Nunca inventes un valor que contradiga una restricción.',
   '- Si una pregunta no se puede resolver con lo que hay, devuelve igual una propuesta con el mejor payload posible y dilo en la nota.',
   '- Las notas van en español de Chile.',
@@ -81,7 +97,7 @@ const INSTRUCCIONES = [
  * ninguno vivo.
  */
 export function promptDeEncargo(sistema: Sistema, evaluacion: Evaluacion): Mensajes | null {
-  const encargos = encargosDe(sistema);
+  const encargos = encargosAPedir(sistema).ids;
   if (encargos.length === 0) return null;
   const { texto: seccionInsumosTexto, imagenes } = seccionInsumos(sistema);
   const secciones: string[] = [seccionSistema(sistema)];

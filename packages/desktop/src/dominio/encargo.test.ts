@@ -1,6 +1,6 @@
 import { findEntry } from '@contope/core';
 import { describe, expect, it } from 'vitest';
-import { encargosDe, jsonDePropuestas, promptDeEncargo } from './encargo.js';
+import { encargosAPedir, encargosDe, jsonDePropuestas, promptDeEncargo } from './encargo.js';
 import { evaluar } from './evaluacion.js';
 import { requisito } from './manifiesto.js';
 import { leerPropuestas } from './propuestas.js';
@@ -26,6 +26,19 @@ function conEncargo(): Sistema {
   s = reducir(s, { tipo: 'encargar-a-contope', requirementId: 'dim3.req02' }, AHORA);
   return s;
 }
+
+describe('encargosAPedir', () => {
+  it('pide sólo lo que no tiene propuesta; si todo la tiene, todo de nuevo', () => {
+    let s = reducir(nuevoSistema('digital', 'x', AHORA), { tipo: 'encargar-a-contope', requirementId: 'dim3.req01' }, AHORA);
+    s = reducir(s, { tipo: 'encargar-a-contope', requirementId: 'dim3.req08' }, AHORA);
+    expect(encargosAPedir(s)).toEqual({ ids: ['dim3.req01', 'dim3.req08'], deNuevo: false });
+    s = reducir(s, { tipo: 'traer-propuesta', requirementId: 'dim3.req01', payload: { unidad: '4px' } }, AHORA);
+    expect(encargosAPedir(s)).toEqual({ ids: ['dim3.req08'], deNuevo: false });
+    expect(promptDeEncargo(s, evaluar(s))?.usuario).not.toMatch(/^- dim3\.req01$/m);
+    s = reducir(s, { tipo: 'traer-propuesta', requirementId: 'dim3.req08', payload: { formatos: [] } }, AHORA);
+    expect(encargosAPedir(s)).toEqual({ ids: ['dim3.req01', 'dim3.req08'], deNuevo: true });
+  });
+});
 
 describe('encargosDe', () => {
   it('lista las preguntas encargadas, ordenadas por id', () => {

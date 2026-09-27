@@ -157,8 +157,11 @@ El formato de abajo es el contrato interno entre la IA del taller y el reductor
 Reglas: `designId` es el del contrato leído, tal cual (si no calza, el taller
 rechaza el archivo entero). **Una propuesta por pregunta** (dos con el mismo
 `requirementId` rechazan el archivo; varias candidatas es una decisión pendiente).
-Las `ref` del payload sólo pueden apuntar a preguntas que ya tienen entrada en
-el set: una referencia colgante rechaza el archivo. `requirementId` es el id de la pregunta del
+Las `ref` del payload pueden apuntar a preguntas que ya tienen entrada en el
+set o a otras preguntas propuestas en el mismo archivo (así se responden de una
+vez encargos que se nombran entre sí). Una propuesta cuya `ref` no está en
+ninguno de los dos se deja fuera con un aviso, junto con las que dependan de
+ella; el resto del archivo entra. `requirementId` es el id de la pregunta del
 manifiesto (el `definitionId` de la tarea sin el sufijo `.defN`). El `payload`
 sigue el `payloadSchema` de esa pregunta: el taller lo evalúa con el mismo
 evaluador que todo lo demás. Lo que entra queda como **propuesta explorable de

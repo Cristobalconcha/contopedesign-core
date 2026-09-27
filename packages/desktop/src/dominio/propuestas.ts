@@ -6,6 +6,9 @@
  * la frontera, igual que `persistencia.ts` con el sistema: forma inesperada,
  * archivo rechazado entero, con el motivo.
  *
+ * Una propuesta cuyas `ref` apuntan a algo que no está ni en el sistema ni en
+ * el mismo archivo se deja fuera con un aviso; el resto del archivo entra.
+ *
  * Lo que entra nunca gana autoridad sola (orden `human-confirmed >
  * approved-guideline > deterministic-extraction > model-proposal`): cada
  * propuesta se vuelve una entrada de ContOpe en estado `propuesta` y fuerza
@@ -77,14 +80,33 @@ export function leerPropuestas(texto: string, sistema: Sistema): LecturaDePropue
       return { ok: false, motivo: `hay dos propuestas para ${requirementId}; el formato admite una por pregunta (varias candidatas es una decisión pendiente)` };
     }
     vistas.add(requirementId);
-    const colgantes = refsDe(p['payload']).filter((id) => id !== requirementId && !findEntry(sistema.designSet, id));
-    if (colgantes.length) {
-      return { ok: false, motivo: `la propuesta ${i + 1} (${requirementId}) referencia preguntas sin entrada en este sistema: ${[...new Set(colgantes)].join(', ')}` };
-    }
     if (p['nota'] !== undefined && typeof p['nota'] !== 'string') return { ok: false, motivo: `la nota de la propuesta ${i + 1} debe ser texto` };
     propuestas.push({ requirementId, payload: p['payload'], ...(typeof p['nota'] === 'string' ? { nota: p['nota'] } : {}) });
   }
   const avisos: string[] = [];
+  // Una `ref` puede apuntar a una pregunta con entrada en el sistema o a otra
+  // propuesta de este mismo archivo: la IA responde todos los encargos de una
+  // vez y los encargos se nombran entre sí (medido el 27-09 con Econut: 66
+  // encargos no cabían en un archivo, y dim1.req11 y dim1.req12 se nombran
+  // mutuamente). Lo que apunta a algo que no está en ninguno de los dos se deja
+  // fuera, sólo esa propuesta y lo que dependa de ella, y se dice.
+  const fuera = new Map<string, string[]>();
+  for (let cambio = true; cambio; ) {
+    cambio = false;
+    for (const p of propuestas) {
+      if (fuera.has(p.requirementId)) continue;
+      const colgantes = refsDe(p.payload).filter(
+        (id) => id !== p.requirementId && !findEntry(sistema.designSet, id) && !(vistas.has(id) && !fuera.has(id)),
+      );
+      if (colgantes.length) {
+        fuera.set(p.requirementId, [...new Set(colgantes)]);
+        cambio = true;
+      }
+    }
+  }
+  for (const [id, colgantes] of fuera) {
+    avisos.push(`Se dejó fuera la propuesta para ${id}: apunta a ${colgantes.join(', ')}, que no está en el sistema ni viene propuesta en este archivo.`);
+  }
   const revision = valor['contractRevision'];
   if (typeof revision === 'number' && sistema.capsulaAnterior !== null && revision !== sistema.capsulaAnterior.design.revision) {
     avisos.push(
@@ -104,7 +126,7 @@ export function leerPropuestas(texto: string, sistema: Sistema): LecturaDePropue
       ...(typeof revision === 'number' ? { contractRevision: revision } : {}),
       ...(typeof valor['por'] === 'string' ? { por: valor['por'] } : {}),
       ...(typeof valor['generadaEn'] === 'string' ? { generadaEn: valor['generadaEn'] } : {}),
-      propuestas,
+      propuestas: propuestas.filter((p) => !fuera.has(p.requirementId)),
     },
   };
 }
