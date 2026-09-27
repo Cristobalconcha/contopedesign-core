@@ -107,7 +107,7 @@ describe('pdf: lectura', () => {
     expect(l.soporte).toEqual({ ancho: 303, alto: 426, caja: 'MediaBox' });
     expect(l.fuentes).toEqual(['Anton-Regular', 'Montserrat-Bold']);
     expect(l.familias).toEqual(['Anton', 'Montserrat']);
-    expect(l.tintasPlanas).toEqual([{ nombre: 'PANTONE 485 C', alternativo: 'CMYK', componentes: [0, 0.95, 1, 0], hex: '#ff0d00' }]);
+    expect(l.tintasPlanas).toEqual([{ nombre: 'PANTONE 485 C', alternativo: 'CMYK', componentes: [0, 0.95, 1, 0], hex: '#ff0d00', usos: 1 }]);
     // El negro de la segunda página (a la vista, sin comprimir) suma usos al del trazo.
     expect(l.colores[0]).toMatchObject({ espacio: 'CMYK', componentes: [0, 0.95, 1, 0], usos: 2 });
     expect(l.colores.find((c) => c.componentes.join() === '0,0,0,1')?.usos).toBe(2);
@@ -159,6 +159,8 @@ describe('pdf: lectura', () => {
     expect(familiaDeFuente('ABCDEF+Anton-Regular')).toBe('Anton');
     expect(familiaDeFuente('Arial,Bold')).toBe('Arial');
     expect(familiaDeFuente('HelveticaNeue')).toBe('HelveticaNeue');
+    expect(familiaDeFuente('ArialMT')).toBe('Arial');
+    expect(familiaDeFuente('Arial-BoldMT')).toBe('Arial');
   });
 });
 
@@ -196,7 +198,52 @@ describe('pdf: filtros y funciones de tinta', () => {
       '<< /Type /Page /MediaBox [0 0 100 100] /Resources << /ColorSpace << /CS0 [/Separation /PANTONE#20356#20C /DeviceCMYK 2 0 R] >> >> >>',
       { diccionario: '/FunctionType 4 /Domain [0 1] /Range [0 1 0 1 0 1 0 1]', contenido: '{ dup 0.9 mul exch dup 0 mul exch dup 1 mul exch 0.3 mul }', comprimir: true },
     ]);
-    expect(leerPdf(bytes).tintasPlanas).toEqual([{ nombre: 'PANTONE 356 C', alternativo: 'CMYK', componentes: [0.9, 0, 1, 0.3], hex: '#12b300' }]);
+    expect(leerPdf(bytes).tintasPlanas).toEqual([{ nombre: 'PANTONE 356 C', alternativo: 'CMYK', componentes: [0.9, 0, 1, 0.3], hex: '#12b300', usos: 0 }]);
+    expect(candidatosDePdf(leerPdf(bytes), 'x')[0]?.detalle).toMatch(/Declaradas pero sin uso en las páginas: PANTONE 356 C\./);
+  });
+});
+
+describe('pdf: como lo escribe Illustrator', () => {
+  /**
+   * Illustrator pinta a través de espacios con nombre de los recursos de la
+   * página (`/CS0 cs … scn`): un ICC de cuatro componentes para el proceso y
+   * tintas planas cuyo alternativo es otro ICC por referencia. Escribe
+   * `endobj5 0 obj` sin espacio, y guarda su archivo nativo en flujos
+   * `AIPrivateData` que no son contenido.
+   */
+  function pdfDeIllustrator(): Uint8Array {
+    const partes = [
+      '%PDF-1.6\n',
+      '1 0 obj<</Type/Pages/Kids[2 0 R]/Count 1>>endobj',
+      '2 0 obj<</Type/Page/Parent 1 0 R/MediaBox[0 0 612 792]/Contents 3 0 R/PieceInfo<</Illustrator 9 0 R>>',
+      '/Resources<</ColorSpace<</CS0 4 0 R/CS1 5 0 R>>>>>>endobj',
+      '3 0 obj<</Length 58>>stream\n/CS0 cs 0 0.63 0.83 0.05 scn 0 0 1 1 re f /CS1 cs 1 scn 0 0 1 1 re f\nendstream\nendobj',
+      '4 0 obj[/ICCBased 6 0 R]endobj',
+      '5 0 obj[/Separation/PANTONE#203298#20C 4 0 R<</C0[0 0 0 0]/C1[0.88 0.33 0.7 0.26]/Domain[0 1]/FunctionType 2/N 1.0>>]endobj',
+      '6 0 obj<</N 4/Length 4>>stream\nicc!\nendstream\nendobj',
+      '9 0 obj<</AIPrivateData1 10 0 R>>endobj',
+      '10 0 obj<</Length 12>>stream\n0.5 g 8 g 1 k\nendstream\nendobj',
+      'trailer<</Root 1 0 R>>',
+    ];
+    const texto = partes.join('\n');
+    // /Length exacto del contenido de 3 0 obj.
+    const contenido = '/CS0 cs 0 0.63 0.83 0.05 scn 0 0 1 1 re f /CS1 cs 1 scn 0 0 1 1 re f';
+    return strToU8(texto.replace('/Length 58', `/Length ${contenido.length}`), true);
+  }
+
+  it('resuelve los espacios con nombre de la página: proceso ICC y tinta plana con alternativo por referencia', () => {
+    const l = leerPdf(pdfDeIllustrator());
+    expect(l.colores.map((c) => `${c.espacio} ${c.componentes.join(' ')}`)).toEqual(['CMYK 0 0.63 0.83 0.05']);
+    expect(l.tintasPlanas).toEqual([{ nombre: 'PANTONE 3298 C', alternativo: 'CMYK', componentes: [0.88, 0.33, 0.7, 0.26], hex: '#177e39', usos: 1 }]);
+  });
+
+  it('un .ai compatible con PDF se lee como PDF; uno que no lo es se registra y dice cómo guardarlo', async () => {
+    const ai = await extraer({ nombre: 'paleta.ai', extension: 'ai', bytes: pdfDeIllustrator() });
+    expect(ai.tipo).toBe('pdf');
+    expect(ai.candidatos.map((c) => c.requirementId)).toEqual(['dim1.req01']);
+    const viejo = await extraer({ nombre: 'viejo.ai', extension: 'ai', bytes: strToU8('%!PS-Adobe-3.0\n') });
+    expect(viejo.tipo).toBe('otro');
+    expect(viejo.resumen).toMatch(/compatible con PDF/);
   });
 });
 

@@ -185,7 +185,7 @@ export function Recoleccion() {
             <path d="M12 5v14M5 12h14" />
           </svg>
           <b>{leyendo ? 'Leyendo…' : 'Incorporar un insumo'}</b>
-          <span>IDML, PDF, CSS, tokens W3C, imagen… o arrástralo aquí</span>
+          <span>IDML, PDF, AI, CSS, tokens W3C, imagen… o arrástralo aquí</span>
         </button>
         <p className="rot" style={{ marginTop: 0 }}>
           Insumos incorporados

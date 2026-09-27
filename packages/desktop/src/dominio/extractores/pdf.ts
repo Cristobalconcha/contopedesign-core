@@ -46,6 +46,8 @@ export interface TintaPlanaPdf {
   /** El equivalente a tinta llena (`/C1`), si el PDF lo trae a la vista. */
   componentes: number[] | undefined;
   hex: string | undefined;
+  /** Cuántas veces el documento pinta con esta tinta (0: declarada y sin uso). */
+  usos: number;
 }
 
 export interface MedidaPdf {
@@ -83,6 +85,8 @@ const PT_A_MM = 25.4 / 72;
 // --- Flujos ------------------------------------------------------------------
 
 interface Flujo {
+  /** El número del objeto que contiene el flujo, si se lee antes de `stream`. */
+  numero: number | undefined;
   diccionario: string;
   datos: Uint8Array;
 }
@@ -211,13 +215,15 @@ function flujosDe(bytes: Uint8Array, texto: string): { flujos: Flujo[]; sinLeer:
     if (fin < 0) break;
     inicio.lastIndex = fin + 'endstream'.length;
     const diccionario = diccionarioAntesDe(texto, m.index);
+    const cabeceras = [...texto.slice(Math.max(0, m.index - 4096), m.index).matchAll(/(\d+)\s+\d+\s+obj\b/g)];
+    const numero = cabeceras.length ? Number(cabeceras[cabeceras.length - 1]?.[1]) : undefined;
     if (NO_ES_TEXTO.test(diccionario)) continue;
     const datos = decodificarFlujo(diccionario, crudoDeFlujo(bytes, comienzo, fin, diccionario));
     if (datos === undefined || datos.length > MAX_FLUJO) {
       sinLeer += 1;
       continue;
     }
-    flujos.push({ diccionario, datos });
+    flujos.push({ numero, diccionario, datos });
   }
   return { flujos, sinLeer };
 }
@@ -251,14 +257,30 @@ function esBlanco(c: string): boolean {
 }
 
 /**
+ * Un espacio de color ya resuelto: de proceso (dispositivo o ICC, que para
+ * medir es lo mismo: los componentes son los del documento) o una tinta plana.
+ */
+export type EspacioResuelto = { tipo: 'proceso'; espacio: EspacioPdf } | { tipo: 'plana'; nombre: string };
+
+/**
  * Recorre los operadores de un flujo de contenido y anota cada color que se
  * fija. Salta las cadenas (con sus paréntesis anidados y escapes), las cadenas
  * hexadecimales, los comentarios y las imágenes en línea (`BI … ID … EI`),
  * porque ahí adentro puede haber cualquier cosa que parezca un operador.
+ *
+ * `espacios` traduce los nombres de los recursos de la página (`/CS0 cs`) a
+ * lo que son: así pinta Illustrator, y sin eso sus colores no se ven. Lo que
+ * se pinta con una tinta plana se cuenta en `usosPlanas`.
  */
-export function coloresDeContenido(contenido: string, cuenta: Map<string, ColorPdf>): void {
+export function coloresDeContenido(
+  contenido: string,
+  cuenta: Map<string, ColorPdf>,
+  espacios: ReadonlyMap<string, EspacioResuelto> = new Map(),
+  usosPlanas: Map<string, number> = new Map(),
+): void {
   const numeros: number[] = [];
-  const espacioActual: { relleno: EspacioPdf | undefined; trazo: EspacioPdf | undefined } = { relleno: 'Gris', trazo: 'Gris' };
+  const gris: EspacioResuelto = { tipo: 'proceso', espacio: 'Gris' };
+  const espacioActual: { relleno: EspacioResuelto | undefined; trazo: EspacioResuelto | undefined } = { relleno: gris, trazo: gris };
   let ultimoNombre: string | undefined;
   const anotar = (espacio: EspacioPdf, comp: number[]): void => {
     const redondeados = comp.map((n) => Math.round(n * 1000) / 1000);
@@ -266,6 +288,10 @@ export function coloresDeContenido(contenido: string, cuenta: Map<string, ColorP
     const previo = cuenta.get(clave);
     if (previo) previo.usos += 1;
     else cuenta.set(clave, { espacio, componentes: redondeados, hex: hexDePdf(espacio, redondeados), usos: 1 });
+  };
+  const fijar = (palabra: string, e: EspacioResuelto | undefined): void => {
+    if (palabra === palabra.toLowerCase()) espacioActual.relleno = e;
+    else espacioActual.trazo = e;
   };
   const n = contenido.length;
   let i = 0;
@@ -327,32 +353,27 @@ export function coloresDeContenido(contenido: string, cuenta: Map<string, ColorP
       case 'RG': {
         const v = ultimos(3);
         if (v) anotar('RGB', v);
-        const e: EspacioPdf = 'RGB';
-        if (palabra === 'rg') espacioActual.relleno = e;
-        else espacioActual.trazo = e;
+        fijar(palabra, { tipo: 'proceso', espacio: 'RGB' });
         break;
       }
       case 'k':
       case 'K': {
         const v = ultimos(4);
         if (v) anotar('CMYK', v);
-        if (palabra === 'k') espacioActual.relleno = 'CMYK';
-        else espacioActual.trazo = 'CMYK';
+        fijar(palabra, { tipo: 'proceso', espacio: 'CMYK' });
         break;
       }
       case 'g':
       case 'G': {
         const v = ultimos(1);
         if (v) anotar('Gris', v);
-        if (palabra === 'g') espacioActual.relleno = 'Gris';
-        else espacioActual.trazo = 'Gris';
+        fijar(palabra, gris);
         break;
       }
       case 'cs':
       case 'CS': {
-        const e = ultimoNombre !== undefined ? ESPACIOS_DISPOSITIVO[ultimoNombre] : undefined;
-        if (palabra === 'cs') espacioActual.relleno = e;
-        else espacioActual.trazo = e;
+        const dispositivo = ultimoNombre !== undefined ? ESPACIOS_DISPOSITIVO[ultimoNombre] : undefined;
+        fijar(palabra, dispositivo ? { tipo: 'proceso', espacio: dispositivo } : ultimoNombre !== undefined ? espacios.get(ultimoNombre) : undefined);
         break;
       }
       case 'sc':
@@ -360,9 +381,13 @@ export function coloresDeContenido(contenido: string, cuenta: Map<string, ColorP
       case 'SC':
       case 'SCN': {
         const e = palabra === 'sc' || palabra === 'scn' ? espacioActual.relleno : espacioActual.trazo;
-        const k = e === 'RGB' ? 3 : e === 'CMYK' ? 4 : e === 'Gris' ? 1 : 0;
+        if (e?.tipo === 'plana') {
+          usosPlanas.set(e.nombre, (usosPlanas.get(e.nombre) ?? 0) + 1);
+          break;
+        }
+        const k = e?.espacio === 'RGB' ? 3 : e?.espacio === 'CMYK' ? 4 : e?.espacio === 'Gris' ? 1 : 0;
         const v = k > 0 ? ultimos(k) : undefined;
-        if (e && v) anotar(e, v);
+        if (e && v) anotar(e.espacio, v);
         break;
       }
       case 'BI': {
@@ -384,14 +409,6 @@ export function coloresDeContenido(contenido: string, cuenta: Map<string, ColorP
 /** `#20` y compañía, como los escribe un nombre PDF. */
 function desescaparNombre(nombre: string): string {
   return nombre.replace(/#([0-9a-fA-F]{2})/g, (_, h: string) => String.fromCharCode(parseInt(h, 16)));
-}
-
-/** Dónde empieza y termina el objeto `n 0 obj … endobj`, si está a la vista en el archivo. */
-function objeto(texto: string, numero: string): { desde: number; hasta: number } | undefined {
-  const m = new RegExp(`(?:^|[\\s>])${numero}\\s+0\\s+obj\\b`).exec(texto);
-  if (!m) return undefined;
-  const fin = texto.indexOf('endobj', m.index);
-  return { desde: m.index, hasta: fin < 0 ? texto.length : fin };
 }
 
 function numerosDe(lista: string): number[] {
@@ -488,33 +505,242 @@ function equivalenteDeFuncion(funcion: string, programa: string | undefined): nu
   return undefined;
 }
 
-export function tintasPlanasDe(textos: readonly string[], todo: string, bytes?: Uint8Array): TintaPlanaPdf[] {
+// --- El documento: objetos, valores y recursos ---------------------------------
+
+/**
+ * Los objetos del PDF por número, con su texto: los que están a la vista
+ * (`n 0 obj … endobj`) y los que viajan dentro de flujos de objetos (PDF 1.5+).
+ * Con esto se siguen las referencias `n 0 R` de los recursos y de las tintas.
+ */
+export interface DocumentoPdf {
+  todo: string;
+  bytes: Uint8Array;
+  objetos: Map<number, { texto: string; desde: number }>;
+}
+
+function documentoDe(bytes: Uint8Array, todo: string, flujos: readonly Flujo[]): DocumentoPdf {
+  const objetos = new Map<number, { texto: string; desde: number }>();
+  // Illustrator escribe `endobj40 0 obj` sin espacio: el número no puede venir pegado a otro dígito.
+  for (const m of todo.matchAll(/(?<![0-9])(\d+)\s+\d+\s+obj\b/g)) {
+    const desde = (m.index ?? 0) + m[0].length;
+    const fin = todo.indexOf('endobj', desde);
+    objetos.set(Number(m[1]), { texto: todo.slice(desde, fin < 0 ? undefined : fin), desde });
+  }
+  for (const f of flujos) {
+    if (!/\/Type\s*\/ObjStm\b/.test(f.diccionario)) continue;
+    const primero = Number(/\/First\s+(\d+)/.exec(f.diccionario)?.[1]);
+    if (!Number.isFinite(primero)) continue;
+    const datos = comoLatin1(f.datos);
+    const cabecera = numerosDe(datos.slice(0, primero));
+    for (let k = 0; k + 1 < cabecera.length; k += 2) {
+      const numero = cabecera[k] ?? 0;
+      const desde = primero + (cabecera[k + 1] ?? 0);
+      const hasta = k + 3 < cabecera.length ? primero + (cabecera[k + 3] ?? 0) : datos.length;
+      if (!objetos.has(numero)) objetos.set(numero, { texto: datos.slice(desde, hasta), desde: -1 });
+    }
+  }
+  return { todo, bytes, objetos };
+}
+
+/** Lo que cierra una estructura que abre en `desde` (`<<`, `[`), contando anidados y saltando cadenas. */
+function cierreDe(texto: string, desde: number): number {
+  let nivel = 0;
+  for (let i = desde; i < texto.length; i += 1) {
+    const c = texto[i];
+    if (c === '(') {
+      let n = 1;
+      i += 1;
+      while (i < texto.length && n > 0) {
+        if (texto[i] === '\\') i += 1;
+        else if (texto[i] === '(') n += 1;
+        else if (texto[i] === ')') n -= 1;
+        i += 1;
+      }
+      i -= 1;
+    } else if (c === '<' && texto[i + 1] === '<') {
+      nivel += 1;
+      i += 1;
+    } else if (c === '>' && texto[i + 1] === '>') {
+      nivel -= 1;
+      i += 1;
+      if (nivel === 0) return i + 1;
+    } else if (c === '[') nivel += 1;
+    else if (c === ']') {
+      nivel -= 1;
+      if (nivel === 0) return i + 1;
+    }
+  }
+  return texto.length;
+}
+
+/** El valor PDF que empieza en `desde` (tras blancos): referencia, nombre, arreglo, diccionario o número. */
+function valorEn(texto: string, desde: number): { valor: string; fin: number } | undefined {
+  let i = desde;
+  while (i < texto.length && esBlanco(texto[i] ?? '')) i += 1;
+  const resto = texto.slice(i, i + 40);
+  const ref = /^(\d+)\s+(\d+)\s+R(?![A-Za-z])/.exec(resto);
+  if (ref) return { valor: ref[0], fin: i + ref[0].length };
+  const c = texto[i];
+  if (c === '[' || (c === '<' && texto[i + 1] === '<')) {
+    const fin = cierreDe(texto, i);
+    return { valor: texto.slice(i, fin), fin };
+  }
+  const simple = /^\/?[^\s/[\]<>()]+/.exec(texto.slice(i, i + 200));
+  if (simple) return { valor: simple[0], fin: i + simple[0].length };
+  return undefined;
+}
+
+/** Sigue una referencia `n 0 R` hasta el texto del objeto (sin su flujo); lo demás pasa tal cual. */
+function resolver(doc: DocumentoPdf, valor: string, profundidad = 0): string {
+  const ref = /^\s*(\d+)\s+\d+\s+R\s*$/.exec(valor);
+  if (!ref || profundidad > 8) return valor;
+  const obj = doc.objetos.get(Number(ref[1]));
+  if (!obj) return '';
+  const texto = obj.texto.replace(/stream\r?\n[^]*$/, '').trim();
+  return resolver(doc, texto, profundidad + 1);
+}
+
+/** El valor de `/Clave` en un diccionario (resuelto si es una referencia). */
+function entrada(doc: DocumentoPdf, diccionario: string, clave: string): string | undefined {
+  const m = new RegExp(`/${clave}(?![A-Za-z0-9])`).exec(diccionario);
+  if (!m) return undefined;
+  const v = valorEn(diccionario, m.index + m[0].length);
+  return v ? resolver(doc, v.valor) : undefined;
+}
+
+/** Los elementos de un arreglo PDF, sin resolver. */
+function elementos(arreglo: string): string[] {
+  const salida: string[] = [];
+  const cuerpo = arreglo.trim().replace(/^\[/, '').replace(/\]$/, '');
+  let i = 0;
+  while (i < cuerpo.length) {
+    const v = valorEn(cuerpo, i);
+    if (!v || v.fin <= i) break;
+    salida.push(v.valor);
+    i = v.fin;
+  }
+  return salida;
+}
+
+/**
+ * Qué es un espacio de color: de proceso (dispositivo, Cal, o ICC según su
+ * número de componentes) o una tinta plana. Lab, indexado, DeviceN y patrón
+ * quedan sin resolver (undefined): no se cuentan, y el resumen no los inventa.
+ */
+function espacioDe(doc: DocumentoPdf, valor: string, profundidad = 0): EspacioResuelto | undefined {
+  if (profundidad > 6) return undefined;
+  const v = resolver(doc, valor).trim();
+  if (v.startsWith('/')) {
+    const e = ESPACIOS_DISPOSITIVO[v.slice(1)];
+    return e ? { tipo: 'proceso', espacio: e } : undefined;
+  }
+  if (!v.startsWith('[')) return undefined;
+  const [familia, primero] = elementos(v);
+  switch (familia) {
+    case '/ICCBased': {
+      const perfil = primero !== undefined ? doc.objetos.get(Number(/^(\d+)/.exec(primero)?.[1])) : undefined;
+      const n = perfil ? Number(/\/N\s+(\d)/.exec(perfil.texto)?.[1]) : NaN;
+      if (n === 4) return { tipo: 'proceso', espacio: 'CMYK' };
+      if (n === 3) return { tipo: 'proceso', espacio: 'RGB' };
+      if (n === 1) return { tipo: 'proceso', espacio: 'Gris' };
+      return undefined;
+    }
+    case '/CalRGB':
+      return { tipo: 'proceso', espacio: 'RGB' };
+    case '/CalGray':
+      return { tipo: 'proceso', espacio: 'Gris' };
+    case '/Separation': {
+      const nombre = primero?.startsWith('/') ? desescaparNombre(primero.slice(1)) : '';
+      return nombre && nombre !== 'All' && nombre !== 'None' ? { tipo: 'plana', nombre } : undefined;
+    }
+    default:
+      return undefined;
+  }
+}
+
+/** Los espacios de color con nombre de un diccionario de recursos (`/ColorSpace << /CS0 … >>`). */
+function espaciosDeRecursos(doc: DocumentoPdf, recursos: string | undefined): Map<string, EspacioResuelto> {
+  const salida = new Map<string, EspacioResuelto>();
+  const dicc = recursos !== undefined ? entrada(doc, recursos, 'ColorSpace') : undefined;
+  if (dicc === undefined || !dicc.trim().startsWith('<<')) return salida;
+  const cuerpo = dicc.trim().slice(2, -2);
+  let i = 0;
+  while (i < cuerpo.length) {
+    const nombre = /\/([^\s/[\]<>()]+)/g;
+    nombre.lastIndex = i;
+    const m = nombre.exec(cuerpo);
+    if (!m) break;
+    const v = valorEn(cuerpo, m.index + m[0].length);
+    if (!v) break;
+    const e = espacioDe(doc, v.valor);
+    if (e) salida.set(m[1] ?? '', e);
+    i = v.fin;
+  }
+  return salida;
+}
+
+/**
+ * Los recursos de cada flujo de contenido: el de cada página (heredado del
+ * árbol si la página no los trae) y el de cada formulario (`/Subtype /Form`).
+ */
+function recursosPorFlujo(doc: DocumentoPdf): Map<number, Map<string, EspacioResuelto>> {
+  const salida = new Map<number, Map<string, EspacioResuelto>>();
+  for (const [numero, obj] of doc.objetos) {
+    const dicc = obj.texto.replace(/stream\r?\n[^]*$/, '');
+    if (/\/Subtype\s*\/Form\b/.test(dicc)) {
+      salida.set(numero, espaciosDeRecursos(doc, entrada(doc, dicc, 'Resources')));
+      continue;
+    }
+    if (!/\/Type\s*\/Page(?![a-zA-Z])/.test(dicc)) continue;
+    let recursos = entrada(doc, dicc, 'Resources');
+    let padre = /\/Parent\s+(\d+\s+\d+\s+R)/.exec(dicc)?.[1];
+    for (let n = 0; recursos === undefined && padre !== undefined && n < 10; n += 1) {
+      const p = resolver(doc, padre);
+      recursos = entrada(doc, p, 'Resources');
+      padre = /\/Parent\s+(\d+\s+\d+\s+R)/.exec(p)?.[1];
+    }
+    const espacios = espaciosDeRecursos(doc, recursos);
+    const m = /\/Contents(?![A-Za-z])/.exec(dicc);
+    const contenidos = m ? valorEn(dicc, m.index + m[0].length) : undefined;
+    const refs = contenidos ? [...contenidos.valor.matchAll(/(\d+)\s+\d+\s+R/g)].map((r) => Number(r[1])) : [];
+    for (const r of refs) salida.set(r, espacios);
+  }
+  return salida;
+}
+
+/** Los objetos que Illustrator guarda para sí (su archivo nativo dentro del PDF): no son contenido. */
+function privadosDeIllustrator(todo: string): Set<number> {
+  return new Set([...todo.matchAll(/\/AIPrivateData\d+\s+(\d+)\s+\d+\s+R/g)].map((m) => Number(m[1])));
+}
+
+export function tintasPlanasDe(doc: DocumentoPdf, usos: ReadonlyMap<string, number> = new Map()): TintaPlanaPdf[] {
   const porNombre = new Map<string, TintaPlanaPdf>();
-  const patron = /\/Separation\s*\/([^\s/[\]<>()]+)\s*\/(DeviceCMYK|DeviceRGB|DeviceGray)\b/g;
-  for (const texto of textos) {
-    for (const m of texto.matchAll(patron)) {
-      const nombre = desescaparNombre(m[1] ?? '');
+  const fuentes = [doc.todo, ...[...doc.objetos.values()].filter((o) => o.desde < 0).map((o) => o.texto)];
+  for (const texto of fuentes) {
+    for (const m of texto.matchAll(/\/Separation(?![A-Za-z])/g)) {
+      const nombreV = valorEn(texto, (m.index ?? 0) + m[0].length);
+      if (!nombreV || !nombreV.valor.startsWith('/')) continue;
+      const nombre = desescaparNombre(nombreV.valor.slice(1));
       if (!nombre || nombre === 'All' || nombre === 'None') continue;
-      const alternativo = ESPACIOS_DISPOSITIVO[m[2] ?? ''];
-      // La función de tinta viene a continuación, en línea o por referencia.
-      const resto = texto.slice((m.index ?? 0) + m[0].length, (m.index ?? 0) + m[0].length + 600);
-      const referencia = /^\s*(\d+)\s+0\s+R/.exec(resto)?.[1];
-      let funcion = resto;
+      const altV = valorEn(texto, nombreV.fin);
+      const alt = altV ? espacioDe(doc, altV.valor) : undefined;
+      const alternativo = alt?.tipo === 'proceso' ? alt.espacio : undefined;
+      const funV = altV ? valorEn(texto, altV.fin) : undefined;
+      let funcion = '';
       let programa: string | undefined;
-      if (referencia !== undefined) {
-        const donde = objeto(todo, referencia);
-        funcion = donde ? todo.slice(donde.desde, donde.hasta) : '';
-        const flujo = /stream\r?\n/.exec(funcion);
-        if (donde && flujo && bytes) {
-          const comienzo = donde.desde + flujo.index + flujo[0].length;
-          const fin = todo.indexOf('endstream', comienzo);
-          const datos = fin < 0 ? undefined : decodificarFlujo(funcion.slice(0, flujo.index), crudoDeFlujo(bytes, comienzo, fin, funcion.slice(0, flujo.index)));
-          if (datos) programa = new TextDecoder('latin1').decode(datos);
-          funcion = funcion.slice(0, flujo.index);
+      const ref = funV ? /^(\d+)\s+\d+\s+R$/.exec(funV.valor) : null;
+      if (ref) {
+        const obj = doc.objetos.get(Number(ref[1]));
+        const flujo = obj ? /stream\r?\n/.exec(obj.texto) : null;
+        funcion = obj ? (flujo ? obj.texto.slice(0, flujo.index) : obj.texto) : '';
+        if (obj && flujo && obj.desde >= 0) {
+          const comienzo = obj.desde + flujo.index + flujo[0].length;
+          const fin = doc.todo.indexOf('endstream', comienzo);
+          const datos = fin < 0 ? undefined : decodificarFlujo(funcion, crudoDeFlujo(doc.bytes, comienzo, fin, funcion));
+          if (datos) programa = comoLatin1(datos);
         }
-      } else if (/^\s*\{/.test(resto)) {
-        // Una función de tipo 4 no puede ir en línea: un `{` acá no es función.
-        funcion = '';
+      } else if (funV && funV.valor.startsWith('<<')) {
+        funcion = funV.valor;
       }
       const componentes = equivalenteDeFuncion(funcion, programa);
       const esperados = alternativo === 'CMYK' ? 4 : alternativo === 'RGB' ? 3 : 1;
@@ -527,22 +753,26 @@ export function tintasPlanasDe(textos: readonly string[], todo: string, bytes?: 
         alternativo,
         componentes: redondeados,
         hex: redondeados && alternativo ? hexDePdf(alternativo, redondeados) : undefined,
+        usos: usos.get(nombre) ?? 0,
       });
     }
   }
-  return [...porNombre.values()];
+  return [...porNombre.values()].sort((a, b) => b.usos - a.usos);
 }
 
 /**
  * La familia de un nombre PostScript: sin el prefijo de subconjunto y sin el
- * estilo (`Anton-Regular` → `Anton`, `ABCDEF+Montserrat-Bold` → `Montserrat`).
+ * estilo (`Anton-Regular` → `Anton`, `ABCDEF+Montserrat-Bold` → `Montserrat`,
+ * `ArialMT` → `Arial`).
  * Un nombre PostScript no lleva espacios (`HelveticaNeue`), así que puede no
  * calzar letra por letra con el nombre de la familia: eso lo resuelve el
  * selector tipográfico, y el candidato lo dice.
  */
 export function familiaDeFuente(nombrePostScript: string): string {
   const sinPrefijo = nombrePostScript.replace(/^[A-Z]{6}\+/, '');
-  return sinPrefijo.split(/[-,]/)[0] || sinPrefijo;
+  const base = sinPrefijo.split(/[-,]/)[0] || sinPrefijo;
+  // «MT» es la marca de Monotype al final del nombre (ArialMT, Arial-BoldMT): no es parte de la familia.
+  return base.replace(/(?<=[a-z])MT$/, '');
 }
 
 export function fuentesDe(textos: readonly string[]): string[] {
@@ -604,15 +834,20 @@ export function leerPdf(bytes: Uint8Array): LecturaPdf {
     return { cifrado, paginas: 0, medida: undefined, soporte: undefined, colores: [], tintasPlanas: [], familias: [], fuentes: [], flujosSinLeer: 0 };
   }
   const { flujos, sinLeer } = flujosDe(bytes, todo);
-  const textosDeFlujos = flujos.map((f) => comoLatin1(f.datos));
+  const doc = documentoDe(bytes, todo, flujos);
   // Los diccionarios pueden estar a la vista o dentro de flujos de objetos (PDF 1.5+).
   const textos = [todo, ...flujos.filter((f) => /\/Type\s*\/ObjStm\b/.test(f.diccionario)).map((f) => comoLatin1(f.datos))];
 
+  const recursos = recursosPorFlujo(doc);
+  const privados = privadosDeIllustrator(todo);
   const cuenta = new Map<string, ColorPdf>();
-  flujos.forEach((f, i) => {
-    if (/\/Type\s*\/(?:ObjStm|Metadata)\b|\/Subtype\s*\/XML\b/.test(f.diccionario)) return;
-    coloresDeContenido(textosDeFlujos[i] ?? '', cuenta);
-  });
+  const usosPlanas = new Map<string, number>();
+  for (const f of flujos) {
+    if (/\/Type\s*\/(?:ObjStm|Metadata)\b|\/Subtype\s*\/XML\b/.test(f.diccionario)) continue;
+    if (f.numero !== undefined && privados.has(f.numero)) continue;
+    const espacios = f.numero !== undefined ? recursos.get(f.numero) : undefined;
+    coloresDeContenido(comoLatin1(f.datos), cuenta, espacios, usosPlanas);
+  }
   const colores = [...cuenta.values()].sort((a, b) => b.usos - a.usos);
 
   const fuentes = fuentesDe(textos);
@@ -624,7 +859,7 @@ export function leerPdf(bytes: Uint8Array): LecturaPdf {
     medida,
     soporte,
     colores,
-    tintasPlanas: tintasPlanasDe(textos, todo, bytes),
+    tintasPlanas: tintasPlanasDe(doc, usosPlanas),
     familias,
     fuentes,
     flujosSinLeer: sinLeer,
@@ -696,6 +931,8 @@ export function candidatosDePdf(lectura: LecturaPdf, idBase: string): Candidato[
       );
     }
     let texto = `${detalle.join('; ')}.`;
+    const sinUso = planas.filter((t) => t.usos === 0);
+    if (sinUso.length) texto += ` Declaradas pero sin uso en las páginas: ${sinUso.map((t) => t.nombre).join(', ')}.`;
     if (lectura.colores.length > propuestos.length) texto += ` Quedan ${lectura.colores.length - propuestos.length} colores menos usados sin proponer.`;
     if (cmyk) texto += ' Los CMYK se muestran convertidos a hex de forma aproximada: el valor de imprenta es el CMYK, que va en el nombre.';
     salida.push({

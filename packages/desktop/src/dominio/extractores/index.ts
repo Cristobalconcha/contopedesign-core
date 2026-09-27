@@ -38,11 +38,19 @@ export interface OpcionesExtraccion {
 
 const EXT_IMAGEN = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif']);
 
+/** Si los bytes empiezan como un PDF (la cabecera puede venir tras un poco de basura). */
+function esPdf(bytes: Uint8Array): boolean {
+  return new TextDecoder('latin1').decode(bytes.slice(0, 1024)).includes('%PDF-');
+}
+
 export function tipoDeArchivo(extension: string, bytes?: Uint8Array): TipoInsumo {
   const e = extension.toLowerCase();
   if (e === 'css' || e === 'scss') return 'css';
   if (e === 'idml') return 'idml';
   if (e === 'pdf') return 'pdf';
+  // Un .ai guardado «compatible con PDF» es un PDF por dentro (con el archivo
+  // nativo de Illustrator adentro, que no se lee). Sin eso no se puede leer.
+  if (e === 'ai') return bytes && esPdf(bytes) ? 'pdf' : 'otro';
   if (EXT_IMAGEN.has(e)) return 'imagen';
   if (e === 'json') {
     if (bytes && /"\$value"|"\$type"/.test(new TextDecoder().decode(bytes.slice(0, 200_000)))) return 'tokens-w3c';
@@ -133,6 +141,14 @@ export async function extraer(archivo: ArchivoEntrante, opciones: OpcionesExtrac
       }
       case 'texto':
       case 'otro':
+        if (base.extension === 'ai') {
+          return {
+            ...base,
+            resumen:
+              'Archivo de Illustrator guardado sin compatibilidad con PDF: no se puede leer. Guárdalo con «Crear archivo compatible con PDF» o expórtalo a PDF.',
+            candidatos: [],
+          };
+        }
         return { ...base, resumen: 'Registrado como referente; de este tipo de archivo no se extrae nada todavía.', candidatos: [] };
     }
   } catch (error) {
