@@ -382,6 +382,35 @@ describe('EXTENSIÓN R1 — cuantificación cruzada entre requisitos', () => {
   });
 });
 
+describe('containsNoneOf no lee las listas de prohibidos como uso', () => {
+  // Medido el 27-09 con Econut: «degradados» prohibido en dim5.req06 (overlays)
+  // y en dim5.req08 (marca) hacía que cada una acusara a la otra.
+  const overlays: PredicateClause = {
+    kind: 'everyDef',
+    dimensionId: 'dim5',
+    reqAlias: 'rid',
+    payloadAlias: 'pl',
+    condition: { kind: 'containsNoneOf', target: ['pl'], literalsPath: ['overlays', 'prohibited'] },
+  };
+  const payload = { overlays: { allowed: ['ninguno'], prohibited: ['degradados'] } };
+
+  it('la misma palabra prohibida en otra definición no es una violación', () => {
+    const store = new Map<string, Record<string, unknown>>([
+      ['dim5.req08', { marca: { allowed: ['logotipo a dos tintas'], prohibited: ['degradados', 'transparencias'] } }],
+    ]);
+    expect(evalPred([overlays], payload, { store, selfId: 'dim5.req06' }).ok).toBe(true);
+  });
+
+  it('usarla fuera de una lista de prohibidos sigue siendo una violación, a cualquier profundidad', () => {
+    const store = new Map<string, Record<string, unknown>>([
+      ['dim5.req08', { marca: { allowed: ['logotipo con degradados'], prohibited: ['transparencias'] } }],
+    ]);
+    const r = evalPred([overlays], payload, { store, selfId: 'dim5.req06' });
+    expect(r.ok).toBe(false);
+    expect(r.motivos[0]?.codigo).toBe('literal-prohibido');
+  });
+});
+
 describe('verdad-vacía FAIL-CLOSED (decisión 2 de la ficha)', () => {
   it('ningún cuantificador pasa con colección ausente o vacía', () => {
     const cuantificadores: PredicateClause[] = [
