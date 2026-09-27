@@ -39,6 +39,7 @@ const KIND_MATERIAL: Record<TipoInsumo, NonNullable<EditContextMaterial['kind']>
   imagen: 'image',
   idml: 'idml',
   pdf: 'document',
+  ase: 'document',
   texto: 'text',
   otro: 'document',
 };
@@ -49,6 +50,7 @@ const MIME: Record<TipoInsumo, string> = {
   imagen: 'image/*',
   idml: 'application/vnd.adobe.indesign-idml-package',
   pdf: 'application/pdf',
+  ase: 'application/octet-stream',
   texto: 'text/plain',
   otro: 'application/octet-stream',
 };
