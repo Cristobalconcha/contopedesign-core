@@ -114,6 +114,29 @@ describe('pdf: lectura', () => {
     expect(l.flujosSinLeer).toBe(0);
   });
 
+  it('respeta /Length: un flujo comprimido que termina en 0x0A no pierde su último byte', () => {
+    // Se busca un contenido cuyo zlib termine en un salto de línea (el caso del
+    // letrero de Econut exportado por InDesign, que dejaba un flujo sin leer).
+    let contenido = '';
+    let datos = new Uint8Array();
+    for (let n = 0; n < 5000; n += 1) {
+      // Un comentario de largo variable mueve la suma de control de zlib por todos sus valores.
+      contenido = `% ${'a'.repeat(n)}\n0 0 0 1 k 0 0 1 1 re f`;
+      datos = zlibSync(strToU8(contenido));
+      if (datos[datos.length - 1] === 0x0a) break;
+    }
+    expect(datos[datos.length - 1]).toBe(0x0a);
+    const bytes = pdf(['<< /Type /Page /MediaBox [0 0 100 100] >>', { diccionario: '', contenido, comprimir: true }]);
+    const l = leerPdf(bytes);
+    expect(l.flujosSinLeer).toBe(0);
+    expect(l.colores.map((c) => c.componentes.join(' '))).toEqual(['0 0 0 1']);
+  });
+
+  it('sin fuentes, el resumen dice que el texto puede venir en trazados', () => {
+    const l = leerPdf(pdf(['<< /Type /Page /MediaBox [0 0 100 100] >>', { diccionario: '', contenido: '0 g 0 0 1 1 re f' }]));
+    expect(resumenDePdf(l)).toMatch(/No trae fuentes: el texto puede estar convertido en trazados/);
+  });
+
   it('un PDF cifrado no se lee y lo dice', () => {
     const bytes = pdf(['<< /Type /Catalog >>']);
     const cifrado = new Uint8Array([...bytes, ...strToU8('trailer << /Encrypt 9 0 R >>')]);

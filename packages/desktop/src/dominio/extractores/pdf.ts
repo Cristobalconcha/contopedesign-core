@@ -175,13 +175,20 @@ export function decodificarFlujo(diccionario: string, crudo: Uint8Array): Uint8A
   return datos;
 }
 
-/** Los bytes entre `stream` y `endstream`, sin el fin de línea que precede a `endstream`. */
-function crudoDeFlujo(bytes: Uint8Array, comienzo: number, fin: number): Uint8Array {
-  let crudo = bytes.subarray(comienzo, fin);
-  while (crudo.length > 0 && (crudo[crudo.length - 1] === 0x0a || crudo[crudo.length - 1] === 0x0d)) {
-    crudo = crudo.subarray(0, crudo.length - 1);
-  }
-  return crudo;
+/**
+ * Los bytes entre `stream` y `endstream`. Si el diccionario declara `/Length`
+ * con un número, manda ese largo; si no (o si viene por referencia), se quita
+ * UN fin de línea antes de `endstream`, nunca más: el último byte de un flujo
+ * comprimido puede ser 0x0A o 0x0D y es dato.
+ */
+function crudoDeFlujo(bytes: Uint8Array, comienzo: number, fin: number, diccionario = ''): Uint8Array {
+  const declarado = /\/Length\s+(\d+)(?!\s+\d+\s+R)/.exec(diccionario)?.[1];
+  const largo = declarado !== undefined ? Number(declarado) : undefined;
+  if (largo !== undefined && largo <= fin - comienzo) return bytes.subarray(comienzo, comienzo + largo);
+  let hasta = fin;
+  if (bytes[hasta - 1] === 0x0a) hasta -= 1;
+  if (bytes[hasta - 1] === 0x0d) hasta -= 1;
+  return bytes.subarray(comienzo, hasta);
 }
 
 const NO_ES_TEXTO =
@@ -205,7 +212,7 @@ function flujosDe(bytes: Uint8Array, texto: string): { flujos: Flujo[]; sinLeer:
     inicio.lastIndex = fin + 'endstream'.length;
     const diccionario = diccionarioAntesDe(texto, m.index);
     if (NO_ES_TEXTO.test(diccionario)) continue;
-    const datos = decodificarFlujo(diccionario, crudoDeFlujo(bytes, comienzo, fin));
+    const datos = decodificarFlujo(diccionario, crudoDeFlujo(bytes, comienzo, fin, diccionario));
     if (datos === undefined || datos.length > MAX_FLUJO) {
       sinLeer += 1;
       continue;
@@ -501,7 +508,7 @@ export function tintasPlanasDe(textos: readonly string[], todo: string, bytes?: 
         if (donde && flujo && bytes) {
           const comienzo = donde.desde + flujo.index + flujo[0].length;
           const fin = todo.indexOf('endstream', comienzo);
-          const datos = fin < 0 ? undefined : decodificarFlujo(funcion.slice(0, flujo.index), crudoDeFlujo(bytes, comienzo, fin));
+          const datos = fin < 0 ? undefined : decodificarFlujo(funcion.slice(0, flujo.index), crudoDeFlujo(bytes, comienzo, fin, funcion.slice(0, flujo.index)));
           if (datos) programa = new TextDecoder('latin1').decode(datos);
           funcion = funcion.slice(0, flujo.index);
         }
@@ -651,6 +658,9 @@ export function resumenDePdf(lectura: LecturaPdf): string {
   partes.push(`${lectura.familias.length} ${lectura.familias.length === 1 ? 'familia' : 'familias'}`);
   let texto = `${partes.join(', ')}.`;
   if (lectura.paginas > 1) texto += ' La miniatura es de la primera página; los colores y las fuentes, de todas.';
+  if (lectura.paginas > 0 && lectura.fuentes.length === 0) {
+    texto += ' No trae fuentes: el texto puede estar convertido en trazados, y la tipografía hay que traerla aparte.';
+  }
   if (lectura.flujosSinLeer > 0) texto += ` ${lectura.flujosSinLeer === 1 ? 'Un flujo no se pudo leer' : `${lectura.flujosSinLeer} flujos no se pudieron leer`}.`;
   return texto;
 }
@@ -678,7 +688,13 @@ export function candidatosDePdf(lectura: LecturaPdf, idBase: string): Candidato[
           : `${planas.length} tintas planas con su nombre (${nombres}), mostradas por el equivalente que declara el PDF`,
       );
     }
-    if (propuestos.length) detalle.push(`los ${propuestos.length} colores más usados del documento, con su espacio original`);
+    if (propuestos.length) {
+      detalle.push(
+        propuestos.length === 1
+          ? 'el color de proceso que usa el documento, con su espacio original'
+          : `los ${propuestos.length} colores más usados del documento, con su espacio original`,
+      );
+    }
     let texto = `${detalle.join('; ')}.`;
     if (lectura.colores.length > propuestos.length) texto += ` Quedan ${lectura.colores.length - propuestos.length} colores menos usados sin proponer.`;
     if (cmyk) texto += ' Los CMYK se muestran convertidos a hex de forma aproximada: el valor de imprenta es el CMYK, que va en el nombre.';
