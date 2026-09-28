@@ -7,7 +7,7 @@
  */
 import { DIMENSIONES, NOMBRE_DIMENSION } from '../dominio/manifiesto.js';
 import { useState } from 'react';
-import { encargosDe, jsonDePropuestas, promptDeEncargo } from '../dominio/encargo.js';
+import { encargosAPedir, jsonDePropuestas, promptDeEncargo } from '../dominio/encargo.js';
 import { leerPropuestas } from '../dominio/propuestas.js';
 import { useTaller } from '../taller.js';
 
@@ -22,7 +22,7 @@ export function Construccion() {
   const { sistema, evaluacion, ir, puente, despachar, avisar, configurarIA } = useTaller();
   const dims = DIMENSIONES.map((d) => ({ id: d, nombre: NOMBRE_DIMENSION[d] ?? d, ev: evaluacion.porDimension.get(d) }));
   const [pidiendo, setPidiendo] = useState(false);
-  const encargos = encargosDe(sistema);
+  const { ids: encargos, deNuevo } = encargosAPedir(sistema);
 
   /** Lo que la IA devolvió (por la vía que sea) entra por la misma puerta: validar, y despachar una por una. */
   const traerJson = (json: string, origen: string): void => {
@@ -136,8 +136,19 @@ export function Construccion() {
         cortapisas). Lo que proponga entra como propuesta: nada pisa lo que una persona ya resolvió.
       </p>
       <p className="caminos">
-        <button className="btn fuerte" disabled={pidiendo || encargos.length === 0} onClick={() => void pedirAContope()} title={encargos.length ? `Pedir propuestas para ${encargos.join(', ')}` : 'No hay encargos'}>
-          {pidiendo ? 'Pidiendo…' : `Pedir a ContOpe${encargos.length ? ` (${encargos.length})` : ''}`}
+        <button
+          className="btn fuerte"
+          disabled={pidiendo || encargos.length === 0}
+          onClick={() => void pedirAContope()}
+          title={
+            encargos.length === 0
+              ? 'No hay encargos'
+              : deNuevo
+                ? `Todos los encargos ya tienen propuesta: volver a pedirlas para ${encargos.join(', ')}`
+                : `Pedir propuestas para ${encargos.join(', ')}`
+          }
+        >
+          {pidiendo ? 'Pidiendo…' : `${deNuevo && encargos.length ? 'Volver a pedir a ContOpe' : 'Pedir a ContOpe'}${encargos.length ? ` (${encargos.length})` : ''}`}
         </button>
         <button className="btn" onClick={configurarIA}>
           IA del taller…

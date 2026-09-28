@@ -9,9 +9,12 @@
  * que el diseñador eligió en Recolección (ver reductor.ts, «los dos carriles»).
  */
 import { nuevoId, type Insumo, type TipoInsumo } from '../sistema.js';
+import { candidatosDeAse, leerAse, resumenDeAse } from './ase.js';
 import { candidatosDeCss, leerCss } from './css.js';
+import { candidatosDeFuentes, leerFuentes, resumenDeFuentes, zipTraeFuentes } from './fuente.js';
 import { candidatosDeIdml, leerIdml } from './idml.js';
 import { candidatosDeImagen, paletaDePixeles } from './imagen.js';
+import { candidatosDePdf, leerPdf, resumenDePdf } from './pdf.js';
 import { candidatosDeTokens, leerTokens } from './tokens-w3c.js';
 
 export interface ArchivoEntrante {
@@ -30,16 +33,30 @@ export interface ImagenDecodificada {
 export interface OpcionesExtraccion {
   /** Lo pone el navegador: decodificar bytes de imagen a píxeles y miniatura. */
   decodificarImagen?: (bytes: Uint8Array, extension: string) => Promise<ImagenDecodificada>;
+  /** Lo pone el navegador: dibujar la primera página de un PDF a píxeles y miniatura. */
+  rasterizarPdf?: (bytes: Uint8Array) => Promise<ImagenDecodificada>;
   ahora?: string;
 }
 
 const EXT_IMAGEN = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif']);
+
+/** Si los bytes empiezan como un PDF (la cabecera puede venir tras un poco de basura). */
+function esPdf(bytes: Uint8Array): boolean {
+  return new TextDecoder('latin1').decode(bytes.slice(0, 1024)).includes('%PDF-');
+}
 
 export function tipoDeArchivo(extension: string, bytes?: Uint8Array): TipoInsumo {
   const e = extension.toLowerCase();
   if (e === 'css' || e === 'scss') return 'css';
   if (e === 'idml') return 'idml';
   if (e === 'pdf') return 'pdf';
+  if (e === 'ase') return 'ase';
+  if (['ttf', 'otf', 'ttc', 'woff', 'woff2'].includes(e)) return 'fuente';
+  // Un ZIP es un paquete de fuentes si trae alguna (como los de Google Fonts); si no, un archivo más.
+  if (e === 'zip') return bytes && zipTraeFuentes(bytes) ? 'fuente' : 'otro';
+  // Un .ai guardado «compatible con PDF» es un PDF por dentro (con el archivo
+  // nativo de Illustrator adentro, que no se lee). Sin eso no se puede leer.
+  if (e === 'ai') return bytes && esPdf(bytes) ? 'pdf' : 'otro';
   if (EXT_IMAGEN.has(e)) return 'imagen';
   if (e === 'json') {
     if (bytes && /"\$value"|"\$type"/.test(new TextDecoder().decode(bytes.slice(0, 200_000)))) return 'tokens-w3c';
@@ -104,14 +121,48 @@ export async function extraer(archivo: ArchivoEntrante, opciones: OpcionesExtrac
           candidatos: candidatosDeImagen(paleta, id, archivo.nombre),
         };
       }
-      case 'pdf':
-        return {
-          ...base,
-          resumen: 'PDF registrado como referente. Leer sus tipografías y colores todavía no está construido.',
-          candidatos: [],
-        };
+      case 'fuente': {
+        const lectura = leerFuentes(archivo.bytes, archivo.nombre);
+        return { ...base, resumen: resumenDeFuentes(lectura), candidatos: candidatosDeFuentes(lectura, id) };
+      }
+      case 'ase': {
+        const lectura = leerAse(archivo.bytes);
+        return { ...base, resumen: resumenDeAse(lectura), candidatos: candidatosDeAse(lectura, id) };
+      }
+      case 'pdf': {
+        const lectura = leerPdf(archivo.bytes);
+        const candidatos = candidatosDePdf(lectura, id);
+        let resumen = resumenDePdf(lectura);
+        let miniatura: string | undefined;
+        if (!lectura.cifrado && opciones.rasterizarPdf) {
+          // La miniatura es para mirar y para que la IA del taller vea la pieza.
+          // Su paleta dominante sólo se propone si el PDF no trae colores
+          // vectoriales (un escaneo): donde los hay, son la medición y la
+          // paleta de píxeles sería una aproximación que se mezclaría con ellos.
+          try {
+            const img = await opciones.rasterizarPdf(archivo.bytes);
+            miniatura = img.miniatura;
+            if (!candidatos.some((c) => c.requirementId === 'dim1.req01')) {
+              const paleta = paletaDePixeles(img.pixeles);
+              candidatos.push(...candidatosDeImagen(paleta, id, archivo.nombre));
+              if (paleta.length) resumen += ' Sin colores vectoriales: se propone la paleta dominante de la página dibujada.';
+            }
+          } catch (error) {
+            resumen += ` No se pudo dibujar la página: ${(error as Error).message}.`;
+          }
+        }
+        return { ...base, ...(miniatura !== undefined ? { miniatura } : {}), resumen, candidatos };
+      }
       case 'texto':
       case 'otro':
+        if (base.extension === 'ai') {
+          return {
+            ...base,
+            resumen:
+              'Archivo de Illustrator guardado sin compatibilidad con PDF: no se puede leer. Guárdalo con «Crear archivo compatible con PDF» o expórtalo a PDF.',
+            candidatos: [],
+          };
+        }
         return { ...base, resumen: 'Registrado como referente; de este tipo de archivo no se extrae nada todavía.', candidatos: [] };
     }
   } catch (error) {

@@ -39,6 +39,9 @@ const KIND_MATERIAL: Record<TipoInsumo, NonNullable<EditContextMaterial['kind']>
   imagen: 'image',
   idml: 'idml',
   pdf: 'document',
+  ase: 'document',
+  // Una fuente es un referente más, como el PDF: la cápsula nombra el archivo, no lo lleva.
+  fuente: 'document',
   texto: 'text',
   otro: 'document',
 };
@@ -49,6 +52,8 @@ const MIME: Record<TipoInsumo, string> = {
   imagen: 'image/*',
   idml: 'application/vnd.adobe.indesign-idml-package',
   pdf: 'application/pdf',
+  ase: 'application/octet-stream',
+  fuente: 'font/*',
   texto: 'text/plain',
   otro: 'application/octet-stream',
 };

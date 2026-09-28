@@ -32,7 +32,7 @@ export const KIND_SISTEMA = 'contope/sistema';
 export const SCHEMA_SISTEMA = 1;
 
 /** Qué clase de archivo entró; decide qué extractor lo lee. */
-export type TipoInsumo = 'css' | 'tokens-w3c' | 'imagen' | 'idml' | 'pdf' | 'texto' | 'otro';
+export type TipoInsumo = 'css' | 'tokens-w3c' | 'imagen' | 'idml' | 'pdf' | 'ase' | 'fuente' | 'texto' | 'otro';
 
 /**
  * Los dos carriles de un insumo. El referente es lo normal: se toma y se
@@ -66,7 +66,7 @@ export interface Insumo {
   tipo: TipoInsumo;
   tamanoBytes: number;
   incorporadoEn: string;
-  /** Miniatura en data URL, sólo para imágenes. */
+  /** Miniatura en data URL: de una imagen, o de la primera página de un PDF. */
   miniatura?: string;
   /** Resumen de lo que el extractor encontró (o por qué no leyó nada). */
   resumen: string;

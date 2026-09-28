@@ -119,7 +119,13 @@ export type PredicateClause =
       payloadAlias: string;
       condition: PredicateClause;
     }
-  /** EXTENSIÓN R1: ninguna hoja string del target contiene (substring) ningún literal de la lista. */
+  /**
+   * EXTENSIÓN R1: ninguna hoja string del target contiene (substring) ningún
+   * literal de la lista. Las hojas que cuelgan de una clave `prohibited` no se
+   * miran: declarar que algo está prohibido no es usarlo (medido el 27-09 con
+   * Econut: «degradados» prohibido en dim5.req06 y en dim5.req08 hacía que cada
+   * una acusara a la otra).
+   */
   | {
       kind: 'containsNoneOf';
       target: readonly PathSegment[];
@@ -1084,7 +1090,7 @@ function evalClause(clause: PredicateClause, state: EvalState): ClauseResult {
       }
       const literals = literalsRes.value.filter((l): l is string => typeof l === 'string');
       if (literals.length === 0) return { truth: true, motivos: [] };
-      const leaves = collectStringLeaves(targetRes.value);
+      const leaves = collectStringLeaves(sinListasDeProhibidos(targetRes.value));
       for (const leaf of leaves) {
         for (const literal of literals) {
           if (leaf.includes(literal)) {
@@ -1103,6 +1109,19 @@ function evalClause(clause: PredicateClause, state: EvalState): ClauseResult {
       return { truth: true, motivos: [] };
     }
   }
+}
+
+/**
+ * Copia del valor sin las claves `prohibited`, a cualquier profundidad: lo que
+ * `containsNoneOf` no debe leer como uso (ver el comentario de la cláusula).
+ * Las referencias se dejan tal cual, igual que las deja `collectStringLeaves`.
+ */
+function sinListasDeProhibidos(valor: unknown): unknown {
+  if (Array.isArray(valor)) return valor.map(sinListasDeProhibidos);
+  if (!isRecord(valor) || isRefValue(valor)) return valor;
+  const salida: Record<string, unknown> = {};
+  for (const [clave, v] of Object.entries(valor)) if (clave !== 'prohibited') salida[clave] = sinListasDeProhibidos(v);
+  return salida;
 }
 
 /** Evalúa TODAS las cláusulas (lista ordenada): si cualquiera falla ⇒ no-resuelto con todos los motivos. */

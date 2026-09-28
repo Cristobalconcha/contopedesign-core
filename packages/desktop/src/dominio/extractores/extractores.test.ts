@@ -155,7 +155,9 @@ describe('idml', () => {
     expect(malo.candidatos).toEqual([]);
     expect(malo.resumen).toMatch(/No se pudo leer/);
     const pdf = await extraer({ nombre: 'x.pdf', extension: 'pdf', bytes: new Uint8Array() });
-    expect(pdf.resumen).toMatch(/no está construido/);
+    expect(pdf.tipo).toBe('pdf');
+    expect(pdf.candidatos).toEqual([]);
+    expect(pdf.resumen).toMatch(/No se pudo leer: el archivo no empieza como un PDF/);
   });
 });
 

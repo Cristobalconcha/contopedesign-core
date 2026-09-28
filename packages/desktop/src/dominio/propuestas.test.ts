@@ -57,17 +57,50 @@ describe('reducir · traer-propuesta', () => {
     expect(s.notasDePropuesta['dim3.req01']).toEqual({ texto: 'n', en: AHORA });
   });
 
-  it('rechaza dos propuestas para la misma pregunta y una ref a una pregunta sin entrada', () => {
+  it('rechaza dos propuestas para la misma pregunta', () => {
     const s = nuevoSistema('digital', 'x', AHORA);
     const dos = archivo(s.id, [
       { requirementId: 'dim3.req01', payload: { unidad: '4px' } },
       { requirementId: 'dim3.req01', payload: { unidad: '8px' } },
     ]);
     expect(leerPropuestas(dos, s)).toMatchObject({ ok: false, motivo: expect.stringContaining('dos propuestas') });
-    const colgante = archivo(s.id, [
-      { requirementId: 'dim3.req02', payload: { roleSpacing: [{ role: 'x', value: { refReqId: 'dim3.req01', refPath: ['escala', 0] } }] } },
-    ]);
-    expect(leerPropuestas(colgante, s)).toMatchObject({ ok: false, motivo: expect.stringContaining('dim3.req01') });
+  });
+
+  it('una ref puede apuntar a otra propuesta del mismo archivo, también en ciclo', () => {
+    const s = nuevoSistema('digital', 'x', AHORA);
+    const ref = (id: string) => ({ refReqId: id, refPath: [] });
+    const r = leerPropuestas(
+      archivo(s.id, [
+        { requirementId: 'dim3.req01', payload: { unidad: '4px' } },
+        { requirementId: 'dim3.req02', payload: { roleSpacing: [{ role: 'x', value: { refReqId: 'dim3.req01', refPath: ['escala', 0] } }] } },
+        // dim1.req11 y dim1.req12 se nombran entre sí (medido con Econut el 27-09).
+        { requirementId: 'dim1.req11', payload: { provenance: [{ definition: ref('dim1.req12') }] } },
+        { requirementId: 'dim1.req12', payload: { forces: [{ definition: ref('dim1.req11') }] } },
+      ]),
+      s,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) throw new Error(r.motivo);
+    expect(r.archivo.propuestas.map((p) => p.requirementId)).toEqual(['dim3.req01', 'dim3.req02', 'dim1.req11', 'dim1.req12']);
+    expect(r.avisos).toEqual([]);
+  });
+
+  it('una ref que no está ni en el sistema ni en el archivo deja fuera sólo esa propuesta y las que dependen de ella', () => {
+    const s = nuevoSistema('digital', 'x', AHORA);
+    const r = leerPropuestas(
+      archivo(s.id, [
+        { requirementId: 'dim3.req08', payload: { formatos: [] } },
+        { requirementId: 'dim3.req02', payload: { roleSpacing: [{ role: 'x', value: { refReqId: 'dim3.req01', refPath: ['escala', 0] } }] } },
+        { requirementId: 'dim3.req05', payload: { contenedores: [{ padding: { refReqId: 'dim3.req02', refPath: ['roleSpacing', 0] } }] } },
+      ]),
+      s,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) throw new Error(r.motivo);
+    expect(r.archivo.propuestas.map((p) => p.requirementId)).toEqual(['dim3.req08']);
+    expect(r.avisos).toHaveLength(2);
+    expect(r.avisos[0]).toContain('dim3.req02: apunta a dim3.req01');
+    expect(r.avisos[1]).toContain('dim3.req05: apunta a dim3.req02');
   });
 
   it('una entrada de ContOpe reabierta no se pisa: la propuesta nueva queda como conflicto', () => {

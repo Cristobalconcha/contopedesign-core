@@ -115,7 +115,7 @@ dimensiones hay. Todo lo demás los lee.
 | `capsula.ts` | Proyecta el `Sistema` a `design-contract.json` + `DESIGN.md` con los proyectores del núcleo. | No. |
 | `catalogo.ts` | El catálogo tipográfico y sus filtros. | No. |
 | `mundos.ts` | Los cuatro mundos (propuesta sin confirmar); hoy todos usan el mismo manifiesto y la pantalla lo dice. | No, hasta que exista un núcleo por mundo. |
-| `extractores/{css,idml,imagen,tokens-w3c}.ts` | Cada extractor produce candidatos apuntando a ids concretos (`dim1.req01`, `dim2.req01`, `dim3.req01`…). | Sólo si un insumo trae algo de la dimensión nueva. No es obligatorio. |
+| `extractores/{ase,css,fuente,idml,imagen,pdf,tokens-w3c}.ts` | Cada extractor produce candidatos apuntando a ids concretos (`dim1.req01`, `dim2.req01`, `dim3.req01`…). El de PDF lee sin dibujar; la miniatura la dibuja `navegador/pdf.ts` con pdf.js. | Sólo si un insumo trae algo de la dimensión nueva. No es obligatorio. |
 
 ### 3.3 Instrumentos y pantallas
 
