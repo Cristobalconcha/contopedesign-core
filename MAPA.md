@@ -68,6 +68,15 @@ del §4.
 
 El escritorio los conecta en `dominio/nucleos.ts` (`nucleoDeMundo`, `enNucleo`) y `dominio/evaluacion.ts` los evalúa junto con el manifiesto.
 
+### 2.3b `biblia/` — la Biblia del diseño, compilada
+
+| archivo | qué hace |
+|---|---|
+| `biblia.generada.json` | Los catorce capítulos del vault compilados por `scripts/biblia/compilar.mjs` (`pnpm biblia:compilar`); no se edita a mano. |
+| `tipos.ts`, `datos.ts`, `consultar.ts` | Los tipos (`FuerzaBiblia`, para no chocar con la `Fuerza` del set), los datos importados como módulo y `consultarBiblia`, búsqueda pura por tema, tipo de producto y estado. |
+
+El escritorio la conecta en `dominio/biblia.ts` (qué temas y tipos tocan a cada encargo; la sección «LA BIBLIA DEL DISEÑO» del prompt) y `componentes/QueDiceLaBiblia.tsx`. Límites y decisiones: `packages/core/src/biblia/README.md`.
+
 ### 2.4 La cápsula — C3/C4
 
 | archivo | qué hace |

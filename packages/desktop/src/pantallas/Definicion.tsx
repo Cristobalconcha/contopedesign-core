@@ -17,6 +17,7 @@
 import { findEntry, type Fuerza } from '@contope/core';
 import { useState } from 'react';
 import { Primitiva } from '../componentes/Primitiva.js';
+import { QueDiceLaBiblia } from '../componentes/QueDiceLaBiblia.js';
 import { EXPLICACIONES } from '../dominio/explicaciones.js';
 import { DIMENSIONES, NOMBRE_DIMENSION, REQUISITOS, dependientesDe } from '../dominio/manifiesto.js';
 import { mundo as mundoDe } from '../dominio/mundos.js';
@@ -298,6 +299,7 @@ export function Definicion() {
                         <b>Qué quiere decir.</b> {EXPLICACIONES[r.id]}
                       </div>
                     ) : null}
+                    {abierta ? <QueDiceLaBiblia mundo={sistema.mundo} requirementId={r.id} /> : null}
 
                     {entrada && !resuelto ? (
                       <div className="expl motivos">

@@ -6,7 +6,8 @@
  * `proveedores.ts`), así que el encargo se arma acá, sin red: se le da el
  * sistema entero —qué mundo es, qué exige su núcleo, qué hay ya definido— más
  * las preguntas encargadas con su `payloadSchema` y las restricciones que las
- * amarran, y se le pide un JSON de propuestas.
+ * amarran, más lo que la Biblia del diseño dice para ese tipo de producto y
+ * esas preguntas (`biblia.ts`), y se le pide un JSON de propuestas.
  *
  * El prompt es largo a propósito: el modelo no tiene el repositorio ni la
  * cápsula a la vista, y una propuesta que ignore una definición anterior o una
@@ -19,6 +20,7 @@
  * lo que el formato exige, para que `leerPropuestas` lo valide y el taller lo
  * traiga con `traer-propuesta`.
  */
+import { seccionBiblia } from './biblia.js';
 import type { Evaluacion } from './evaluacion.js';
 import { EXPLICACIONES } from './explicaciones.js';
 import { requisito } from './manifiesto.js';
@@ -89,6 +91,7 @@ const INSTRUCCIONES = [
   '- Los `ref` a otras preguntas pueden apuntar a preguntas que ya tienen definición en el sistema (te las listamos en LO YA DEFINIDO) o a otras preguntas encargadas que propones en esta misma respuesta. Una propuesta que apunte a cualquier otra cosa se descarta.',
   '- Nunca inventes un valor que contradiga una restricción.',
   '- Si una pregunta no se puede resolver con lo que hay, devuelve igual una propuesta con el mejor payload posible y dilo en la nota.',
+  '- Si usaste LA BIBLIA DEL DISEÑO, cita en la nota los ids de sus entradas (p. ej. «05.E01») y di si te apartaste de una cortapisa y por qué.',
   '- Las notas van en español de Chile.',
 ].join('\n');
 
@@ -103,6 +106,8 @@ export function promptDeEncargo(sistema: Sistema, evaluacion: Evaluacion): Mensa
   const secciones: string[] = [seccionSistema(sistema)];
   const nucleo = seccionNucleo(sistema);
   if (nucleo !== null) secciones.push(nucleo);
+  const biblia = seccionBiblia(sistema, encargos);
+  if (biblia !== null) secciones.push(biblia);
   secciones.push(seccionInsumosTexto);
   secciones.push(seccionDefinido(sistema));
   secciones.push(seccionDeclaraciones(sistema));

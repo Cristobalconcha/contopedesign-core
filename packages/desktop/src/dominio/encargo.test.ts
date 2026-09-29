@@ -1,5 +1,6 @@
 import { findEntry } from '@contope/core';
 import { describe, expect, it } from 'vitest';
+import { seccionBiblia } from './biblia.js';
 import { encargosAPedir, encargosDe, jsonDePropuestas, promptDeEncargo } from './encargo.js';
 import { evaluar } from './evaluacion.js';
 import { requisito } from './manifiesto.js';
@@ -26,6 +27,35 @@ function conEncargo(): Sistema {
   s = reducir(s, { tipo: 'encargar-a-contope', requirementId: 'dim3.req02' }, AHORA);
   return s;
 }
+
+describe('promptDeEncargo y la Biblia del diseño', () => {
+  it('con encargos de color, la sección de la Biblia va después del núcleo y antes de los insumos', () => {
+    const s = reducir(nuevoSistema('digital', 'x', AHORA), { tipo: 'encargar-a-contope', requirementId: 'dim1.req01' }, AHORA);
+    const prompt = promptDeEncargo(s, evaluar(s));
+    if (prompt === null) throw new Error('el sistema tiene un encargo y no hubo prompt');
+    const { usuario, sistema: instrucciones } = prompt;
+    const nucleo = usuario.indexOf('EL NÚCLEO DEL MUNDO');
+    const biblia = usuario.indexOf('LA BIBLIA DEL DISEÑO');
+    const insumos = usuario.indexOf('LOS INSUMOS');
+    expect(nucleo).toBeGreaterThan(-1);
+    expect(biblia).toBeGreaterThan(nucleo);
+    expect(insumos).toBeGreaterThan(biblia);
+    expect(usuario).toMatch(/^- 05\.E\d+ · tema 05 /m);
+    expect(instrucciones).toContain('cita en la nota los ids de sus entradas');
+  });
+
+  it('la sección aparece en el prompt si y sólo si la Biblia tiene algo pertinente', () => {
+    // No depende del estado del vault: compara con lo que devuelve seccionBiblia.
+    for (const id of ['dim7.req01', 'dim3.req01', 'dim1.req01']) {
+      const s = reducir(nuevoSistema('digital', 'x', AHORA), { tipo: 'encargar-a-contope', requirementId: id }, AHORA);
+      const prompt = promptDeEncargo(s, evaluar(s));
+      if (prompt === null) throw new Error('el sistema tiene un encargo y no hubo prompt');
+      const seccion = seccionBiblia(s, [id]);
+      expect(prompt.usuario.includes('LA BIBLIA DEL DISEÑO')).toBe(seccion !== null);
+      if (seccion !== null) expect(prompt.usuario).toContain(seccion);
+    }
+  });
+});
 
 describe('encargosAPedir', () => {
   it('pide sólo lo que no tiene propuesta; si todo la tiene, todo de nuevo', () => {

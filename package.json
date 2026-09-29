@@ -8,7 +8,8 @@
     "dev": "pnpm --filter @contope/desktop dev",
     "dev:web": "pnpm --filter @contope/desktop dev:web",
     "build": "pnpm --filter @contope/desktop build",
-    "start": "pnpm --filter @contope/desktop start"
+    "start": "pnpm --filter @contope/desktop start",
+    "biblia:compilar": "node scripts/biblia/compilar.mjs"
   },
   "pnpm": {
     "onlyBuiltDependencies": ["electron", "esbuild"]

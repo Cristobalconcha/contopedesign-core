@@ -1109,6 +1109,19 @@ h2.tit {
 .expl.aprobar {
   border-left-color: var(--ok);
 }
+/* «Qué dice la Biblia», plegado bajo «Qué quiere decir». */
+.expl.biblia {
+  border-left-color: var(--ia);
+}
+.expl.biblia summary {
+  cursor: pointer;
+}
+.biblia-entrada {
+  margin-top: 0.7rem;
+}
+.biblia-entrada p {
+  margin: 0.3rem 0 0;
+}
 .pie-def {
   position: sticky;
   bottom: 0;
