@@ -27,6 +27,31 @@ function conEncargo(): Sistema {
   return s;
 }
 
+describe('promptDeEncargo y la Biblia del diseño', () => {
+  it('con encargos de color, la sección de la Biblia va después del núcleo y antes de los insumos', () => {
+    const s = reducir(nuevoSistema('digital', 'x', AHORA), { tipo: 'encargar-a-contope', requirementId: 'dim1.req01' }, AHORA);
+    const prompt = promptDeEncargo(s, evaluar(s));
+    if (prompt === null) throw new Error('el sistema tiene un encargo y no hubo prompt');
+    const { usuario, sistema: instrucciones } = prompt;
+    const nucleo = usuario.indexOf('EL NÚCLEO DEL MUNDO');
+    const biblia = usuario.indexOf('LA BIBLIA DEL DISEÑO');
+    const insumos = usuario.indexOf('LOS INSUMOS');
+    expect(nucleo).toBeGreaterThan(-1);
+    expect(biblia).toBeGreaterThan(nucleo);
+    expect(insumos).toBeGreaterThan(biblia);
+    expect(usuario).toMatch(/^- 05\.E\d+ · tema 05 /m);
+    expect(instrucciones).toContain('cita en la nota los ids de sus entradas');
+  });
+
+  it('sin nada pertinente en la Biblia, la sección no aparece', () => {
+    // dim7 es interacción → tema 13, todavía en borrador: no entra al prompt.
+    const s = reducir(nuevoSistema('digital', 'x', AHORA), { tipo: 'encargar-a-contope', requirementId: 'dim7.req01' }, AHORA);
+    const prompt = promptDeEncargo(s, evaluar(s));
+    if (prompt === null) throw new Error('el sistema tiene un encargo y no hubo prompt');
+    expect(prompt.usuario).not.toContain('LA BIBLIA DEL DISEÑO');
+  });
+});
+
 describe('encargosAPedir', () => {
   it('pide sólo lo que no tiene propuesta; si todo la tiene, todo de nuevo', () => {
     let s = reducir(nuevoSistema('digital', 'x', AHORA), { tipo: 'encargar-a-contope', requirementId: 'dim3.req01' }, AHORA);
