@@ -117,7 +117,7 @@ const RESTO = ['resto', 'lo demas'];
 function plano(s) {
   return s
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
