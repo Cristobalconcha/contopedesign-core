@@ -2,6 +2,7 @@ import { TIPOS_DE_PRODUCTO } from '@contope/core';
 import { describe, expect, it } from 'vitest';
 import {
   entradasPertinentes,
+  ESTADOS_EN_PROMPT,
   seccionBiblia,
   TEMAS_POR_PAQUETE,
   temasDeEncargos,
@@ -79,9 +80,14 @@ describe('entradasPertinentes', () => {
     expect(rangos).toContain(0);
   });
 
-  it('deja fuera los temas en borrador (hoy 13: interacción no trae nada)', () => {
-    const interaccion = REQUISITOS.filter((r) => r.packageId.startsWith('pkg.interaccion.')).map((r) => r.id);
-    expect(entradasPertinentes('digital', interaccion)).toEqual([]);
+  it('sólo trae temas en los estados que entran al prompt (los borradores quedan fuera)', () => {
+    // No depende de qué temas estén hoy en borrador: vale para cualquier estado del vault.
+    const todos = REQUISITOS.map((r) => r.id);
+    for (const mundo of ['editorial', 'marca', 'digital', 'campana'] as const) {
+      for (const { entrada } of entradasPertinentes(mundo, todos)) {
+        expect(ESTADOS_EN_PROMPT).toContain(entrada.tema.estado);
+      }
+    }
   });
 });
 
@@ -103,8 +109,6 @@ describe('seccionBiblia', () => {
     const s = nuevoSistema('digital', 'x', AHORA);
     expect(seccionBiblia(s, [])).toBeNull();
     expect(seccionBiblia(s, ['dim99.req01'])).toBeNull();
-    const interaccion = REQUISITOS.filter((r) => r.packageId.startsWith('pkg.interaccion.')).map((r) => r.id);
-    expect(seccionBiblia(s, interaccion)).toBeNull();
   });
 
   it('respeta el orden por fuerza en el texto', () => {

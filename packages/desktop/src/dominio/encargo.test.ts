@@ -1,5 +1,6 @@
 import { findEntry } from '@contope/core';
 import { describe, expect, it } from 'vitest';
+import { seccionBiblia } from './biblia.js';
 import { encargosAPedir, encargosDe, jsonDePropuestas, promptDeEncargo } from './encargo.js';
 import { evaluar } from './evaluacion.js';
 import { requisito } from './manifiesto.js';
@@ -43,12 +44,16 @@ describe('promptDeEncargo y la Biblia del diseño', () => {
     expect(instrucciones).toContain('cita en la nota los ids de sus entradas');
   });
 
-  it('sin nada pertinente en la Biblia, la sección no aparece', () => {
-    // dim7 es interacción → tema 13, todavía en borrador: no entra al prompt.
-    const s = reducir(nuevoSistema('digital', 'x', AHORA), { tipo: 'encargar-a-contope', requirementId: 'dim7.req01' }, AHORA);
-    const prompt = promptDeEncargo(s, evaluar(s));
-    if (prompt === null) throw new Error('el sistema tiene un encargo y no hubo prompt');
-    expect(prompt.usuario).not.toContain('LA BIBLIA DEL DISEÑO');
+  it('la sección aparece en el prompt si y sólo si la Biblia tiene algo pertinente', () => {
+    // No depende del estado del vault: compara con lo que devuelve seccionBiblia.
+    for (const id of ['dim7.req01', 'dim3.req01', 'dim1.req01']) {
+      const s = reducir(nuevoSistema('digital', 'x', AHORA), { tipo: 'encargar-a-contope', requirementId: id }, AHORA);
+      const prompt = promptDeEncargo(s, evaluar(s));
+      if (prompt === null) throw new Error('el sistema tiene un encargo y no hubo prompt');
+      const seccion = seccionBiblia(s, [id]);
+      expect(prompt.usuario.includes('LA BIBLIA DEL DISEÑO')).toBe(seccion !== null);
+      if (seccion !== null) expect(prompt.usuario).toContain(seccion);
+    }
   });
 });
 

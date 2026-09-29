@@ -51,11 +51,15 @@ El escritorio la usa en `dominio/biblia.ts`: el tipo sale del mundo
 «LA BIBLIA DEL DISEÑO» y a la ayuda de cada pregunta en la pantalla de
 definición («Qué dice la Biblia»).
 
-## Límites (medidos el 29-09-2026, vault `8003f8f`)
+## Límites (medidos el 29-09-2026, vault `b42bc73`)
 
-- **Estados.** Sólo el tema 01 está aprobado; 02 a 10 están «por revisar»; 11 a
-  14 siguen en borrador y **no entran al prompt** (`ESTADOS_EN_PROMPT`). Mientras
-  el 13 sea borrador, las preguntas de interacción y movimiento no reciben nada.
+- **Estados.** Sólo el tema 01 está aprobado; 02 a 14 están «por revisar» (con la
+  síntesis de la ronda 1 hecha, sin la revisión del dueño) y entran al prompt
+  marcados así. Un tema en borrador no entra (`ESTADOS_EN_PROMPT`).
+- **Informe del compilador.** 168 entradas y 1.626 filas de fuerza; 89,2 % de las
+  celdas con una sola fuerza, 9,5 % con varias y 1,3 % sin fuerza reconocible;
+  11 entradas sin tabla de fuerza y 5 etiquetas sin tipo (pictograma, braille,
+  tres sobre la UE y C2PA).
 - **Normalización de tipos.** Es una tabla escrita a mano en el compilador
   (`PREFIJOS`), con las decisiones marcadas: «editorial» a secas vale por libro y
   revista; las funciones de señalética (identificación, dirección, seguridad…)
