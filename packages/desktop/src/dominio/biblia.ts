@@ -171,7 +171,7 @@ export function entradasPertinentes(mundo: MundoId, encargos: readonly string[])
 // La sección del prompt
 // ---------------------------------------------------------------------------
 
-const NOMBRE_FUERZA: Readonly<Record<FuerzaBiblia, string>> = {
+export const NOMBRE_FUERZA: Readonly<Record<FuerzaBiblia, string>> = {
   cortapisa: 'cortapisa',
   'recomendacion-fuerte': 'recomendación fuerte',
   divergencia: 'divergencia',
