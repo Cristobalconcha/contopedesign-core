@@ -21,11 +21,17 @@
  * Los dos campos también son opcionales en el archivo: un archivo viejo abre
  * como referente que toma todo (ver persistencia.ts). El carril lo pone quien
  * incorpora el insumo, no el extractor.
+ *
+ * Desde el 08-10-2026 guarda también `celulasMadre` (decisión 35): el registro
+ * de los archivos generados desde el ADN, con su metadata de ancestro, para
+ * decir cuáles siguen vigentes. Opcional en el archivo: uno viejo abre con la
+ * lista vacía.
  */
 import type { DesignContractV1, DesignSetV0, DimensionId, EditContextDevelopmentTask, VerificationRecordV0 } from '@contope/core';
 import type { Alcance } from './alcance.js';
 import type { MundoId } from './mundos.js';
 import { armonizacionVacia, type Armonizacion } from './armonizacion.js';
+import type { CelulaGenerada } from './celulas.js';
 import type { Muestra } from './primitivas.js';
 
 export const KIND_SISTEMA = 'contope/sistema';
@@ -144,6 +150,12 @@ export interface Sistema {
    * una persona redefine o quita esa definición.
    */
   imperativas: Record<string, { insumoId: string; nombre: string; en: string }>;
+  /**
+   * Lo generado en Células Madre (decisión 35): por cada generación, la
+   * metadata de ancestro y la huella de cada archivo. Los archivos no se
+   * guardan acá; se regeneran.
+   */
+  celulasMadre: CelulaGenerada[];
 }
 
 export function nuevoId(prefijo: string): string {
@@ -176,5 +188,6 @@ export function nuevoSistema(mundo: MundoId, nombre: string, ahora = new Date().
     armonizacion: armonizacionVacia(),
     notasDePropuesta: {},
     imperativas: {},
+    celulasMadre: [],
   };
 }
