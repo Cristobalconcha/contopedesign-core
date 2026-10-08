@@ -51,7 +51,7 @@ El escritorio la usa en `dominio/biblia.ts`: el tipo sale del mundo
 «LA BIBLIA DEL DISEÑO» y a la ayuda de cada pregunta en la pantalla de
 definición («Qué dice la Biblia»).
 
-## Límites (medidos el 29-09-2026, vault `b42bc73`)
+## Límites (medidos el 29-09-2026, vault `6ee2d2d`)
 
 - **Estados.** Sólo el tema 01 está aprobado; 02 a 14 están «por revisar» (con la
   síntesis de la ronda 1 hecha, sin la revisión del dueño) y entran al prompt
