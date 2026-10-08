@@ -35,6 +35,13 @@ export interface ArchivoDeSistema {
   texto: string;
 }
 
+/** Un archivo que la app escribe tal cual (una Célula Madre y su `.contope.json`). */
+export interface ArchivoParaGuardar {
+  nombre: string;
+  tipoMime: string;
+  bytes: Uint8Array;
+}
+
 export interface ArchivoDeInsumo {
   ruta?: string;
   nombre: string;
@@ -80,6 +87,12 @@ export interface Puente {
   /** Un archivo `*.propuestas.json` hecho por la IA para este sistema; no entra a recientes. */
   abrirPropuestas(): Promise<ArchivoDeSistema | null>;
   exportarCapsula(archivos: Array<{ nombre: string; texto: string }>): Promise<string | null>;
+  /**
+   * Guarda varios archivos, binarios o de texto, en una carpeta que elige la
+   * persona (Electron) o como descargas (navegador). Devuelve dónde quedaron,
+   * o null si se canceló. Los nombres no llevan carpetas.
+   */
+  guardarArchivos(archivos: ArchivoParaGuardar[]): Promise<string | null>;
   listarRecientes(): Promise<Reciente[]>;
   descargarCatalogo(): Promise<string>;
   ia: PuenteDeIA;
@@ -95,6 +108,8 @@ export interface PuenteElectron {
   abrirInsumos(): Promise<Array<{ ruta: string; nombre: string; extension: string; bytes: string }>>;
   abrirPropuestas(): Promise<{ ruta: string; nombre: string; texto: string } | null>;
   exportarCapsula(archivos: Array<{ nombre: string; texto: string }>): Promise<string | null>;
+  /** Los bytes viajan en base64, como los insumos al abrirlos. */
+  guardarArchivos(archivos: Array<{ nombre: string; bytes: string }>): Promise<string | null>;
   listarRecientes(): Promise<Reciente[]>;
   descargarCatalogo(): Promise<string>;
   ia: PuenteDeIA;

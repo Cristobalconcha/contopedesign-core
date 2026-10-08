@@ -174,6 +174,20 @@ function registrarIpc(): void {
     return carpeta;
   });
 
+  // Células Madre (decisión 35): archivos binarios o de texto, con su `.contope.json`,
+  // en una carpeta que elige la persona. Sólo el nombre: nada de rutas desde el renderizador.
+  ipcMain.handle('dialogo:guardar-archivos', async (_e, archivos: Array<{ nombre: string; bytes: string }>) => {
+    const r = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'], title: 'Carpeta para las Células Madre' });
+    if (r.canceled || r.filePaths[0] === undefined) return null;
+    const carpeta = r.filePaths[0];
+    for (const archivo of archivos) {
+      const nombre = basename(archivo.nombre);
+      if (nombre === '' || nombre === '.' || nombre === '..') throw new Error(`Nombre de archivo no permitido: «${archivo.nombre}»`);
+      await writeFile(join(carpeta, nombre), Buffer.from(archivo.bytes, 'base64'));
+    }
+    return carpeta;
+  });
+
   ipcMain.handle('recientes:listar', () => leerRecientes());
 
   ipcMain.handle('catalogo:descargar', async () => {
