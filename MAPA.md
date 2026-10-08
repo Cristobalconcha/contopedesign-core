@@ -88,10 +88,12 @@ formato de la metadata y cómo se agrega uno: [`packages/core/src/celulas-madre/
 
 | archivo | qué hace |
 |---|---|
-| `tipos.ts` | `Generador` (id, versión, nombre, descripción, formato, `queLee`, `lee`, `disponible`, `parametros`, `generar`), `MetadataDeCelula` (kind `contope/celula-madre`, schemaVersion 1), `Vigencia`. |
+| `tipos.ts` | `Generador` (id, versión, nombre, descripción, formato, `queLee`, `lee`, `disponible`, `parametros`, `generar`), `MetadataDeCelula` (kind `contope/celula-madre`, schemaVersion 1), `FichaDeCelula` (la metadata más la huella de cada archivo), `Vigencia`. |
 | `huella.ts` | SHA-256 propio y síncrono + JSON canónico → `huella(payload)`. |
-| `metadata.ts` | `metadataDeAncestro`, `hermanoDe` (el `<archivo>.contope.json`), `vigencia` (vigente / desactualizada / huérfana), `leerMetadataDeCelula`. |
-| `registro.ts` | **`GENERADORES`: acá se registra cada generador nuevo**; `resolverParametros`, `generarCelula`. |
+| `metadata.ts` | `metadataDeAncestro`, `fichaDe`, `vigencia` (vigente / desactualizada / huérfana), `leerMetadataDeCelula`, `leerFichaDeCelula`. |
+| `leeme.ts` | `escribirLeeme`: el `LEEME.md` para personas, que termina con la ficha en un bloque ```json; `leerMetadataDeLeeme` la vuelve a sacar. Nombres cortos de las preguntas y cómo se usa cada formato. |
+| `zip.ts` | `armarZip` (con `fflate`, determinista), `entradasDeCelula` (LEEME + archivos, en una carpeta si se pide), `zipDeCelula` (`<sistema>-<generador>.zip`). |
+| `registro.ts` | **`GENERADORES`: acá se registra cada generador nuevo**; `resolverParametros`, `generarCelula` (archivos, LEEME y zip). |
 | `color-del-adn.ts`, `ase.ts` | Colores de dim1 a sRGB; escritor de `.ase`. |
 | `generador-paleta-ase.ts`, `generador-degradados-svg.ts` | Los dos primeros: paleta `.ase` y degradados `.svg`. |
 
@@ -99,8 +101,10 @@ Lee el DesignSet; no depende de ningún manifiesto en particular (los ids que
 lee cada generador están en su `lee`). En el escritorio: `dominio/celulas.ts`
 (correr un generador sobre el sistema, el registro y la vigencia),
 `Sistema.celulasMadre` (opcional en el archivo: uno viejo abre con `[]`),
-`puente.guardarArchivos` y `pantallas/CelulasMadre.tsx` (el menú; pestaña
-propia en la barra, separada de las fases porque no es una etapa del armado).
+`puente.guardarArchivo` (un archivo con nombre sugerido: el `.zip`),
+`pantallas/CelulasMadre.tsx` (el menú; pestaña propia en la barra, separada
+de las fases porque no es una etapa del armado) y `dominio/exportacion.ts`
+(«Exportar ADN»: la cápsula y las Células Madre regeneradas, en un zip).
 
 ## 3. El escritorio, módulo por módulo
 
@@ -136,6 +140,8 @@ dimensiones hay. Todo lo demás los lee.
 | `reductor.ts` | Todas las acciones sobre el archivo del taller (`Sistema`): agregar insumo, adoptar candidato, aprobar, encargar, resolver conflicto… Al primer `entry` de una dimensión escribe `manifestRefs[dim]` desde el manifiesto real. | No. |
 | `sistema.ts` | El tipo `Sistema` (el `.contope.json`) y su estado vacío. | No. |
 | `capsula.ts` | Proyecta el `Sistema` a `design-contract.json` + `DESIGN.md` con los proyectores del núcleo. | No. |
+| `celulas.ts` | Corre un generador de Células Madre sobre el sistema, el registro («Lo generado») y su vigencia. | No. |
+| `exportacion.ts` | «Exportar ADN»: un `<sistema>-adn.zip` con la cápsula, `celulas-madre/<sistema>-<generador>/` por cada Célula Madre del registro (regenerada con este ADN, con su `LEEME.md`) y un `LEEME.md` en la raíz que dice qué trae y qué quedó fuera. | No. |
 | `catalogo.ts` | El catálogo tipográfico y sus filtros. | No. |
 | `mundos.ts` | Los cuatro mundos (propuesta sin confirmar); hoy todos usan el mismo manifiesto y la pantalla lo dice. | No, hasta que exista un núcleo por mundo. |
 | `extractores/{ase,css,fuente,idml,imagen,pdf,tokens-w3c}.ts` | Cada extractor produce candidatos apuntando a ids concretos (`dim1.req01`, `dim2.req01`, `dim3.req01`…). El de PDF lee sin dibujar; la miniatura la dibuja `navegador/pdf.ts` con pdf.js. | Sólo si un insumo trae algo de la dimensión nueva. No es obligatorio. |

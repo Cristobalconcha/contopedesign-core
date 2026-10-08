@@ -11,7 +11,8 @@ Cuando el sistema está completo, guarda un archivo. Ahí termina su trabajo
 de definir. Desde la decisión 35 (08-10-2026) Core tiene una segunda parte: con
 esas definiciones —el **ADN**— fabrica **Células Madre**, archivos que se
 importan tal cual en otra herramienta (una paleta `.ase`, un archivo de
-degradados), cada uno con la metadata que dice de qué definiciones salió.
+degradados). Bajan en un `.zip` con un `LEEME.md` que dice qué son, cómo se
+usan y de qué definiciones salieron.
 
 *ContOpe* es **Content Opener**. *Design* es una de sus ramas.
 
@@ -133,8 +134,11 @@ pnpm build      # compila el renderizador y el proceso principal a dist/
 pnpm start      # abre lo compilado
 ```
 
-El programa guarda archivos `*.contope.json` y exporta la cápsula
-(`design-contract.json` + `DESIGN.md`) a una carpeta. No hay instalador
+El programa guarda archivos `*.contope.json` y exporta el ADN en un `.zip`
+(`<sistema>-adn.zip`): la cápsula (`design-contract.json` + `DESIGN.md`) y
+las Células Madre del sistema, hechas de nuevo con ese ADN, cada una con su
+`LEEME.md`. Cada Célula Madre también baja suelta, como `.zip` con su archivo
+y su `LEEME.md`. No hay instalador
 todavía: se corre desde el repositorio.
 
 ## Estado
