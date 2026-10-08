@@ -30,9 +30,10 @@
  *   persona o un insumo NO pisa: queda como conflicto de origen. Una propuesta
  *   nueva reemplaza a la anterior mientras siga siendo propuesta. Aprobarla
  *   resuelve la tarea; quitarla la rechaza.
- * - Lo generado en Células Madre se registra con su metadata de ancestro;
- *   generar otra vez con el mismo generador y los mismos parámetros reemplaza
- *   el registro anterior (es «regenerar»), con otros parámetros se suma.
+ * - Lo generado en Células Madre se registra con su metadata de ancestro.
+ *   «Regenerar» reemplaza el registro que se regeneró (`reemplaza`); generar
+ *   otra vez con el mismo generador y los mismos parámetros también reemplaza
+ *   al anterior; con otros parámetros se suma. Olvidar no borra archivos.
  * - La armonización es una etapa con pasadas (decisión 23): resolver una señal
  *   la marca como validada o anotada en la pasada actual; reabrirla borra esa
  *   decisión; una pasada nueva sólo sube el contador, las decisiones quedan.
