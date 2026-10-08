@@ -2,14 +2,16 @@
  * Células Madre (decisión 35): el menú que ofrece generar archivos desde el
  * ADN del sistema. Cada generador del núcleo (`GENERADORES`) aparece con lo
  * que hace, lo que lee del ADN, si puede generar o qué le falta, sus
- * parámetros y el botón «Generar». Debajo, lo ya generado, con su vigencia
- * frente al ADN de hoy y «Regenerar».
+ * parámetros y el botón «Generar», que guarda un `.zip` con los archivos y su
+ * `LEEME.md` (la ficha). Debajo, lo ya generado, con su vigencia frente al
+ * ADN de hoy y «Regenerar».
  *
  * No es una fase más del armado: se puede usar en cualquier momento, con lo
  * que el ADN tenga. Por eso va en la barra separada de las fases, sin flecha.
  */
 import {
   GENERADORES,
+  NOMBRE_CORTO_DE_PREGUNTA,
   generadorPorId,
   idsQueLee,
   resolverParametros,
@@ -21,12 +23,12 @@ import {
   type Vigencia,
 } from '@contope/core';
 import { useState } from 'react';
-import { NOMBRE_CORTO, generarEnElTaller, paraGuardar, vigenciaDe, type CelulaGenerada } from '../dominio/celulas.js';
+import { generarEnElTaller, paraGuardar, vigenciaDe, type CelulaGenerada } from '../dominio/celulas.js';
 import { NOMBRE_DIMENSION, dimensionDe, requisito } from '../dominio/manifiesto.js';
 import { useTaller } from '../taller.js';
 
 function nombreDePregunta(id: string): string {
-  return NOMBRE_CORTO[id] ?? `${NOMBRE_DIMENSION[dimensionDe(id)] ?? dimensionDe(id)} · ${id}`;
+  return NOMBRE_CORTO_DE_PREGUNTA[id] ?? `${NOMBRE_DIMENSION[dimensionDe(id)] ?? dimensionDe(id)} · ${id}`;
 }
 
 const FECHA = new Intl.DateTimeFormat('es-CL', { dateStyle: 'medium', timeStyle: 'short' });
@@ -160,13 +162,11 @@ export function CelulasMadre() {
     }
     setOcupado(clave);
     try {
-      const destino = await puente.guardarArchivos(paraGuardar(r.archivos));
+      const destino = await puente.guardarArchivo(paraGuardar(r.zip));
       if (destino === null) return;
       despachar({ tipo: 'registrar-celula', celula: r.celula, ...(reemplaza !== undefined ? { reemplaza } : {}) });
       const nombres = r.celula.archivos.map((a) => a.nombre).join(', ');
-      avisar(
-        `${generador.nombre}: ${nombres}, cada uno con su ficha de origen (.contope.json), en ${destino}. Guarda el sistema para que recuerde lo generado.`,
-      );
+      avisar(`${generador.nombre}: ${r.zip.nombre} (${nombres} y su LEEME.md) en ${destino}. Guarda el sistema para que recuerde lo generado.`);
     } catch (error) {
       avisar((error as Error).message, 'error');
     } finally {
@@ -182,10 +182,10 @@ export function CelulasMadre() {
         <span className="marca-stub">Primera entrega</span>
         <h2>Células Madre</h2>
         <p>
-          Material hecho con el ADN de este sistema: archivos que se abren tal cual en otra herramienta. Cada archivo lleva escrita
-          su procedencia —de qué sistema, con qué generador, de qué definiciones y cuándo— en una ficha que lo acompaña
-          (<span className="mono">.contope.json</span>), y adentro cuando el formato tiene dónde. Así se sabe cuándo un archivo quedó
-          atrás porque el ADN cambió.
+          Material hecho con el ADN de este sistema: archivos que se abren tal cual en otra herramienta. Cada generación baja como un{' '}
+          <span className="mono">.zip</span> con el archivo y su ficha (<span className="mono">LEEME.md</span>): qué es, cómo se usa
+          y su procedencia —de qué sistema, con qué generador, de qué definiciones y cuándo—, que también va adentro del archivo
+          cuando el formato tiene dónde. Así se sabe cuándo un archivo quedó atrás porque el ADN cambió.
         </p>
       </div>
 
@@ -234,7 +234,7 @@ export function CelulasMadre() {
                     <button className="btn fuerte" disabled={ocupado !== null} onClick={() => void generar(g, parametros, g.id)}>
                       {ocupado === g.id ? 'Generando…' : 'Generar'}
                     </button>
-                    <span className="tenue">{puente.entorno === 'navegador' ? 'Se descargan el archivo y su ficha.' : 'Eliges la carpeta; van el archivo y su ficha.'}</span>
+                    <span className="tenue">{puente.entorno === 'navegador' ? 'Se descarga un .zip con el archivo y su ficha.' : 'Guardas un .zip con el archivo y su ficha.'}</span>
                   </footer>
                 </>
               ) : (

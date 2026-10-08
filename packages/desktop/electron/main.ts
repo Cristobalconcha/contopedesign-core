@@ -162,30 +162,20 @@ function registrarIpc(): void {
     return { ruta, nombre: basename(ruta), texto: await readFile(ruta, 'utf8') };
   });
 
-  ipcMain.handle('dialogo:exportar-capsula', async (_e, archivos: Array<{ nombre: string; texto: string }>) => {
-    const r = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'], title: 'Carpeta para la cápsula' });
-    if (r.canceled || r.filePaths[0] === undefined) return null;
-    const carpeta = r.filePaths[0];
-    for (const archivo of archivos) {
-      const ruta = join(carpeta, archivo.nombre);
-      await mkdir(join(ruta, '..'), { recursive: true });
-      await writeFile(ruta, archivo.texto, 'utf8');
-    }
-    return carpeta;
-  });
-
-  // Células Madre (decisión 35): archivos binarios o de texto, con su `.contope.json`,
-  // en una carpeta que elige la persona. Sólo el nombre: nada de rutas desde el renderizador.
-  ipcMain.handle('dialogo:guardar-archivos', async (_e, archivos: Array<{ nombre: string; bytes: string }>) => {
-    const r = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'], title: 'Carpeta para las Células Madre' });
-    if (r.canceled || r.filePaths[0] === undefined) return null;
-    const carpeta = r.filePaths[0];
-    for (const archivo of archivos) {
-      const nombre = basename(archivo.nombre);
-      if (nombre === '' || nombre === '.' || nombre === '..') throw new Error(`Nombre de archivo no permitido: «${archivo.nombre}»`);
-      await writeFile(join(carpeta, nombre), Buffer.from(archivo.bytes, 'base64'));
-    }
-    return carpeta;
+  // El ADN exportado y las Células Madre (decisión 35): un archivo (un `.zip`) con el
+  // nombre que sugiere la app. La persona elige dónde y cómo se llama; del renderizador
+  // sólo se toma el nombre (basename), nunca una ruta.
+  ipcMain.handle('dialogo:guardar-archivo', async (_e, sugerido: string, bytes: string) => {
+    const nombre = basename(sugerido);
+    if (nombre === '' || nombre === '.' || nombre === '..') throw new Error(`Nombre de archivo no permitido: «${sugerido}»`);
+    const ext = extname(nombre).slice(1).toLowerCase();
+    const r = await dialog.showSaveDialog({
+      defaultPath: nombre,
+      filters: ext === '' ? [] : [{ name: ext === 'zip' ? 'Archivo comprimido' : ext.toUpperCase(), extensions: [ext] }],
+    });
+    if (r.canceled || r.filePath === undefined || r.filePath === '') return null;
+    await writeFile(r.filePath, Buffer.from(bytes, 'base64'));
+    return r.filePath;
   });
 
   ipcMain.handle('recientes:listar', () => leerRecientes());

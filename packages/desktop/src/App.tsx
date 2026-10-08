@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { proyectarCapsula } from './dominio/capsula.js';
+import { paraGuardar } from './dominio/celulas.js';
 import { evaluar } from './dominio/evaluacion.js';
+import { exportarAdn } from './dominio/exportacion.js';
 import { muestraDePayload } from './dominio/primitivas.js';
 import { nombreDeArchivo, parsearSistema, serializarSistema } from './dominio/persistencia.js';
 import { reducir, type Accion } from './dominio/reductor.js';
@@ -129,14 +130,16 @@ export function App() {
     [avisar, cargarRecientes, evaluacion, puente, taller.archivo, taller.sistema],
   );
 
-  const exportarCapsula = useCallback(async () => {
+  const exportarElAdn = useCallback(async () => {
     if (!taller.sistema) return;
     try {
-      const capsula = proyectarCapsula(taller.sistema);
-      const destino = await puente.exportarCapsula(capsula.archivos);
+      const { zip, capsula, incluidas, omitidas } = exportarAdn(taller.sistema);
+      const destino = await puente.guardarArchivo(paraGuardar(zip));
       if (destino === null) return;
       emitir({ tipo: 'accion', accion: { tipo: 'registrar-capsula', contrato: capsula.contrato } });
-      avisar(`Cápsula exportada (revisión ${capsula.contrato.design.revision}) en ${destino}`);
+      const celulas = incluidas.length === 0 ? '' : `, con ${incluidas.length === 1 ? 'una Célula Madre' : `${incluidas.length} Células Madre`} al día`;
+      const fuera = omitidas.length === 0 ? '' : ` Quedó fuera: ${omitidas.map((o) => o.nombre).join(', ')} (el LEEME.md del paquete dice por qué).`;
+      avisar(`ADN exportado (revisión ${capsula.contrato.design.revision}${celulas}) en ${destino}.${fuera}`);
     } catch (error) {
       avisar((error as Error).message, 'error');
     }
@@ -233,8 +236,8 @@ export function App() {
               <button className="btn" onClick={() => void guardar(true)} title="Ctrl+Shift+S">
                 Guardar como…
               </button>
-              <button className="btn fuerte" onClick={() => void exportarCapsula()} title="design-contract.json + DESIGN.md">
-                Exportar cápsula
+              <button className="btn fuerte" onClick={() => void exportarElAdn()} title="Baja un .zip con las definiciones del sistema (para leerlas y para otras herramientas) y sus Células Madre, hechas de nuevo con ellas">
+                Exportar ADN
               </button>
             </div>
           </>

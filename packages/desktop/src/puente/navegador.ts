@@ -169,12 +169,8 @@ export function puenteNavegador(): Puente {
       if (!archivo) return null;
       return { ruta: null, nombre: archivo.name, texto: await archivo.text() };
     },
-    async exportarCapsula(archivos) {
-      for (const a of archivos) descargar(a.nombre, a.texto);
-      return 'descargas del navegador';
-    },
-    async guardarArchivos(archivos: ArchivoParaGuardar[]) {
-      for (const a of archivos) descargar(a.nombre, a.bytes, a.tipoMime);
+    async guardarArchivo(archivo: ArchivoParaGuardar) {
+      descargar(archivo.nombre, archivo.bytes, archivo.tipoMime);
       return 'descargas del navegador';
     },
     async listarRecientes(): Promise<Reciente[]> {

@@ -28,7 +28,16 @@ export interface CelulaGenerada {
 }
 
 export type GeneracionEnElTaller =
-  | { ok: true; celula: CelulaGenerada; archivos: ArchivoGenerado[] }
+  | {
+      ok: true;
+      celula: CelulaGenerada;
+      /** Los archivos generados, en su formato. */
+      archivos: ArchivoGenerado[];
+      /** Su `LEEME.md`: la ficha para personas, con la metadata al final. */
+      leeme: ArchivoGenerado;
+      /** Lo que se guarda: los archivos y el LEEME en un `.zip`. */
+      zip: ArchivoGenerado & { contenido: Uint8Array };
+    }
   | { ok: false; falta: string };
 
 /** Corre el generador sobre el sistema. No toca el sistema: el registro lo hace el reductor. */
@@ -40,17 +49,22 @@ export function generarEnElTaller(
 ): GeneracionEnElTaller {
   const r = generarCelula(generador, sistema.designSet, { sistema: { designId: sistema.id, nombre: sistema.nombre }, generadoEn: ahora, parametros });
   if (!r.ok) return r;
-  return { ok: true, archivos: r.archivos, celula: { id: nuevoId('celula'), archivos: r.registrados, metadata: r.metadata } };
+  return {
+    ok: true,
+    archivos: r.archivos,
+    leeme: r.leeme,
+    zip: r.zip,
+    celula: { id: nuevoId('celula'), archivos: r.registrados, metadata: r.metadata },
+  };
 }
 
-/** Los archivos generados, como los pide el puente (todo en bytes). */
-export function paraGuardar(archivos: readonly ArchivoGenerado[]): ArchivoParaGuardar[] {
-  const utf8 = new TextEncoder();
-  return archivos.map((a) => ({
-    nombre: a.nombre,
-    tipoMime: a.tipoMime,
-    bytes: typeof a.contenido === 'string' ? utf8.encode(a.contenido) : a.contenido,
-  }));
+/** Un archivo hecho por la app, como lo pide el puente (en bytes). */
+export function paraGuardar(archivo: ArchivoGenerado): ArchivoParaGuardar {
+  return {
+    nombre: archivo.nombre,
+    tipoMime: archivo.tipoMime,
+    bytes: typeof archivo.contenido === 'string' ? new TextEncoder().encode(archivo.contenido) : archivo.contenido,
+  };
 }
 
 /** Dos generaciones son «la misma» si salieron del mismo generador con los mismos parámetros: la nueva reemplaza a la vieja. */
@@ -74,14 +88,3 @@ export function registrarCelula(lista: readonly CelulaGenerada[], celula: Celula
 export function vigenciaDe(celula: CelulaGenerada, sistema: Sistema): Vigencia {
   return vigencia(celula.metadata, sistema.designSet);
 }
-
-/**
- * Nombre corto, para el menú, de las preguntas que leen los generadores. Lo
- * que no esté acá se muestra con el nombre de su dimensión y su id.
- */
-export const NOMBRE_CORTO: Readonly<Record<string, string>> = {
-  'dim1.req01': 'Fundamento cromático',
-  'dim1.req02': 'Colores por rol',
-  'dim1.req04': 'Rampas',
-  'dim1.req14': 'Reproducción en imprenta',
-};

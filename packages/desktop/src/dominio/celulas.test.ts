@@ -1,4 +1,5 @@
-import { generadorDegradadosSvg, generadorPaletaAse } from '@contope/core';
+import { generadorDegradadosSvg, generadorPaletaAse, leerMetadataDeLeeme } from '@contope/core';
+import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import { generarEnElTaller, paraGuardar, vigenciaDe } from './celulas.js';
 import { leerAse } from './extractores/ase.js';
@@ -29,11 +30,26 @@ function conColor(valor = '#1d4ed8'): Sistema {
 }
 
 describe('Células Madre en el taller', () => {
+  it('«Generar» guarda un .zip con el archivo y su LEEME.md, cuya ficha calza con el registro', () => {
+    const r = generarEnElTaller(conColor(), generadorPaletaAse, {}, AHORA);
+    if (!r.ok) throw new Error(r.falta);
+    const zip = paraGuardar(r.zip);
+    expect(zip.nombre).toBe('econut-paleta-ase.zip');
+    expect(zip.tipoMime).toBe('application/zip');
+    const dentro = unzipSync(zip.bytes);
+    expect(Object.keys(dentro)).toEqual(['LEEME.md', 'econut-paleta.ase']);
+    const ficha = leerMetadataDeLeeme(strFromU8(dentro['LEEME.md']!));
+    if (!ficha.ok) throw new Error(ficha.motivo);
+    expect(ficha.metadata.archivos).toEqual(r.celula.archivos);
+    const { archivos: _a, ...metadata } = ficha.metadata;
+    expect(metadata).toEqual(r.celula.metadata);
+  });
+
   it('la paleta generada la lee el mismo extractor de .ase que usa Recolección', () => {
     const r = generarEnElTaller(conColor(), generadorPaletaAse, {}, AHORA);
     if (!r.ok) throw new Error(r.falta);
-    const [ase] = paraGuardar(r.archivos);
-    const lectura = leerAse(ase!.bytes);
+    const ase = unzipSync(r.zip.contenido)['econut-paleta.ase'];
+    const lectura = leerAse(ase!);
     expect(lectura.version).toBe('1.0');
     expect(lectura.grupos).toEqual(['Econut · ContOpe · Institucionales', 'Econut · ContOpe · Neutros']);
     expect(lectura.colores.map((c) => [c.nombre, c.modelo, c.tipo, c.hex])).toEqual([
