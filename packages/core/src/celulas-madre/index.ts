@@ -5,4 +5,7 @@ export * from './color-del-adn.js';
 export * from './ase.js';
 export * from './generador-paleta-ase.js';
 export * from './generador-degradados-svg.js';
+export * from './leeme.js';
+export * from './zip.js';
+export { baseDeNombre } from './comun.js';
 export * from './registro.js';

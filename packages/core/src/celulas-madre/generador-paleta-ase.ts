@@ -5,7 +5,7 @@
  * familia (institucionales, neutros, roles, cada rampa, imprenta). El nombre de
  * cada grupo lleva la referencia corta al sistema («Econut · ContOpe ·
  * Institucionales»), porque el `.ase` no tiene otro lugar donde decir de dónde
- * viene: la metadata completa va en el `.contope.json` hermano.
+ * viene: la metadata completa va en el `LEEME.md` que baja con él en el `.zip`.
  *
  * Las muestras son GLOBALES: al cambiar una en Illustrator o InDesign cambian
  * todos los objetos que la usan, que es lo que se espera de una paleta de

@@ -10,9 +10,10 @@ import {
   SCHEMA_CELULA_MADRE,
   type AncestroDeAdn,
   type ArchivoGenerado,
+  type ArchivoRegistrado,
   type CambioDeAncestro,
+  type FichaDeCelula,
   type Generador,
-  type HermanoDeCelula,
   type MetadataDeCelula,
   type Parametros,
   type SistemaDeOrigen,
@@ -63,23 +64,14 @@ export function metadataDeAncestro(entrada: {
   };
 }
 
-/** Nombre del hermano: el nombre completo del archivo más `.contope.json` (`paleta.ase.contope.json`). */
-export function nombreDeHermano(nombreDeArchivo: string): string {
-  return `${nombreDeArchivo}.contope.json`;
+/** Un archivo generado, sin su contenido y con su huella. */
+export function registroDe(archivo: ArchivoGenerado): ArchivoRegistrado {
+  return { nombre: archivo.nombre, tipoMime: archivo.tipoMime, huella: huellaDeContenido(archivo.contenido) };
 }
 
-/** El `.contope.json` que acompaña a un archivo generado. */
-export function hermanoDe(metadata: MetadataDeCelula, archivo: ArchivoGenerado): ArchivoGenerado & { metadata: HermanoDeCelula } {
-  const contenido: HermanoDeCelula = {
-    ...metadata,
-    archivo: { nombre: archivo.nombre, tipoMime: archivo.tipoMime, huella: huellaDeContenido(archivo.contenido) },
-  };
-  return {
-    nombre: nombreDeHermano(archivo.nombre),
-    tipoMime: 'application/json',
-    contenido: `${JSON.stringify(contenido, null, 2)}\n`,
-    metadata: contenido,
-  };
+/** La ficha que cierra el `LEEME.md`: la metadata común y la huella de cada archivo generado. */
+export function fichaDe(metadata: MetadataDeCelula, archivos: readonly ArchivoGenerado[]): FichaDeCelula {
+  return { ...metadata, archivos: archivos.map(registroDe) };
 }
 
 /**
@@ -126,8 +118,9 @@ function esValorDeParametro(v: unknown): v is ValorDeParametro {
 }
 
 /**
- * Lee la metadata de un `.contope.json` hermano (o la guardada en el taller)
- * desde JSON desconocido. Fail-closed: si la forma no calza, dice por qué.
+ * Lee la metadata (la de la ficha de un `LEEME.md` o la guardada en el
+ * taller) desde JSON desconocido. Fail-closed: si la forma no calza, dice por
+ * qué. Lo que no es de la metadata común (como `archivos`) se descarta.
  */
 export function leerMetadataDeCelula(valor: unknown): { ok: true; metadata: MetadataDeCelula } | { ok: false; motivo: string } {
   if (!esRegistro(valor)) return { ok: false, motivo: 'la metadata no es un objeto' };
@@ -180,4 +173,20 @@ export function leerMetadataDeCelula(valor: unknown): { ok: true; metadata: Meta
       parametros,
     },
   };
+}
+
+/** Lee la ficha completa (la metadata y sus archivos) desde JSON desconocido. Fail-closed. */
+export function leerFichaDeCelula(valor: unknown): { ok: true; ficha: FichaDeCelula } | { ok: false; motivo: string } {
+  const metadata = leerMetadataDeCelula(valor);
+  if (!metadata.ok) return metadata;
+  const crudos = (valor as Record<string, unknown>)['archivos'];
+  if (!Array.isArray(crudos) || crudos.length === 0) return { ok: false, motivo: "'archivos' debe ser una lista con al menos un archivo" };
+  const archivos: ArchivoRegistrado[] = [];
+  for (const a of crudos) {
+    if (!esRegistro(a) || typeof a['nombre'] !== 'string' || typeof a['tipoMime'] !== 'string' || typeof a['huella'] !== 'string') {
+      return { ok: false, motivo: "cada archivo necesita 'nombre', 'tipoMime' y 'huella'" };
+    }
+    archivos.push({ nombre: a['nombre'], tipoMime: a['tipoMime'], huella: a['huella'] });
+  }
+  return { ok: true, ficha: { ...metadata.metadata, archivos } };
 }

@@ -15,9 +15,17 @@ apartado Células Madre es **un menú** que ofrece generarlos
 (`packages/desktop/src/pantallas/CelulasMadre.tsx`).
 
 Y el requisito: **cada archivo lleva metadata que lo relaciona con su ancestro
-de ADN**. Dentro del archivo cuando el formato lo permite, y siempre en un
-archivo hermano `<archivo>.contope.json`, porque formatos como `.ase` no tienen
-dónde guardarla.
+de ADN**. Dentro del archivo cuando el formato lo permite, y siempre en su
+ficha, porque formatos como `.ase` no tienen dónde guardarla.
+
+**Cómo se entrega** (decisión 35, mismo día): *«descargarlo como zip con el
+archivo fuente y la ficha como un readme del archivo»*. Cada generación baja
+como **un `.zip`** (`<sistema>-<generador>.zip`: `econut-paleta-ase.zip`) con
+los archivos en su formato y un **`LEEME.md`**: la ficha escrita para una
+persona, que termina con la metadata en un bloque ```json para que ContOpe la
+lea. Y al **exportar el ADN** (botón «Exportar ADN»), las Células Madre del
+sistema van en el mismo zip que la cápsula, generadas de nuevo con ese ADN
+(ver `packages/desktop/src/dominio/exportacion.ts`).
 
 Lo que es pieza (el video de una campaña, la pantalla con la textura corriendo)
 sigue fuera de Core.
@@ -26,17 +34,20 @@ sigue fuera de Core.
 
 | archivo | qué hace |
 |---|---|
-| `tipos.ts` | `Generador` (la extensión), `Parametro`, `ArchivoGenerado`, `MetadataDeCelula`, `HermanoDeCelula`, `Vigencia`. |
+| `tipos.ts` | `Generador` (la extensión), `Parametro`, `ArchivoGenerado`, `ArchivoRegistrado`, `MetadataDeCelula`, `FichaDeCelula`, `Vigencia`. |
 | `huella.ts` | SHA-256 propio y síncrono, UTF-8, JSON canónico, `huella(payload)`. El núcleo no tiene `node:crypto` ni DOM (`lib` ES2023), y los generadores son síncronos. |
-| `metadata.ts` | `metadataDeAncestro`, `hermanoDe` (el `.contope.json`), `vigencia`, `leerMetadataDeCelula` (desde JSON desconocido, fail-closed). |
-| `registro.ts` | `GENERADORES`, `generadorPorId`, `resolverParametros`, `generarCelula` (comprueba, resuelve, genera y agrega los hermanos). |
+| `metadata.ts` | `metadataDeAncestro`, `fichaDe` (la metadata más la huella de cada archivo), `vigencia`, `leerMetadataDeCelula` y `leerFichaDeCelula` (desde JSON desconocido, fail-closed). |
+| `leeme.ts` | `escribirLeeme` (la ficha para personas), `leerMetadataDeLeeme` (saca la ficha del bloque json de un `LEEME.md`), `NOMBRE_CORTO_DE_PREGUNTA`, `comoUsarArchivo` (por formato), `fechaEnPalabras`, `parametrosEnPalabras`. |
+| `zip.ts` | `armarZip` (con `fflate`, determinista: fecha inyectada), `entradasDeCelula` (el LEEME y los archivos, opcionalmente en una carpeta), `zipDeCelula`, `nombreDePaquete`. |
+| `registro.ts` | `GENERADORES`, `generadorPorId`, `resolverParametros`, `generarCelula` (comprueba, resuelve, genera, escribe el LEEME y arma el zip). |
 | `color-del-adn.ts` | Lee los colores de la dimensión 1 y los pasa a sRGB (hex, rgb, hsl, oklch). |
 | `ase.ts` | Escritor de Adobe Swatch Exchange 1.0. |
 | `generador-paleta-ase.ts` | **Paleta de color** (`.ase`). |
 | `generador-degradados-svg.ts` | **Degradados** (`.svg`). |
 
-Todo es puro: nada toca el disco. Guardar es trabajo del escritorio (el puente:
-`guardarArchivos`).
+Todo es puro: nada toca el disco. La única dependencia es `fflate` (zip puro,
+sin `node:fs` ni DOM). Guardar es trabajo del escritorio (el puente:
+`guardarArchivo`, un archivo con nombre sugerido).
 
 ## Cómo se agrega un generador
 
@@ -62,12 +73,38 @@ Todo es puro: nada toca el disco. Guardar es trabajo del escritorio (el puente:
      el sistema, la fecha y la metadata ya armada: si el formato tiene dónde,
      el generador la mete adentro. **Determinista**: nada de `Date.now()` ni
      azar; la fecha viene en el contexto.
-2. Sumarlo a `GENERADORES` en `registro.ts` y reexportarlo en `index.ts`.
+2. Sumarlo a `GENERADORES` en `registro.ts` y reexportarlo en `index.ts`. Si
+   lee preguntas nuevas, darles nombre corto en `NOMBRE_CORTO_DE_PREGUNTA`
+   (`leeme.ts`); si entrega un formato nuevo, decir cómo se usa en
+   `COMO_USAR` (`leeme.ts`).
 3. Pruebas: que el archivo se lea de vuelta con un lector propio de la prueba,
    que `disponible` diga qué falta, y que mismo ADN y parámetros den los mismos
    bytes.
 
-El menú, el registro en el sistema y la vigencia no se tocan: salen solos.
+El menú, el LEEME, el zip, el registro en el sistema, la exportación del ADN y
+la vigencia no se tocan: salen solos.
+
+## El `.zip` y su `LEEME.md`
+
+```
+econut-paleta-ase.zip
+├── LEEME.md
+└── econut-paleta.ase
+```
+
+El `LEEME.md` dice, sin jerga: qué es y para qué sirve (la `descripcion` del
+generador), qué archivos trae, de qué sistema viene, generador y versión,
+cuándo se generó (en hora de Chile), qué definiciones del ADN usó (nombre
+corto, id, revisión y huella abreviada; las que consulta y no estaban
+definidas, también), con qué parámetros (en palabras), cómo usar cada archivo
+según su formato, y que queda desactualizado si las definiciones cambian. Al
+final, una línea que dice que el bloque es para ContOpe y el bloque ```json
+con la ficha (abajo). Si el generador entrega varios archivos, un solo LEEME
+los describe todos. Si el JSON trajera comillas invertidas, la cerca se alarga.
+
+El zip es determinista: las entradas llevan la fecha de la generación (en
+cifras UTC, para no depender del huso del computador), en orden y con
+compresión fija. Mismo ADN, parámetros y fecha → mismos bytes.
 
 ## La metadata
 
@@ -86,8 +123,10 @@ El menú, el registro en el sistema y la vigencia no se tocan: salen solos.
       "huella": "sha256:98b862442f0b858850b91fe471df1c3f180f23acd68545bb971cc3306bce9b07" }
   ],
   "parametros": { "incluirRoles": true, "incluirRampas": false, "incluirImprenta": false },
-  "archivo": { "nombre": "econut-paleta.ase", "tipoMime": "application/octet-stream",
-    "huella": "sha256:b0a3489020a3aa53029ed68291b0d2026c3e748804410137af57f2300379ff37" }
+  "archivos": [
+    { "nombre": "econut-paleta.ase", "tipoMime": "application/octet-stream",
+      "huella": "sha256:b0a3489020a3aa53029ed68291b0d2026c3e748804410137af57f2300379ff37" }
+  ]
 }
 ```
 
@@ -97,13 +136,15 @@ El menú, el registro en el sistema y la vigencia no se tocan: salen solos.
   estén o no definidas al generar. `ancestros`: las que existían, con su
   `effectiveDefinitionId`, su `revision` y la **huella**: `sha256:` + SHA-256
   del JSON canónico del payload (claves ordenadas, sin espacios).
-- `archivo` sólo va en el `.contope.json` hermano: es la huella del archivo
-  que acompaña, y no puede ir dentro del mismo archivo sin morderse la cola.
+- `archivos` sólo va en la ficha del `LEEME.md`: la huella de cada archivo que
+  la acompaña en el zip; no puede ir dentro del mismo archivo sin morderse la
+  cola. Lo demás es la metadata común (`MetadataDeCelula`), la misma que
+  guarda el taller. `leerMetadataDeLeeme(texto)` la saca del último bloque
+  ```json del LEEME, fail-closed.
 - Dentro del archivo: SVG en `<metadata id="contope-celula-madre">` como JSON
   en CDATA; PNG irá en un chunk `iTXt` con la clave `contope:celula-madre`;
-  una animación JSON, en su `meta`.
-- El hermano se llama como el archivo más `.contope.json`
-  (`econut-paleta.ase.contope.json`).
+  una animación JSON, en su `meta`. El `.ase` sólo guarda la referencia corta
+  en el nombre de cada grupo.
 
 ### Vigencia
 
@@ -153,5 +194,6 @@ degradado pinta una franja con su nombre.
   y quizás como guías de InDesign/Illustrator.
 - **Librerías de estilo** (estilos de párrafo y carácter desde la dimensión 2:
   IDML parcial, o tokens W3C).
-- Abrir un `.contope.json` suelto en el taller y decir de qué sistema viene y
-  si está vigente (hoy la vigencia se ve sólo para lo generado desde el taller).
+- Abrir un `.zip` de Célula Madre (o su `LEEME.md`) en el taller y decir de
+  qué sistema viene y si está al día: `leerMetadataDeLeeme` ya lo lee; falta
+  la pantalla (hoy la vigencia se ve sólo para lo generado desde el taller).

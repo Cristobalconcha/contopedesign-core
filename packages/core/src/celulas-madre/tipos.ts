@@ -78,8 +78,8 @@ export interface ContextoDeGeneracion {
   /**
    * La metadata común de esta generación, ya armada. El generador la mete
    * DENTRO del archivo cuando el formato lo permite (SVG `<metadata>`, PNG
-   * `iTXt`, `meta` de un JSON). El `.contope.json` hermano lo agrega
-   * `generarCelula`, no el generador.
+   * `iTXt`, `meta` de un JSON). El `LEEME.md` que acompaña a los archivos
+   * en el `.zip` lo escribe `generarCelula`, no el generador.
    */
   metadata: MetadataDeCelula;
 }
@@ -123,8 +123,8 @@ export interface AncestroDeAdn {
 
 /**
  * La metadata que relaciona un archivo con su ancestro de ADN. Va dentro del
- * archivo cuando el formato lo permite y SIEMPRE en el `.contope.json`
- * hermano (el `.ase` no tiene dónde guardarla).
+ * archivo cuando el formato lo permite y SIEMPRE al final del `LEEME.md` que
+ * baja con él en el `.zip` (el `.ase` no tiene dónde guardarla).
  */
 export interface MetadataDeCelula {
   kind: typeof KIND_CELULA_MADRE;
@@ -139,9 +139,21 @@ export interface MetadataDeCelula {
   parametros: Parametros;
 }
 
-/** El `.contope.json` hermano: la metadata común más la identidad del archivo que acompaña. */
-export interface HermanoDeCelula extends MetadataDeCelula {
-  archivo: { nombre: string; tipoMime: string; huella: string };
+/** Un archivo generado como lo recuerdan la ficha y el taller: sin el contenido, con su huella. */
+export interface ArchivoRegistrado {
+  nombre: string;
+  tipoMime: string;
+  /** `sha256:` + SHA-256 de los bytes del archivo. */
+  huella: string;
+}
+
+/**
+ * La ficha de una generación, la que cierra el `LEEME.md`: la metadata común
+ * más la identidad de cada archivo que la acompaña en el `.zip`. No puede ir
+ * dentro del archivo mismo (su huella se mordería la cola).
+ */
+export interface FichaDeCelula extends MetadataDeCelula {
+  archivos: ArchivoRegistrado[];
 }
 
 /** Un cambio en el ADN desde que se generó el archivo. */

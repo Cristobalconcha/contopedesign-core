@@ -1,3 +1,4 @@
+import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import { buildDim1DesignSet } from '../design-set/dim1-fixture.js';
 import type { DesignSetV0 } from '../design-set/types.js';
@@ -5,9 +6,11 @@ import { colorCssARgb, rgbAHex } from './color-del-adn.js';
 import { generadorDegradadosSvg } from './generador-degradados-svg.js';
 import { generadorPaletaAse } from './generador-paleta-ase.js';
 import { huella, jsonCanonico, sha256, utf8 } from './huella.js';
+import { escribirLeeme, fechaEnPalabras, leerMetadataDeLeeme } from './leeme.js';
 import { leerMetadataDeCelula, vigencia } from './metadata.js';
 import { GENERADORES, generarCelula, resolverParametros } from './registro.js';
-import { KIND_CELULA_MADRE, type HermanoDeCelula } from './tipos.js';
+import { KIND_CELULA_MADRE } from './tipos.js';
+import { armarZip, entradasDeCelula } from './zip.js';
 
 const SISTEMA = { designId: 'sistema-econut', nombre: 'Econut' };
 const AHORA = '2026-10-08T12:00:00.000Z';
@@ -121,7 +124,7 @@ describe('Células Madre · paleta .ase', () => {
   it('el .ase se lee de vuelta y trae los colores del ADN con su nombre', () => {
     const r = generarCelula(generadorPaletaAse, buildDim1DesignSet(), { sistema: SISTEMA, generadoEn: AHORA });
     if (!r.ok) throw new Error(r.falta);
-    expect(r.archivos.map((a) => a.nombre)).toEqual(['econut-paleta.ase', 'econut-paleta.ase.contope.json']);
+    expect(r.archivos.map((a) => a.nombre)).toEqual(['econut-paleta.ase']);
     const ase = r.archivos[0]!.contenido as Uint8Array;
     const leido = leerAseDePrueba(ase);
     expect(leido.version).toBe('1.0');
@@ -171,25 +174,27 @@ describe('Células Madre · paleta .ase', () => {
     const set = buildDim1DesignSet();
     const r = generarCelula(generadorPaletaAse, set, { sistema: SISTEMA, generadoEn: AHORA });
     if (!r.ok) throw new Error(r.falta);
-    const hermano = JSON.parse(r.archivos[1]!.contenido as string) as HermanoDeCelula;
-    expect(hermano.kind).toBe(KIND_CELULA_MADRE);
-    expect(hermano.schemaVersion).toBe(1);
-    expect(hermano.sistema).toEqual({ designId: 'sistema-econut', nombre: 'Econut', designSetId: 'ds-fixture-dim1' });
-    expect(hermano.generador).toEqual({ id: 'paleta-ase', version: '1.0.0', nombre: 'Paleta de color' });
-    expect(hermano.generadoEn).toBe(AHORA);
-    expect(hermano.parametros).toEqual({ incluirRoles: true, incluirRampas: true, incluirImprenta: true });
-    expect(hermano.ancestros.map((a) => a.requirementId)).toEqual(['dim1.req01', 'dim1.req02', 'dim1.req04', 'dim1.req14']);
-    for (const a of hermano.ancestros) {
+    const leida = leerMetadataDeLeeme(r.leeme.contenido);
+    if (!leida.ok) throw new Error(leida.motivo);
+    const ficha = leida.metadata;
+    expect(ficha.kind).toBe(KIND_CELULA_MADRE);
+    expect(ficha.schemaVersion).toBe(1);
+    expect(ficha.sistema).toEqual({ designId: 'sistema-econut', nombre: 'Econut', designSetId: 'ds-fixture-dim1' });
+    expect(ficha.generador).toEqual({ id: 'paleta-ase', version: '1.0.0', nombre: 'Paleta de color' });
+    expect(ficha.generadoEn).toBe(AHORA);
+    expect(ficha.parametros).toEqual({ incluirRoles: true, incluirRampas: true, incluirImprenta: true });
+    expect(ficha.ancestros.map((a) => a.requirementId)).toEqual(['dim1.req01', 'dim1.req02', 'dim1.req04', 'dim1.req14']);
+    for (const a of ficha.ancestros) {
       const entrada = set.entries.find((e) => e.requirementId === a.requirementId)!;
       expect(a.huella).toBe(huella(entrada.payload));
       expect(a.effectiveDefinitionId).toBe(entrada.effectiveDefinitionId);
     }
-    expect(hermano.archivo.nombre).toBe('econut-paleta.ase');
-    expect(hermano.archivo.huella).toBe(`sha256:${sha256(r.archivos[0]!.contenido as Uint8Array)}`);
-    expect(r.registrados[0]!.huella).toBe(hermano.archivo.huella);
-    // Y se vuelve a leer, como la leería el taller.
-    const leida = leerMetadataDeCelula(JSON.parse(r.archivos[1]!.contenido as string));
-    expect(leida.ok).toBe(true);
+    expect(ficha.archivos).toEqual([
+      { nombre: 'econut-paleta.ase', tipoMime: 'application/octet-stream', huella: `sha256:${sha256(r.archivos[0]!.contenido as Uint8Array)}` },
+    ]);
+    expect(r.registrados).toEqual(ficha.archivos);
+    // La metadata común de la ficha es la misma que guarda el taller.
+    expect(leerMetadataDeCelula(ficha)).toEqual({ ok: true, metadata: r.metadata });
   });
 
   it('disponible da el motivo cuando falta el color', () => {
@@ -208,8 +213,10 @@ describe('Células Madre · paleta .ase', () => {
     const c = generarCelula(generadorPaletaAse, buildDim1DesignSet(), { sistema: SISTEMA, generadoEn: '2027-01-01T00:00:00.000Z' });
     if (!a.ok || !b.ok || !c.ok) throw new Error('no generó');
     expect(a.archivos).toEqual(b.archivos);
+    expect(a.zip.contenido).toEqual(b.zip.contenido);
     expect(c.archivos[0]!.contenido).toEqual(a.archivos[0]!.contenido);
-    expect(c.archivos[1]!.contenido).not.toEqual(a.archivos[1]!.contenido);
+    expect(c.leeme.contenido).not.toEqual(a.leeme.contenido);
+    expect(c.zip.contenido).not.toEqual(a.zip.contenido);
   });
 });
 
@@ -268,7 +275,8 @@ describe('Células Madre · degradados .svg', () => {
     const set = buildDim1DesignSet();
     const r = generarCelula(generadorDegradadosSvg, set, { sistema: SISTEMA, generadoEn: AHORA });
     if (!r.ok) throw new Error(r.falta);
-    expect(r.archivos.map((a) => a.nombre)).toEqual(['econut-degradados.svg', 'econut-degradados.svg.contope.json']);
+    expect(r.archivos.map((a) => a.nombre)).toEqual(['econut-degradados.svg']);
+    expect(r.zip.nombre).toBe('econut-degradados-svg.zip');
     const svg = r.archivos[0]!.contenido as string;
     expect(svg).toContain('<linearGradient id="degradado-azul-institucional-a-verde-institucional" x1="0" y1="0.5" x2="1" y2="0.5">');
     expect(svg).toContain('stop-color="#1d4ed8"');
@@ -334,5 +342,118 @@ describe('Células Madre · registro', () => {
       forma: 'lineal',
       angulo: 360,
     });
+  });
+});
+
+describe('Células Madre · el .zip y su LEEME.md', () => {
+  const generarPaleta = (fecha = AHORA) => {
+    const r = generarCelula(generadorPaletaAse, buildDim1DesignSet(), { sistema: { designId: 'x', nombre: 'Santa Lucía' }, generadoEn: fecha });
+    if (!r.ok) throw new Error(r.falta);
+    return r;
+  };
+
+  it('el zip se llama <sistema>-<generador>.zip y trae el LEEME y el archivo, byte a byte', () => {
+    const r = generarPaleta();
+    expect(r.zip.nombre).toBe('santa-lucia-paleta-ase.zip');
+    expect(r.zip.tipoMime).toBe('application/zip');
+    const dentro = unzipSync(r.zip.contenido);
+    expect(Object.keys(dentro)).toEqual(['LEEME.md', 'santa-lucia-paleta.ase']);
+    expect(dentro['santa-lucia-paleta.ase']).toEqual(r.archivos[0]!.contenido);
+    expect(strFromU8(dentro['LEEME.md']!)).toBe(r.leeme.contenido);
+    // No queda ningún .contope.json hermano.
+    expect(Object.keys(dentro).some((n) => n.endsWith('.contope.json'))).toBe(false);
+  });
+
+  it('el zip es determinista: la fecha de las entradas es la de la generación, en cifras UTC', () => {
+    expect(generarPaleta().zip.contenido).toEqual(generarPaleta().zip.contenido);
+    const bytes = generarPaleta('2026-10-08T12:34:56.000Z').zip.contenido;
+    const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    expect(v.getUint32(0, true)).toBe(0x04034b50);
+    const hora = v.getUint16(10, true);
+    const dia = v.getUint16(12, true);
+    expect([(dia >> 9) + 1980, (dia >> 5) & 15, dia & 31, hora >> 11, (hora >> 5) & 63, (hora & 31) * 2]).toEqual([2026, 10, 8, 12, 34, 56]);
+  });
+
+  it('armarZip pone las entradas en carpetas y rechaza rutas que se salen o se repiten', () => {
+    const r = generarPaleta();
+    const dentro = unzipSync(armarZip(entradasDeCelula(r, 'celulas-madre/paleta'), AHORA));
+    expect(Object.keys(dentro)).toEqual(['celulas-madre/paleta/LEEME.md', 'celulas-madre/paleta/santa-lucia-paleta.ase']);
+    expect(() => armarZip([{ ruta: '../fuera.txt', contenido: 'x' }], AHORA)).toThrow(/no permitida/);
+    expect(() => armarZip([{ ruta: '/raiz.txt', contenido: 'x' }], AHORA)).toThrow(/no permitida/);
+    expect(() => armarZip([{ ruta: 'a.txt', contenido: 'x' }, { ruta: 'a.txt', contenido: 'y' }], AHORA)).toThrow(/repetida/);
+    expect(() => armarZip([{ ruta: 'a.txt', contenido: 'x' }], 'no es fecha')).toThrow(/Fecha/);
+  });
+
+  it('el LEEME dice qué es, de dónde viene, qué definiciones y parámetros usó, cómo usarlo, y que caduca', () => {
+    const t = generarPaleta().leeme.contenido;
+    expect(t.startsWith('# Paleta de color · Santa Lucía\n')).toBe(true);
+    expect(t).toContain('- Sistema: **Santa Lucía**');
+    expect(t).toContain('- Generador: Paleta de color, versión 1.0.0');
+    expect(t).toContain(`- Generado el ${fechaEnPalabras(AHORA)}`);
+    const set = buildDim1DesignSet();
+    const req01 = set.entries.find((e) => e.requirementId === 'dim1.req01')!;
+    expect(t).toContain(`- **Fundamento cromático** (\`dim1.req01\`): revisión ${req01.revision}, huella \`${huella(req01.payload).slice(7, 19)}\``);
+    expect(t).toContain('- **Reproducción en imprenta** (`dim1.req14`)');
+    expect(t).toContain('- Incluir las rampas: sí');
+    expect(t).toContain('Abrir biblioteca de muestras → Otra biblioteca');
+    expect(t).toContain('queda desactualizado');
+    expect(t).toMatch(/para que ContOpe lo lea[^\n]*\n\n```json\n\{/);
+    expect(t.trimEnd().endsWith('```')).toBe(true);
+  });
+
+  it('la fecha se dice en palabras, en hora de Chile', () => {
+    expect(fechaEnPalabras('2026-10-08T12:00:00.000Z')).toBe('8 de octubre de 2026, 09:00 (hora de Chile)');
+    expect(fechaEnPalabras('2026-07-01T23:05:00.000Z')).toBe('1 de julio de 2026, 19:05 (hora de Chile)');
+    expect(fechaEnPalabras('otra cosa')).toBe('otra cosa');
+  });
+
+  it('el LEEME de un SVG explica cómo abrirlo, dice qué no estaba definido y los parámetros en palabras', () => {
+    const r = generarCelula(generadorDegradadosSvg, buildDim1DesignSet(), {
+      sistema: SISTEMA,
+      generadoEn: AHORA,
+      parametros: { colores: ['institucionales:verde-institucional', 'institucionales:azul-institucional'], forma: 'radial' },
+    });
+    if (!r.ok) throw new Error(r.falta);
+    expect(r.leeme.contenido).toContain('Illustrator (Archivo → Abrir)');
+    expect(r.leeme.contenido).toContain('- Colores, en orden: verde-institucional → azul-institucional');
+    expect(r.leeme.contenido).toContain('- Forma: Radial (desde el centro)');
+    const sinRampas = generarCelula(generadorPaletaAse, sin(buildDim1DesignSet(), 'dim1.req04'), { sistema: SISTEMA, generadoEn: AHORA });
+    if (!sinRampas.ok) throw new Error(sinRampas.falta);
+    expect(sinRampas.leeme.contenido).toContain('- **Rampas** (`dim1.req04`): no estaba definida al generar. Si se define, este archivo queda desactualizado.');
+  });
+
+  it('un solo LEEME describe varios archivos, y su ficha trae la huella de cada uno', () => {
+    const set = buildDim1DesignSet();
+    const r = generarPaleta();
+    const otro = { nombre: 'santa-lucia-muestra.svg', tipoMime: 'image/svg+xml', contenido: '<svg/>' };
+    const leeme = escribirLeeme({ generador: generadorPaletaAse, designSet: set, metadata: r.metadata, archivos: [...r.archivos, otro] });
+    expect(leeme.contenido).toContain('Trae estos archivos:');
+    expect(leeme.contenido).toContain('**`santa-lucia-muestra.svg`**. Es un dibujo vectorial.');
+    const leida = leerMetadataDeLeeme(leeme.contenido);
+    if (!leida.ok) throw new Error(leida.motivo);
+    expect(leida.metadata.archivos.map((a) => [a.nombre, a.huella])).toEqual([
+      ['santa-lucia-paleta.ase', `sha256:${sha256(r.archivos[0]!.contenido as Uint8Array)}`],
+      ['santa-lucia-muestra.svg', `sha256:${sha256(utf8('<svg/>'))}`],
+    ]);
+  });
+
+  it('leerMetadataDeLeeme toma el último bloque json, tolera CRLF y comillas invertidas, y falla cerrado', () => {
+    const r = generarPaleta();
+    const conRuido = `Nota previa:\n\n\`\`\`json\n{"kind":"otra cosa"}\n\`\`\`\n\n${r.leeme.contenido}`.replace(/\n/g, '\r\n');
+    const leida = leerMetadataDeLeeme(conRuido);
+    expect(leida.ok && leida.metadata.generador.id).toBe('paleta-ase');
+    expect(vigencia(leida.ok ? leida.metadata : r.metadata, buildDim1DesignSet())).toEqual({ estado: 'vigente' });
+
+    const raro = generarCelula(generadorPaletaAse, buildDim1DesignSet(), { sistema: { designId: 'y', nombre: 'Con ``` adentro' }, generadoEn: AHORA });
+    if (!raro.ok) throw new Error(raro.falta);
+    expect(raro.leeme.contenido).toContain('````json');
+    const leidaRara = leerMetadataDeLeeme(raro.leeme.contenido);
+    expect(leidaRara.ok && leidaRara.metadata.sistema.nombre).toBe('Con ``` adentro');
+
+    expect(leerMetadataDeLeeme('# Sin ficha')).toEqual({ ok: false, motivo: 'el LEEME no trae el bloque json con la ficha' });
+    expect(leerMetadataDeLeeme('```json\n{ roto\n```')).toEqual({ ok: false, motivo: 'el bloque json del LEEME no se puede leer' });
+    expect(leerMetadataDeLeeme('```json\n{"kind":"contope/sistema"}\n```').ok).toBe(false);
+    const sinArchivos = JSON.stringify({ ...r.metadata });
+    expect(leerMetadataDeLeeme(`\`\`\`json\n${sinArchivos}\n\`\`\``)).toEqual({ ok: false, motivo: "'archivos' debe ser una lista con al menos un archivo" });
   });
 });

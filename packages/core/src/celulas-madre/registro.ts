@@ -7,9 +7,19 @@
 import type { DesignSetV0 } from '../design-set/types.js';
 import { generadorDegradadosSvg } from './generador-degradados-svg.js';
 import { generadorPaletaAse } from './generador-paleta-ase.js';
-import { huellaDeContenido } from './huella.js';
-import { hermanoDe, metadataDeAncestro } from './metadata.js';
-import type { ArchivoGenerado, Generador, MetadataDeCelula, Parametro, Parametros, SistemaDeOrigen, ValorDeParametro } from './tipos.js';
+import { escribirLeeme } from './leeme.js';
+import { metadataDeAncestro, registroDe } from './metadata.js';
+import type {
+  ArchivoGenerado,
+  ArchivoRegistrado,
+  Generador,
+  MetadataDeCelula,
+  Parametro,
+  Parametros,
+  SistemaDeOrigen,
+  ValorDeParametro,
+} from './tipos.js';
+import { zipDeCelula } from './zip.js';
 
 export const GENERADORES: readonly Generador[] = [generadorPaletaAse, generadorDegradadosSvg];
 
@@ -41,29 +51,26 @@ export function resolverParametros(generador: Generador, designSet: DesignSetV0,
   return salida;
 }
 
-/** Un archivo escrito, como lo recuerda el taller: sin el contenido. */
-export interface ArchivoRegistrado {
-  nombre: string;
-  tipoMime: string;
-  huella: string;
-}
-
 export type ResultadoDeGeneracion =
   | {
       ok: true;
-      /** Cada archivo seguido de su `.contope.json` hermano. */
+      /** Los archivos generados, en su formato. */
       archivos: ArchivoGenerado[];
+      /** Su ficha para personas, que termina con la metadata para ContOpe. */
+      leeme: ArchivoGenerado & { contenido: string };
+      /** Lo que se descarga: los archivos y el `LEEME.md` en un `.zip` (`econut-paleta-ase.zip`). */
+      zip: ArchivoGenerado & { contenido: Uint8Array };
       metadata: MetadataDeCelula;
-      /** Los archivos principales (sin los hermanos), para el registro del taller. */
+      /** Los archivos generados con su huella, para el registro del taller. */
       registrados: ArchivoRegistrado[];
     }
   | { ok: false; falta: string };
 
 /**
  * Corre un generador: comprueba que el ADN alcance, resuelve los parámetros,
- * arma la metadata común, genera y agrega el `.contope.json` de cada archivo.
- * `generadoEn` se inyecta: con el mismo ADN, los mismos parámetros y la misma
- * fecha, los bytes son los mismos.
+ * arma la metadata común, genera, escribe el `LEEME.md` y empaqueta todo en
+ * el `.zip`. `generadoEn` se inyecta: con el mismo ADN, los mismos parámetros
+ * y la misma fecha, los bytes (también los del zip) son los mismos.
  */
 export function generarCelula(
   generador: Generador,
@@ -74,20 +81,13 @@ export function generarCelula(
   if (!disponible.ok) return { ok: false, falta: disponible.falta };
   const parametros = resolverParametros(generador, designSet, entrada.parametros);
   const metadata = metadataDeAncestro({ generador, designSet, sistema: entrada.sistema, parametros, generadoEn: entrada.generadoEn });
-  let principales: ArchivoGenerado[];
+  let archivos: ArchivoGenerado[];
   try {
-    principales = generador.generar(designSet, parametros, { sistema: entrada.sistema, generadoEn: entrada.generadoEn, metadata });
+    archivos = generador.generar(designSet, parametros, { sistema: entrada.sistema, generadoEn: entrada.generadoEn, metadata });
   } catch (error) {
     return { ok: false, falta: (error as Error).message };
   }
-  const archivos = principales.flatMap((a) => {
-    const { metadata: _m, ...hermano } = hermanoDe(metadata, a);
-    return [a, hermano];
-  });
-  return {
-    ok: true,
-    archivos,
-    metadata,
-    registrados: principales.map((a) => ({ nombre: a.nombre, tipoMime: a.tipoMime, huella: huellaDeContenido(a.contenido) })),
-  };
+  const leeme = escribirLeeme({ generador, designSet, metadata, archivos });
+  const zip = zipDeCelula({ archivos, leeme }, { sistema: entrada.sistema, generador, generadoEn: entrada.generadoEn });
+  return { ok: true, archivos, leeme, zip, metadata, registrados: archivos.map(registroDe) };
 }
