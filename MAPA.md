@@ -79,10 +79,33 @@ El escritorio los conecta en `dominio/nucleos.ts` (`nucleoDeMundo`, `enNucleo`) 
 
 Nada de esto cambia al agregar una dimensión.
 
+### 2.5 `celulas-madre/` — las Células Madre (decisión 35, 08-10-2026)
+
+Core tiene dos partes: el **ADN** (todo lo anterior: las definiciones) y las
+**Células Madre** (archivos hechos con el ADN que se importan tal cual en otra
+herramienta). Un set de generadores; cada uno es una extensión. Detalle,
+formato de la metadata y cómo se agrega uno: [`packages/core/src/celulas-madre/README.md`](packages/core/src/celulas-madre/README.md).
+
+| archivo | qué hace |
+|---|---|
+| `tipos.ts` | `Generador` (id, versión, nombre, descripción, formato, `queLee`, `lee`, `disponible`, `parametros`, `generar`), `MetadataDeCelula` (kind `contope/celula-madre`, schemaVersion 1), `Vigencia`. |
+| `huella.ts` | SHA-256 propio y síncrono + JSON canónico → `huella(payload)`. |
+| `metadata.ts` | `metadataDeAncestro`, `hermanoDe` (el `<archivo>.contope.json`), `vigencia` (vigente / desactualizada / huérfana), `leerMetadataDeCelula`. |
+| `registro.ts` | **`GENERADORES`: acá se registra cada generador nuevo**; `resolverParametros`, `generarCelula`. |
+| `color-del-adn.ts`, `ase.ts` | Colores de dim1 a sRGB; escritor de `.ase`. |
+| `generador-paleta-ase.ts`, `generador-degradados-svg.ts` | Los dos primeros: paleta `.ase` y degradados `.svg`. |
+
+Lee el DesignSet; no depende de ningún manifiesto en particular (los ids que
+lee cada generador están en su `lee`). En el escritorio: `dominio/celulas.ts`
+(correr un generador sobre el sistema, el registro y la vigencia),
+`Sistema.celulasMadre` (opcional en el archivo: uno viejo abre con `[]`),
+`puente.guardarArchivos` y `pantallas/CelulasMadre.tsx` (el menú; pestaña
+propia en la barra, separada de las fases porque no es una etapa del armado).
+
 ## 3. El escritorio, módulo por módulo
 
 ```
-src/main.tsx → App.tsx → pantallas/{Inicio,Recoleccion,Definicion,Construccion}.tsx
+src/main.tsx → App.tsx → pantallas/{Inicio,Alcance,Recoleccion,Definicion,Construccion,Armonizacion,CelulasMadre,Proveedores}.tsx
                         → instrumentos/{index,Ventana,Tipografia,ColorFundamento,EscalaEspacial,EditorEstructurado}.tsx
                         → componentes/Primitiva.tsx
 dominio/   — todo lo que no dibuja

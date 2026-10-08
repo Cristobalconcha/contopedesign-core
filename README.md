@@ -7,7 +7,11 @@ Toma insumos —un IDML de InDesign, tokens del estándar W3C, una configuració
 Tailwind, variables CSS, referentes, o lo que una persona decida a mano— y los
 convierte, en ciclos, en un conjunto de definiciones completo y trazable.
 
-Cuando el sistema está completo, guarda un archivo. Ahí termina su trabajo.
+Cuando el sistema está completo, guarda un archivo. Ahí termina su trabajo
+de definir. Desde la decisión 35 (08-10-2026) Core tiene una segunda parte: con
+esas definiciones —el **ADN**— fabrica **Células Madre**, archivos que se
+importan tal cual en otra herramienta (una paleta `.ase`, un archivo de
+degradados), cada uno con la metadata que dice de qué definiciones salió.
 
 *ContOpe* es **Content Opener**. *Design* es una de sus ramas.
 
@@ -52,12 +56,16 @@ packages/core/src/
   design-contract*.ts     el contrato: procedencia, autoridad y ciclo de
                           vida de cada definición, y su forma portable
   memoria-de-construccion.ts   el estado del set mientras se arma
+  celulas-madre/          los generadores de archivos hechos con el ADN
+                          (paleta .ase, degradados .svg), con su metadata
+                          de ancestro (decisión 35)
 packages/desktop/
   electron/               la ventana y el acceso al disco (proceso principal)
   src/dominio/            el documento del taller, su reductor, la evaluación
                           con el núcleo, la cápsula, los extractores de
                           insumos y el catálogo tipográfico
-  src/pantallas/          inicio, recolección, definición, construcción
+  src/pantallas/          inicio, recolección, definición, construcción,
+                          armonización y Células Madre
   src/instrumentos/       tipografía, parches de color, escala espacial y
                           el editor estructurado
   datos/                  el catálogo de Google Fonts, con fecha
