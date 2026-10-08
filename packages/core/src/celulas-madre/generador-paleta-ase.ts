@@ -43,6 +43,7 @@ export const generadorPaletaAse: Generador = {
   descripcion:
     'Las muestras de color del sistema, cada una con su nombre, agrupadas por familia. Se carga en el panel Muestras y queda lista para usar.',
   formato: '.ase · Illustrator, InDesign, Photoshop',
+  queLee: 'Los colores del fundamento (institucionales y neutros) y, si los incluyes, los colores por rol, las rampas y las equivalencias CMYK de imprenta.',
   lee: (_designSet, parametros) => [
     'dim1.req01',
     ...(parametros['incluirRoles'] === false ? [] : ['dim1.req02']),

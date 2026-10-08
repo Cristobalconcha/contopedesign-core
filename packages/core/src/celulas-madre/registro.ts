@@ -29,7 +29,7 @@ function resolverUno(p: Parametro, designSet: DesignSetV0, crudo: unknown): Valo
     case 'seleccion': {
       const validas = new Set(p.opciones(designSet).map((o) => o.valor));
       const elegidas = Array.isArray(crudo) ? [...new Set(crudo.filter((v): v is string => typeof v === 'string' && validas.has(v)))] : [];
-      return elegidas.length ? elegidas : p.porDefecto(designSet);
+      return elegidas.length >= Math.max(1, p.minimo ?? 1) ? elegidas : p.porDefecto(designSet);
     }
   }
 }

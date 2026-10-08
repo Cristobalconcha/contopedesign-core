@@ -73,6 +73,30 @@ describe('Células Madre en el taller', () => {
     expect(s.celulasMadre).toHaveLength(1);
   });
 
+  it('«Regenerar» toma el lugar del registro que se regeneró, aunque los parámetros se hayan corregido', () => {
+    let s = conColor();
+    const viejo = generarEnElTaller(s, generadorDegradadosSvg, { colores: ['institucionales:Azul', 'neutros:Tinta'] }, AHORA);
+    if (!viejo.ok) throw new Error(viejo.falta);
+    s = reducir(s, { tipo: 'registrar-celula', celula: viejo.celula }, AHORA);
+    // El color «Tinta» se borra del ADN: al regenerar, los parámetros vuelven al valor por defecto.
+    s = reducir(
+      s,
+      {
+        tipo: 'definir',
+        requirementId: 'dim1.req01',
+        payload: { institucionales: [{ name: 'Azul', value: '#1d4ed8' }, { name: 'Verde', value: '#15803d' }], neutros: [] },
+        camino: 'diseñador',
+        fuerza: 'prioritaria',
+      },
+      AHORA,
+    );
+    const nuevo = generarEnElTaller(s, generadorDegradadosSvg, viejo.celula.metadata.parametros, AHORA);
+    if (!nuevo.ok) throw new Error(nuevo.falta);
+    expect(nuevo.celula.metadata.parametros['colores']).toEqual(['institucionales:Azul', 'institucionales:Verde']);
+    s = reducir(s, { tipo: 'registrar-celula', celula: nuevo.celula, reemplaza: viejo.celula.id }, AHORA);
+    expect(s.celulasMadre.map((c) => c.id)).toEqual([nuevo.celula.id]);
+  });
+
   it('al redefinir el color, lo generado queda desactualizado', () => {
     const s = conColor();
     const r = generarEnElTaller(s, generadorPaletaAse, {}, AHORA);

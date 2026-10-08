@@ -58,14 +58,30 @@ export function mismaGeneracion(a: MetadataDeCelula, b: MetadataDeCelula): boole
   return a.generador.id === b.generador.id && jsonCanonico(a.parametros) === jsonCanonico(b.parametros);
 }
 
-/** Registra una generación: reemplaza la que tenga el mismo generador y parámetros, o se suma al final. */
-export function registrarCelula(lista: readonly CelulaGenerada[], celula: CelulaGenerada): CelulaGenerada[] {
-  const i = lista.findIndex((c) => mismaGeneracion(c.metadata, celula.metadata));
+/**
+ * Registra una generación. Reemplaza a `reemplaza` (lo que se regeneró) si se
+ * indica y existe, y si no a la que tenga el mismo generador y parámetros; si
+ * no hay ninguna, se suma al final. Nunca quedan dos iguales.
+ */
+export function registrarCelula(lista: readonly CelulaGenerada[], celula: CelulaGenerada, reemplaza?: string): CelulaGenerada[] {
+  let i = reemplaza === undefined ? -1 : lista.findIndex((c) => c.id === reemplaza);
+  if (i < 0) i = lista.findIndex((c) => mismaGeneracion(c.metadata, celula.metadata));
   if (i < 0) return [...lista, celula];
-  return lista.map((c, k) => (k === i ? celula : c));
+  return lista.flatMap((c, k) => (k === i ? [celula] : mismaGeneracion(c.metadata, celula.metadata) ? [] : [c]));
 }
 
 /** ¿Lo generado sigue diciendo lo que dice el ADN de hoy? */
 export function vigenciaDe(celula: CelulaGenerada, sistema: Sistema): Vigencia {
   return vigencia(celula.metadata, sistema.designSet);
 }
+
+/**
+ * Nombre corto, para el menú, de las preguntas que leen los generadores. Lo
+ * que no esté acá se muestra con el nombre de su dimensión y su id.
+ */
+export const NOMBRE_CORTO: Readonly<Record<string, string>> = {
+  'dim1.req01': 'Fundamento cromático',
+  'dim1.req02': 'Colores por rol',
+  'dim1.req04': 'Rampas',
+  'dim1.req14': 'Reproducción en imprenta',
+};

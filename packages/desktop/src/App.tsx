@@ -8,6 +8,7 @@ import { type Sistema } from './dominio/sistema.js';
 import { Instrumentos } from './instrumentos/index.js';
 import { Alcance } from './pantallas/Alcance.js';
 import { Armonizacion } from './pantallas/Armonizacion.js';
+import { CelulasMadre } from './pantallas/CelulasMadre.js';
 import { Construccion } from './pantallas/Construccion.js';
 import { Definicion } from './pantallas/Definicion.js';
 import { Inicio } from './pantallas/Inicio.js';
@@ -215,6 +216,15 @@ export function App() {
                   </button>
                 </span>
               ))}
+              {/* Células Madre no es una fase más: se genera desde el ADN en cualquier momento (decisión 35). */}
+              <span className="fases-sep" aria-hidden="true" />
+              <button
+                className={`fase ${taller.pantalla === 'celulas' ? 'on' : ''}`}
+                onClick={() => contexto.ir('celulas')}
+                title="Archivos hechos con el ADN: paleta, degradados…"
+              >
+                Células Madre
+              </button>
             </nav>
             <div className="acciones-barra">
               <button className="btn" onClick={() => void guardar(false)} title="Ctrl+S">
@@ -243,6 +253,7 @@ export function App() {
             {taller.pantalla === 'definicion' ? <Definicion /> : null}
             {taller.pantalla === 'construccion' ? <Construccion /> : null}
             {taller.pantalla === 'armonizacion' ? <Armonizacion /> : null}
+            {taller.pantalla === 'celulas' ? <CelulasMadre /> : null}
             {taller.pantalla === 'inicio' ? <Definicion /> : null}
             <Instrumentos />
           </ContextoTaller.Provider>

@@ -81,7 +81,7 @@ export type Accion =
   | { tipo: 'reabrir-senal'; senalId: string }
   | { tipo: 'nueva-pasada' }
   | { tipo: 'traer-propuesta'; requirementId: string; payload: Record<string, unknown>; nota?: string }
-  | { tipo: 'registrar-celula'; celula: CelulaGenerada }
+  | { tipo: 'registrar-celula'; celula: CelulaGenerada; reemplaza?: string }
   | { tipo: 'olvidar-celula'; celulaId: string };
 
 function esRecord(v: unknown): v is Record<string, unknown> {
@@ -523,7 +523,7 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
       return { ...siguiente, notasDePropuesta: { ...siguiente.notasDePropuesta, [accion.requirementId]: { texto: nota, en: ahora } } };
     }
     case 'registrar-celula':
-      return { ...sistema, celulasMadre: registrarCelula(sistema.celulasMadre, accion.celula) };
+      return { ...sistema, celulasMadre: registrarCelula(sistema.celulasMadre, accion.celula, accion.reemplaza) };
     case 'olvidar-celula': {
       const celulasMadre = sistema.celulasMadre.filter((c) => c.id !== accion.celulaId);
       return celulasMadre.length === sistema.celulasMadre.length ? sistema : { ...sistema, celulasMadre };

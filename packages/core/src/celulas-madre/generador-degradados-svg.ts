@@ -61,6 +61,7 @@ export const generadorDegradadosSvg: Generador = {
   descripcion:
     'Degradados hechos con los colores del sistema, en el orden que elijas, con una lámina de muestra. Cada degradado queda aplicado a una franja con su nombre, listo para tomarlo.',
   formato: '.svg · Illustrator, Figma, Inkscape, navegador',
+  queLee: 'Los colores que elijas, en su orden: del fundamento, de los roles o de las rampas.',
   lee: (designSet, parametros) => [...new Set(elegidos(designSet, parametros).map((c) => c.requirementId))].sort(),
   disponible(designSet) {
     if (todosLosColores(designSet).length >= 2) return { ok: true };
@@ -74,8 +75,9 @@ export const generadorDegradadosSvg: Generador = {
       id: 'colores',
       tipo: 'seleccion',
       etiqueta: 'Colores, en orden',
-      ayuda: 'El degradado recorre los colores en el orden en que los marcas. Sin marcar, se usan los institucionales.',
+      ayuda: 'El degradado recorre los colores en el orden en que los marcas. Con menos de dos marcados, se usan los institucionales.',
       ordenada: true,
+      minimo: 2,
       porDefecto: coloresPorDefecto,
       opciones: (designSet) => todosLosColores(designSet).map((c) => ({ valor: c.clave, etiqueta: `${c.nombre} · ${c.etiquetaGrupo}`, muestra: c.css })),
     },

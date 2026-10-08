@@ -53,6 +53,8 @@ export type Parametro =
       opciones: (designSet: DesignSetV0) => OpcionDeParametro[];
       /** Si el orden de lo elegido importa (una secuencia de degradado sí). */
       ordenada?: boolean;
+      /** Con menos de esto elegido (o que siga existiendo en el ADN), vale el valor por defecto. */
+      minimo?: number;
     });
 
 export type ValorDeParametro = boolean | number | string | string[];
@@ -93,6 +95,8 @@ export interface Generador {
   descripcion: string;
   /** El formato que entrega y dónde se abre («.ase · Illustrator, InDesign, Photoshop»). */
   formato: string;
+  /** Qué lee del ADN, dicho para el diseñador («los colores del fundamento y los roles»). */
+  queLee: string;
   /**
    * Qué preguntas del manifiesto lee: ids de requisito, o una función sobre el
    * set (y los parámetros ya resueltos) cuando depende de lo que haya definido
