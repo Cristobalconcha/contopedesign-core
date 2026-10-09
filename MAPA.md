@@ -13,9 +13,11 @@ Todo lo que dice acá está medido contra el commit `94933d8` (207 pruebas en
 
 ```
 packages/core     @contope/core     — el núcleo: manifiesto, set, contrato. Sin React, sin disco.
-packages/desktop  @contope/desktop  — la interfaz: Electron + Vite + React. Depende de @contope/core.
+packages/desktop  @contope/desktop  — la interfaz: Electron + Vite + React. Depende de @contope/core
+                                      y de @contope/trama (la vista previa de la trama).
 packages/trama    @contope/trama    — las tramas generativas (decisión 36): motor, línea de tiempo,
                                       archivo de trama. Puro; no depende de nadie. Ver §2.6.
+                                      @contope/core depende de él (el generador de tramas, §2.5).
 ```
 
 `packages/core/src/index.ts` es un barril puro: reexporta y no declara nada.
@@ -100,6 +102,7 @@ formato de la metadata y cómo se agrega uno: [`packages/core/src/celulas-madre/
 | `color-del-adn.ts`, `ase.ts` | Colores de dim1 a sRGB; escritor de `.ase`. |
 | `generador-paleta-ase.ts`, `generador-degradados-svg.ts` | Paleta `.ase` y degradados `.svg` (desde la dimensión 1). |
 | `espacio-del-adn.ts`, `texto-del-adn.ts`, `generador-grilla-svg.ts` | Grilla `.svg` (desde la dimensión 3): la retícula sobre cada formato de hoja, con márgenes, sangrado y línea base, una capa por parte y las cotas, las divisiones binaria y ternaria, y el **cálculo de texto** con la familia por defecto del cuerpo de texto (rol «cuerpo» de `dim2.req02`): caracteres por línea, por columna, por página y por cm de columna (ancho medio estimado: el ADN no trae métricas de fuente). |
+| `trama-del-adn.ts`, `generador-trama.ts` | **Trama** (decisión 36), con el motor de `@contope/trama`: `armarTrama` arma una trama desde el ADN —colores por rol con `origen`/`rol`/`huella`, formatos de hoja de dim3 como lienzo— o sin él (colores del look); el generador entrega `.trama.json` (vivo, para Publisher), `.trama.txt` (código CT1) y `.trama.svg` (cuadro quieto). Disponible siempre. Una receta pegada (parámetro `texto`) manda. |
 
 Lee el DesignSet; no depende de ningún manifiesto en particular (los ids que
 lee cada generador están en su `lee`). En el escritorio: `dominio/celulas.ts`
@@ -107,7 +110,10 @@ lee cada generador están en su `lee`). En el escritorio: `dominio/celulas.ts`
 `Sistema.celulasMadre` (opcional en el archivo: uno viejo abre con `[]`),
 `puente.guardarArchivo` (un archivo con nombre sugerido: el `.zip`),
 `pantallas/CelulasMadre.tsx` (el menú; pestaña propia en la barra, separada
-de las fases porque no es una etapa del armado) y `dominio/exportacion.ts`
+de las fases porque no es una etapa del armado; la trama abre
+`pantallas/GeneradorDeTrama.tsx`, con vista previa viva, escenas, importar
+CT1/SP1/JSON y descargas zip, PNG y video `.webm`; su estado en
+`dominio/trama.ts` y el dibujo en `navegador/trama.ts`) y `dominio/exportacion.ts`
 («Exportar ADN»: la cápsula y las Células Madre regeneradas, en un zip).
 
 ### 2.6 `packages/trama` — las tramas generativas (decisión 36, 09-10-2026)
@@ -126,15 +132,21 @@ trae Publisher: [`packages/trama/README.md`](packages/trama/README.md).
 | `reproduccion.ts`, `worker/atendedor.ts` | El reloj común (`instanteDeCuadro`) y el protocolo del worker, puros. |
 | `scripts/construir.mjs`, `dist/` | `pnpm trama:construir`: `contope-trama.js` (IIFE, `ContopeTrama`), `contope-trama-worker.js` (worker autónomo), `MOTOR.json` (versiones y sha256). `dist/` se versiona; una prueba falla si quedó viejo. |
 
+**Quién genera tramas.** Core: `celulas-madre/generador-trama.ts` (§2.5) y la
+pantalla de la trama del escritorio, los dos con `armarTrama`. Importan este
+paquete por su fuente (`@contope/trama`, dependencia de workspace); Publisher,
+por `dist/`. El motor no se copia en ninguno.
+
 ## 3. El escritorio, módulo por módulo
 
 ```
 src/main.tsx → App.tsx → pantallas/{Inicio,Alcance,Recoleccion,Definicion,Construccion,Armonizacion,CelulasMadre,Proveedores}.tsx
+                        → pantallas/GeneradorDeTrama.tsx (desde CelulasMadre)
                         → instrumentos/{index,Ventana,Tipografia,ColorFundamento,EscalaEspacial,EditorEstructurado}.tsx
                         → componentes/Primitiva.tsx
 dominio/   — todo lo que no dibuja
 puente/    — el disco: electron.ts (IPC) o navegador.ts (File API); tipos.ts es el contrato
-navegador/ — fuentes.ts (cargar una familia de Google), imagen.ts (paleta dominante)
+navegador/ — fuentes.ts (cargar una familia de Google), imagen.ts (paleta dominante), trama.ts (dibujar una trama, PNG, video)
 electron/  — main.ts, preload.ts
 scripts/   — desarrollo.mjs, empaquetar-electron.mjs, actualizar-catalogo-tipografico.mjs
 datos/     — catalogo-google-fonts.json (1.946 familias, copia fechada)

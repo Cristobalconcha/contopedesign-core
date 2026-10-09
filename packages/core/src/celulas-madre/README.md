@@ -47,9 +47,12 @@ sigue fuera de Core.
 | `espacio-del-adn.ts` | Lee la dimensión 3 para dibujar: retículas, formatos de hoja (con su sangrado, zona segura y margen), línea base y unidad base, en px CSS y con la unidad en que se dibuja cada hoja. |
 | `texto-del-adn.ts` | Lee la dimensión 2 para el cálculo de texto: la familia por defecto del cuerpo de texto (rol «cuerpo»), su tamaño, interlínea y espaciado, y el ancho medio del carácter (estimado, y dicho así). |
 | `generador-grilla-svg.ts` | **Grilla** (`.svg`): la retícula sobre cada formato de hoja, en capas, con el cálculo de texto. |
+| `trama-del-adn.ts` | Arma tramas (decisión 36) desde el ADN o sin él: los looks de v7, los colores por rol con su origen, los formatos de hoja como lienzo, `armarTrama` (la función pura que comparten el generador y la pantalla del escritorio), `tramaDeReceta`, `refrescarColoresDelAdn`. |
+| `generador-trama.ts` | **Trama** (`.trama.json`, `.trama.txt` con el código CT1, `.trama.svg`): la superficie de puntos, con el motor de `@contope/trama`. |
 
-Todo es puro: nada toca el disco. La única dependencia es `fflate` (zip puro,
-sin `node:fs` ni DOM). Guardar es trabajo del escritorio (el puente:
+Todo es puro: nada toca el disco. Las dependencias son `fflate` (zip puro,
+sin `node:fs` ni DOM) y `@contope/trama` (del mismo repositorio, también
+puro: el motor de las tramas, que existe una sola vez). Guardar es trabajo del escritorio (el puente:
 `guardarArchivo`, un archivo con nombre sugerido).
 
 ## Cómo se agrega un generador
@@ -68,10 +71,11 @@ sin `node:fs` ni DOM). Guardar es trabajo del escritorio (el puente:
      `falta` dicho para el diseñador y apuntando a dónde se define
      («Define primero los colores del sistema: en Definición › Color y
      superficies…»).
-   - `parametros`: pocos, con valor por defecto. Cuatro clases: `si-no`,
-     `numero` (con `min`, `max`, `paso`, `unidad`), `opcion` y `seleccion`
+   - `parametros`: pocos, con valor por defecto. Cinco clases: `si-no`,
+     `numero` (con `min`, `max`, `paso`, `unidad`), `opcion`, `seleccion`
      (opciones que salen del ADN, opcionalmente `ordenada`, con `minimo` y
-     con `maximo`; con `maximo: 1` el menú la muestra como elegir una).
+     con `maximo`; con `maximo: 1` el menú la muestra como elegir una) y
+     `texto` (una receta que se pega, con `largoMaximo`; vacío = no se usa).
    - `generar(designSet, parametros, contexto)`: devuelve los archivos
      (`{ nombre, tipoMime, contenido: Uint8Array | string }`). `contexto` trae
      el sistema, la fecha y la metadata ya armada: si el formato tiene dónde,
@@ -286,6 +290,50 @@ el cuerpo de texto»*.
   marcada y la tipografía legible. Sin tipografía, la grilla sale igual, sin
   cálculo, y el LEEME dice «define la tipografía del texto corrido para el
   cálculo de texto» y dónde.
+
+**Trama (decisión 36).** *«Core genera las tramas; Publisher sólo las
+muestra.»* El motor es el de `@contope/trama` (nunca una copia); acá sólo se
+arma la receta y se pide un cuadro quieto.
+
+- **Qué lee**: los colores de la dimensión 1, por rol. El **fondo** sale del
+  rol `background`; los **puntos lejanos**, del primer institucional (si no,
+  de `text`, `action` o `info`); los **cercanos**, del rol `accent` (si no,
+  del segundo institucional, `action`, `focus` o `success`). Se salta lo que
+  sea igual al fondo o al otro color de puntos (no se verían). Cada color
+  queda en el archivo con `origen: 'adn'`, su `rol` (`dim1.req02:accent`,
+  `dim1.req01:institucionales:Azul`) y la `huella` de la definición (la
+  misma de los ancestros). Lo que el ADN no da sale del look, como color
+  propio. Y la dimensión 3, si tiene sentido: sus formatos de hoja se
+  ofrecen primero como lienzo (`formatoAdn` apunta a `dim3.req08`).
+- **«Propio» = `manual`.** El formato de trama ya tenía dónde decir el origen
+  (`adn` | `manual`, con `rol` y `huella`): no hizo falta tocarlo. En
+  pantalla, `manual` se dice «propio».
+- **Sin ADN**: `disponible` siempre dice que sí. Con un set vacío salen los
+  colores del look y un formato fijo; la metadata queda sin ancestros y el
+  LEEME lo dice. Es una utilidad para cualquier proyecto.
+- **Parámetros**: look (los siete presets de v7), colores (del ADN o del
+  look), formato, semilla (el momento de evolución en que parte: el mismo
+  número da la misma imagen), en vivo o secuencia, duración, cerrar el ciclo,
+  ancho de la imagen quieta, y la **receta** (`texto`: un código `CT1.`/`SP1.`
+  o un JSON). Con receta, la receta manda; sus colores del ADN se vuelven a
+  leer por rol al regenerar (si el rol ya no existe, el color queda propio
+  con el mismo hex). La pantalla del escritorio genera por este mismo camino,
+  pasando su trama como receta: así el `.zip` trae LEEME, ficha y registro.
+- **Salidas**, cada una con su virtud: `<sistema>.trama.json`, el archivo de
+  trama vivo e interactivo para Publisher (la metadata va en `procedencia`,
+  sin la receta); `<sistema>.trama.txt`, la misma trama como código `CT1.`
+  de una línea; `<sistema>.trama.svg`, el primer instante quieto (vectorial,
+  `<metadata>` adentro), en la medida del formato con el ancho elegido. El
+  LEEME agrega una sección «Colores y tiempo» (de dónde sale cada color) y
+  dice cómo usar cada archivo.
+- **Lo que no está acá**: el video (formato cerrado: no sigue al cursor) y el
+  PNG se hacen en la pantalla del escritorio, porque necesitan un navegador
+  que dibuje (`MediaRecorder` sobre el lienzo → `.webm`). Un video `.mp4` y el
+  PNG con la metadata en `iTXt` esperan un codificador en el núcleo.
+- **Una trama en vivo no tiene final.** Una secuencia se arma con capturas
+  (escenas) repartidas en la duración; con el ciclo cerrado, parte y termina
+  en la misma captura (la escena de cierre del formato) y la última escena
+  del diseñador no llega al final.
 
 ## Lo que falta
 

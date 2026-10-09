@@ -17,6 +17,13 @@ evoluciona—, su línea de tiempo y el **archivo de trama** que las describe.
   (cerrado: se calcula cuadro a cuadro con `cuadroEn`) y SVG/PNG (un cuadro
   quieto: `cuadroASvg`).
 
+**Quién las genera.** Core: el generador de Células Madre
+`packages/core/src/celulas-madre/generador-trama.ts` y la pantalla de la
+trama del escritorio, que arman la trama con `armarTrama`
+(`trama-del-adn.ts`) e importan este paquete por su fuente. Los colores que
+salen del ADN quedan con `origen: 'adn'`, su `rol` y su `huella`; los
+cambiados a mano, `manual` (en pantalla, «propio»).
+
 TypeScript estricto y **puro**: sin DOM y sin `node:*`. `tsconfig.json` no
 carga los tipos de ninguno de los dos, así que el compilador lo vigila; las
 pruebas tienen su propio `tsconfig.pruebas.json`.
