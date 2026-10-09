@@ -2406,3 +2406,253 @@ select.sel.corto {
   display: block;
   margin: 0 0 1rem;
 }
+
+/* ===== CÉLULAS MADRE (decisión 35) ===== */
+.fases-sep {
+  width: 1px;
+  height: 1.1rem;
+  background: var(--linea);
+  margin: 0 0.45rem;
+}
+.cm {
+  padding: 2.4rem 2rem 3rem;
+  max-width: 64rem;
+}
+.cm-cab h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.6rem;
+  letter-spacing: -0.01em;
+}
+.cm-cab p {
+  color: var(--apagado);
+  font-size: 13.5px;
+  max-width: 46rem;
+  margin: 0;
+}
+.cm-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(26rem, 1fr));
+  gap: 1rem;
+}
+.cm-generador {
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.cm-generador.sin-adn {
+  background: var(--panel2);
+}
+.cm-generador header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.cm-generador header b {
+  font-size: 15px;
+}
+.cm-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--apagado);
+}
+.cm-et {
+  font: 500 10.5px/1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tenue);
+  display: block;
+  margin-bottom: 0.35rem;
+}
+.cm-lee p {
+  margin: 0 0 0.35rem;
+  font-size: 12.5px;
+}
+.cm-lee ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.cm-lee li {
+  font-size: 11.5px;
+  padding: 0.2rem 0.5rem;
+  border-radius: 2px;
+  border: 1px solid var(--linea);
+}
+.cm-lee li.definido {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+.cm-lee li.pendiente {
+  color: var(--tenue);
+  border-style: dashed;
+}
+.cm-params {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  border-top: 1px solid var(--linea);
+  padding-top: 0.75rem;
+}
+.cm-param {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 13px;
+}
+.cm-param em {
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--tenue);
+}
+.cm-param select {
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--linea);
+  border-radius: 3px;
+  background: var(--panel);
+  max-width: 22rem;
+}
+.cm-si-no {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+.cm-si-no span {
+  display: flex;
+  flex-direction: column;
+}
+.cm-numero {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.cm-numero input {
+  flex: 1;
+  max-width: 16rem;
+  accent-color: var(--bronce);
+}
+.cm-numero b {
+  font: 500 12px var(--mono);
+  min-width: 3rem;
+}
+.cm-fichas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.cm-ficha {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--linea);
+  background: var(--panel);
+  border-radius: 3px;
+  padding: 0.25rem 0.5rem 0.25rem 0.3rem;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cm-ficha i {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+.cm-ficha.on {
+  border-color: var(--bronce);
+  box-shadow: inset 0 0 0 1px var(--bronce);
+}
+.cm-ficha b {
+  font: 600 10.5px/1 var(--mono);
+  color: #fff;
+  background: var(--bronce);
+  border-radius: 8px;
+  padding: 0.15rem 0.35rem;
+}
+.cm-generador footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: auto;
+  font-size: 12px;
+}
+.cm-falta {
+  justify-content: space-between;
+  color: var(--bronce);
+  font-size: 12.5px;
+}
+.cm-generados {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.cm-hecho {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-left: 3px solid var(--ok);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+}
+.cm-hecho.desactualizada {
+  border-left-color: var(--bronce);
+}
+.cm-hecho.huerfana {
+  border-left-color: var(--tenue);
+}
+.cm-hecho-txt,
+.cm-hecho-estado {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 12.5px;
+  min-width: 0;
+}
+.cm-hecho-txt .mono {
+  overflow-wrap: anywhere;
+}
+.cm-sello {
+  font: 500 10.5px/1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.cm-sello.vigente {
+  color: var(--ok);
+}
+.cm-sello.desactualizada {
+  color: var(--bronce);
+}
+.cm-sello.huerfana {
+  color: var(--tenue);
+}
+.cm-detalle {
+  color: var(--apagado);
+  font-size: 12px;
+}
+.cm-hecho-acciones {
+  display: flex;
+  gap: 0.4rem;
+}
+@media (max-width: 760px) {
+  .cm-menu {
+    grid-template-columns: 1fr;
+  }
+  .cm-hecho {
+    grid-template-columns: 1fr;
+  }
+}

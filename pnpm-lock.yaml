@@ -9,6 +9,10 @@ importers:
   .: {}
 
   packages/core:
+    dependencies:
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.3
     devDependencies:
       typescript:
         specifier: ^5.9.2
