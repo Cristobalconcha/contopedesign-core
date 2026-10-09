@@ -14,6 +14,8 @@ Todo lo que dice acá está medido contra el commit `94933d8` (207 pruebas en
 ```
 packages/core     @contope/core     — el núcleo: manifiesto, set, contrato. Sin React, sin disco.
 packages/desktop  @contope/desktop  — la interfaz: Electron + Vite + React. Depende de @contope/core.
+packages/trama    @contope/trama    — las tramas generativas (decisión 36): motor, línea de tiempo,
+                                      archivo de trama. Puro; no depende de nadie. Ver §2.6.
 ```
 
 `packages/core/src/index.ts` es un barril puro: reexporta y no declara nada.
@@ -78,6 +80,22 @@ El escritorio los conecta en `dominio/nucleos.ts` (`nucleoDeMundo`, `enNucleo`) 
 | `memoria-de-construccion.ts` | Las cuatro interfaces de la memoria (descriptor, referentes, mood wall, relato). Sólo tipos. |
 
 Nada de esto cambia al agregar una dimensión.
+
+### 2.6 `packages/trama` — las tramas generativas (decisión 36, 09-10-2026)
+
+Un paquete aparte, no un módulo de `core`: Publisher lo consume construido
+(`dist/`) y no debe arrastrar el manifiesto. Puro (su `tsconfig.json` no
+carga tipos de DOM ni de Node). Detalle, formato campo por campo y cómo lo
+trae Publisher: [`packages/trama/README.md`](packages/trama/README.md).
+
+| carpeta / archivo | qué hace |
+|---|---|
+| `motor/` | El motor «superficie de puntos» de v7, portado sin cambiar fórmulas: `ruido.ts` (Perlin con semilla fija), `camara.ts`, `configuracion.ts` (27 parámetros en español y `NOMBRE_V7`), `lamina.ts` (`calcularLamina` → cuadro `Float32Array` de tamaño fijo, 5 valores por punto; `cuadroDeEstado` con morf). Reproduce la huella `9c130d7e7d11640b` de Publisher. |
+| `dibujo/` | Lo que generador, SVG y reproductor dibujan igual: 12 tonos, 4 niveles de alfa, tinta luz/tinta/auto, tramos de línea, `tirasDeTramos` (líneas con grosor real para WebGL), `mezclarCuadros`, `cuadroASvg`. |
+| `linea-de-tiempo/` | `estadoEn(trama, t)`: keyframes y suavizados, enteros que saltan, colores, evolución con morf, escenas → keyframes y escena de cierre. Fiel a v7 (cruzado contra su código). |
+| `formato/` | El archivo de trama (`kind: contope/trama`, versión 1): tipos, `validarTrama` (errores en español con ruta, límites duros), `normalizarTrama`, `leerTrama` (JSON, `CT1.`, `SP1.` viejos), `codificarTrama`. |
+| `reproduccion.ts`, `worker/atendedor.ts` | El reloj común (`instanteDeCuadro`) y el protocolo del worker, puros. |
+| `scripts/construir.mjs`, `dist/` | `pnpm trama:construir`: `contope-trama.js` (IIFE, `ContopeTrama`), `contope-trama-worker.js` (worker autónomo), `MOTOR.json` (versiones y sha256). `dist/` se versiona; una prueba falla si quedó viejo. |
 
 ## 3. El escritorio, módulo por módulo
 

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { CONFIGURACION_POR_DEFECTO, NOMBRE_V7, PARAMETROS_MOTOR } from '../motor/configuracion.js';
 import { cuadroEn } from '../reproduccion.js';
@@ -38,6 +39,12 @@ const EJEMPLO = {
 };
 
 describe('validador', () => {
+  it('el ejemplo completo del README es este mismo y es válido', () => {
+    const readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
+    const bloque = /```json\n([\s\S]*?)\n```/.exec(readme)![1]!;
+    expect(JSON.parse(bloque)).toEqual(EJEMPLO);
+  });
+
   it('un documento mínimo (sólo cabecera) y el ejemplo completo son válidos', () => {
     expect(validarTrama(cabecera)).toEqual([]);
     expect(validarTrama(EJEMPLO)).toEqual([]);
