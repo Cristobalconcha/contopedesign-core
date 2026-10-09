@@ -24,6 +24,7 @@ import {
 } from '@contope/core';
 import { useState } from 'react';
 import { generarEnElTaller, paraGuardar, vigenciaDe, type CelulaGenerada } from '../dominio/celulas.js';
+import { GeneradorDeTrama } from './GeneradorDeTrama.js';
 import { NOMBRE_DIMENSION, dimensionDe, requisito } from '../dominio/manifiesto.js';
 import { useTaller } from '../taller.js';
 
@@ -62,6 +63,7 @@ function resumenDeParametros(generador: Generador | undefined, metadata: Metadat
       if (p.tipo === 'si-no') return v === true ? minuscula(p.etiqueta) : null;
       if (p.tipo === 'opcion') return p.opciones.find((o) => o.valor === v)?.etiqueta ?? String(v);
       if (p.tipo === 'numero') return `${minuscula(p.etiqueta)} ${String(v)}${p.unidad ?? ''}`;
+      if (p.tipo === 'texto') return v === '' ? null : `con ${minuscula(p.etiqueta.replace(/ \(opcional\)$/, ''))} propia`;
       return Array.isArray(v) ? v.map((k) => opciones.get(k)?.split(' · ')[0] ?? k).join(p.ordenada ? ' → ' : ', ') : null;
     })
     .filter((x): x is string => x !== null && x !== '')
@@ -123,6 +125,21 @@ function ControlDeParametro(props: {
       </label>
     );
   }
+  if (p.tipo === 'texto') {
+    return (
+      <label className="cm-param">
+        <span className="cm-et">{p.etiqueta}</span>
+        <textarea
+          className="cm-texto mono"
+          rows={2}
+          maxLength={p.largoMaximo}
+          value={typeof valor === 'string' ? valor : p.porDefecto}
+          onChange={(e) => cambiar(e.target.value)}
+        />
+        {p.ayuda ? <em>{p.ayuda}</em> : null}
+      </label>
+    );
+  }
   // Selección: fichas que se marcan; si es ordenada, el número dice el orden.
   // Con `maximo: 1` es elegir una: marcar otra reemplaza a la marcada.
   const elegidos = Array.isArray(valor) ? valor : [];
@@ -166,6 +183,8 @@ export function CelulasMadre() {
   /** Lo que el diseñador tocó, por generador; lo demás sale del valor por defecto. */
   const [tocados, setTocados] = useState<Record<string, Record<string, unknown>>>({});
   const [ocupado, setOcupado] = useState<string | null>(null);
+  /** Un generador con pantalla propia, abierta encima del menú (hoy, sólo la trama). */
+  const [pantalla, setPantalla] = useState<'trama' | null>(null);
 
   /** `reemplaza`: el registro que se está regenerando, para que el nuevo tome su lugar. */
   const generar = async (generador: Generador, parametros: Readonly<Record<string, unknown>>, clave: string, reemplaza?: string): Promise<void> => {
@@ -189,6 +208,8 @@ export function CelulasMadre() {
   };
 
   const generados = [...sistema.celulasMadre].reverse();
+
+  if (pantalla === 'trama') return <GeneradorDeTrama volver={() => setPantalla(null)} />;
 
   return (
     <section className="cm">
@@ -245,7 +266,12 @@ export function CelulasMadre() {
                     ))}
                   </div>
                   <footer>
-                    <button className="btn fuerte" disabled={ocupado !== null} onClick={() => void generar(g, parametros, g.id)}>
+                    {g.id === 'trama' ? (
+                      <button className="btn fuerte" onClick={() => setPantalla('trama')}>
+                        Abrir con vista previa
+                      </button>
+                    ) : null}
+                    <button className={`btn ${g.id === 'trama' ? '' : 'fuerte'}`} disabled={ocupado !== null} onClick={() => void generar(g, parametros, g.id)}>
                       {ocupado === g.id ? 'Generando…' : 'Generar'}
                     </button>
                     <span className="tenue">{puente.entorno === 'navegador' ? 'Se descarga un .zip con el archivo y su ficha.' : 'Guardas un .zip con el archivo y su ficha.'}</span>

@@ -2648,6 +2648,238 @@ select.sel.corto {
   display: flex;
   gap: 0.4rem;
 }
+.cm-texto {
+  border: 1px solid var(--linea);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--tinta);
+  padding: 0.35rem 0.45rem;
+  resize: vertical;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* ===== la pantalla de la trama ===== */
+.tr {
+  max-width: 82rem;
+}
+.tr .cm-cab .btn {
+  margin-bottom: 0.9rem;
+}
+.tr-cuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(17rem, 1fr);
+  gap: 1.5rem;
+  margin-top: 1.4rem;
+  align-items: start;
+}
+.tr-previa {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.tr-marco {
+  align-self: center;
+  background: #000;
+  border: 1px solid var(--linea);
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+.tr-lienzo {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+.tr-transporte,
+.tr-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.tr-espacio {
+  flex: 1;
+}
+.tr-escenas ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.tr-escenas li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: 3px;
+  padding: 0.35rem 0.5rem;
+  font-size: 12.5px;
+}
+.tr-escenas li .mono {
+  min-width: 3.6rem;
+}
+.tr-escenas li input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--tinta);
+  font: inherit;
+  padding: 0.2rem 0.3rem;
+}
+.tr-escenas li input:focus {
+  border-color: var(--linea);
+  outline: none;
+}
+.tr-escenas li.tr-cierre {
+  border-style: dashed;
+  color: var(--apagado);
+}
+.tr-controles {
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  font-size: 13px;
+}
+.tr-controles .cm-et {
+  margin: 0.8rem 0 0;
+}
+.tr-controles .cm-et:first-child {
+  margin-top: 0;
+}
+.tr-controles select,
+.tr-controles input[type='number'] {
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--linea);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--tinta);
+}
+.tr-controles input[type='range'] {
+  accent-color: var(--bronce);
+  width: 100%;
+}
+.tr-et {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 12.5px;
+}
+.tr-et b {
+  font-weight: 500;
+  color: var(--apagado);
+}
+.tr-seg {
+  display: inline-flex;
+  border: 1px solid var(--linea);
+  border-radius: 3px;
+  overflow: hidden;
+  align-self: flex-start;
+}
+.tr-seg button {
+  appearance: none;
+  border: 0;
+  border-right: 1px solid var(--linea);
+  background: var(--panel);
+  color: var(--tinta);
+  font: 500 12px/1 var(--sans);
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+}
+.tr-seg button:last-child {
+  border-right: 0;
+}
+.tr-seg button[aria-pressed='true'] {
+  background: var(--bronce);
+  color: #fff;
+}
+.tr-colores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.tr-color {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+.tr-color input {
+  width: 34px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--linea);
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+}
+.tr-color span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.tr-color em {
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--tenue);
+}
+.tr-color em.adn {
+  color: var(--ok);
+}
+.tr-color em.propio {
+  color: var(--bronce);
+}
+.tr-color + .btn,
+.tr-colores + .btn {
+  align-self: flex-start;
+}
+.tr-deslizadores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.tr-receta {
+  border: 1px solid var(--linea);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--tinta);
+  padding: 0.4rem 0.5rem;
+  resize: vertical;
+  overflow-wrap: anywhere;
+}
+.tr-salidas {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.5rem 0.7rem;
+  align-items: center;
+  font-size: 12px;
+}
+.tr-error {
+  color: var(--error);
+  font-size: 12.5px;
+  margin: 0;
+  white-space: pre-line;
+}
+@media (max-width: 960px) {
+  .tr-cuerpo {
+    grid-template-columns: 1fr;
+  }
+  .tr-previa {
+    position: static;
+  }
+}
 @media (max-width: 760px) {
   .cm-menu {
     grid-template-columns: 1fr;

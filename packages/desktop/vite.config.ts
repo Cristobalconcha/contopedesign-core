@@ -14,6 +14,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@contope/core': fileURLToPath(new URL('../core/src/index.ts', import.meta.url)),
+      '@contope/trama': fileURLToPath(new URL('../trama/src/index.ts', import.meta.url)),
     },
   },
   build: {

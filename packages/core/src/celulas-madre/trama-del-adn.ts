@@ -331,6 +331,8 @@ export interface AjustesDeTrama {
   cerrarCiclo: boolean;
   /** Valor de `formatosParaTrama`. */
   formato: string;
+  /** Un lienzo dado tal cual (el de una trama importada): manda sobre `formato`. */
+  lienzo: Lienzo | null;
   /** Si los colores salen del ADN por rol (true) o del look (false). */
   coloresDelAdn: boolean;
   /** Colores elegidos a mano: mandan sobre el ADN y el look, y quedan como propios. */
@@ -358,6 +360,7 @@ export function ajustesPorDefecto(designSet: DesignSetV0 | null): AjustesDeTrama
     duracion: 8,
     cerrarCiclo: true,
     formato: formatoPorDefecto(designSet),
+    lienzo: null,
     coloresDelAdn: true,
     colores: {},
     coloresResueltos: {},
@@ -401,7 +404,7 @@ export function armarTrama(designSet: DesignSetV0 | null, parcial: Partial<Ajust
     kind: TRAMA_KIND,
     version: FORMATO_VERSION,
     motor: { id: MOTOR_ID, version: MOTOR_VERSION },
-    lienzo: formato?.lienzo ?? { tipo: 'libre' },
+    lienzo: a.lienzo ?? formato?.lienzo ?? { tipo: 'libre' },
     dibujo: { modo: a.dibujo.modo ?? look.modo, tinta: a.dibujo.tinta ?? 'auto' },
     color,
     configuracion,
