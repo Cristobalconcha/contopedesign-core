@@ -70,6 +70,10 @@ packages/desktop/
   src/instrumentos/       tipografía, parches de color, escala espacial y
                           el editor estructurado
   datos/                  el catálogo de Google Fonts, con fecha
+packages/trama/           las tramas generativas (decisión 36): el motor
+                          único de la superficie de puntos, su línea de
+                          tiempo y el archivo de trama; dist/ es lo que
+                          ContOpe Publisher trae, verificado por sha256
 skills/
   leer-contrato-de-diseno/     cómo una IA lee la cápsula y la honra
 ```
