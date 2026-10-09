@@ -50,13 +50,16 @@ interface ParametroBase {
 }
 
 /**
- * El esquema de un parámetro. Cuatro clases bastan por ahora; las opciones de
+ * El esquema de un parámetro. Cinco clases bastan por ahora; las opciones de
  * `seleccion` pueden depender del ADN (los colores que hay definidos).
+ * `texto` es para una receta que se pega (un código de trama `CT1.…`): una
+ * línea, con largo máximo; vacío = no se usa.
  */
 export type Parametro =
   | (ParametroBase & { tipo: 'si-no'; porDefecto: boolean })
   | (ParametroBase & { tipo: 'numero'; porDefecto: number; min: number; max: number; paso?: number; unidad?: string })
   | (ParametroBase & { tipo: 'opcion'; porDefecto: string; opciones: readonly OpcionDeParametro[] })
+  | (ParametroBase & { tipo: 'texto'; porDefecto: string; largoMaximo: number })
   | (ParametroBase & {
       tipo: 'seleccion';
       /** Lista vacía = el generador decide (lo dice en `ayuda`). */

@@ -85,6 +85,13 @@ export function fechaEnPalabras(iso: string): string {
   return `${d.getUTCDate()} de ${MESES[d.getUTCMonth()]} de ${d.getUTCFullYear()}, ${dosCifras(d.getUTCHours())}:${dosCifras(d.getUTCMinutes())} (UTC)`;
 }
 
+/** Un texto pegado como parámetro, corto: vacío, tal cual, o su comienzo y su largo. */
+export function textoEnPalabras(texto: string): string {
+  if (texto === '') return 'ninguno';
+  if (texto.length <= 60) return `\`${texto}\``;
+  return `\`${texto.slice(0, 24)}…\` (${texto.length} caracteres)`;
+}
+
 /** Un parámetro ya elegido, en palabras: «Incluir las rampas: sí», «Colores, en orden: azul → verde». */
 export function parametrosEnPalabras(generador: Pick<Generador, 'parametros'>, parametros: MetadataDeCelula['parametros'], designSet: DesignSetV0): string[] {
   return generador.parametros.flatMap((p) => {
@@ -93,6 +100,7 @@ export function parametrosEnPalabras(generador: Pick<Generador, 'parametros'>, p
     if (p.tipo === 'si-no') return [`${p.etiqueta}: ${v === true ? 'sí' : 'no'}`];
     if (p.tipo === 'opcion') return [`${p.etiqueta}: ${p.opciones.find((o) => o.valor === v)?.etiqueta ?? String(v)}`];
     if (p.tipo === 'numero') return [`${p.etiqueta}: ${String(v)}${p.unidad ?? ''}`];
+    if (p.tipo === 'texto') return [`${p.etiqueta}: ${textoEnPalabras(String(v))}`];
     const etiquetas = new Map(p.opciones(designSet).map((o) => [o.valor, o.etiqueta.split(' · ')[0] ?? o.etiqueta]));
     const lista = Array.isArray(v) ? v.map((k) => etiquetas.get(k) ?? k) : [String(v)];
     return [`${p.etiqueta}: ${lista.join(p.ordenada ? ' → ' : ', ')}`];

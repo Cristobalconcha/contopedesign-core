@@ -8,6 +8,8 @@ export * from './generador-degradados-svg.js';
 export * from './espacio-del-adn.js';
 export * from './texto-del-adn.js';
 export * from './generador-grilla-svg.js';
+export * from './trama-del-adn.js';
+export * from './generador-trama.js';
 export * from './leeme.js';
 export * from './zip.js';
 export { baseDeNombre } from './comun.js';

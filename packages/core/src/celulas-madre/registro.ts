@@ -8,6 +8,7 @@ import type { DesignSetV0 } from '../design-set/types.js';
 import { generadorDegradadosSvg } from './generador-degradados-svg.js';
 import { generadorGrillaSvg } from './generador-grilla-svg.js';
 import { generadorPaletaAse } from './generador-paleta-ase.js';
+import { generadorTrama } from './generador-trama.js';
 import { escribirLeeme } from './leeme.js';
 import { metadataDeAncestro, registroDe } from './metadata.js';
 import type {
@@ -22,7 +23,7 @@ import type {
 } from './tipos.js';
 import { zipDeCelula } from './zip.js';
 
-export const GENERADORES: readonly Generador[] = [generadorPaletaAse, generadorDegradadosSvg, generadorGrillaSvg];
+export const GENERADORES: readonly Generador[] = [generadorPaletaAse, generadorDegradadosSvg, generadorGrillaSvg, generadorTrama];
 
 export function generadorPorId(id: string): Generador | undefined {
   return GENERADORES.find((g) => g.id === id);
@@ -37,6 +38,8 @@ function resolverUno(p: Parametro, designSet: DesignSetV0, crudo: unknown): Valo
       return typeof crudo === 'number' && Number.isFinite(crudo) ? Math.min(p.max, Math.max(p.min, crudo)) : p.porDefecto;
     case 'opcion':
       return typeof crudo === 'string' && p.opciones.some((o) => o.valor === crudo) ? crudo : p.porDefecto;
+    case 'texto':
+      return typeof crudo === 'string' && crudo.trim().length <= p.largoMaximo ? crudo.trim() : p.porDefecto;
     case 'seleccion': {
       const validas = new Set(p.opciones(designSet).map((o) => o.valor));
       const elegidas = Array.isArray(crudo) ? [...new Set(crudo.filter((v): v is string => typeof v === 'string' && validas.has(v)))] : [];

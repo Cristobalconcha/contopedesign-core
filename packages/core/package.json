@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@contope/trama": "workspace:*",
     "fflate": "^0.8.2"
   },
   "devDependencies": {
