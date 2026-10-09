@@ -44,6 +44,8 @@ sigue fuera de Core.
 | `ase.ts` | Escritor de Adobe Swatch Exchange 1.0. |
 | `generador-paleta-ase.ts` | **Paleta de color** (`.ase`). |
 | `generador-degradados-svg.ts` | **Degradados** (`.svg`). |
+| `espacio-del-adn.ts` | Lee la dimensión 3 para dibujar: retículas, formatos de hoja (con su sangrado, zona segura y margen), línea base y unidad base, en px CSS y con la unidad en que se dibuja cada hoja. |
+| `generador-grilla-svg.ts` | **Grilla** (`.svg`): la retícula sobre cada formato de hoja, en capas. |
 
 Todo es puro: nada toca el disco. La única dependencia es `fflate` (zip puro,
 sin `node:fs` ni DOM). Guardar es trabajo del escritorio (el puente:
@@ -67,12 +69,17 @@ sin `node:fs` ni DOM). Guardar es trabajo del escritorio (el puente:
      superficies…»).
    - `parametros`: pocos, con valor por defecto. Cuatro clases: `si-no`,
      `numero` (con `min`, `max`, `paso`, `unidad`), `opcion` y `seleccion`
-     (opciones que salen del ADN, opcionalmente `ordenada` y con `minimo`).
+     (opciones que salen del ADN, opcionalmente `ordenada`, con `minimo` y
+     con `maximo`; con `maximo: 1` el menú la muestra como elegir una).
    - `generar(designSet, parametros, contexto)`: devuelve los archivos
      (`{ nombre, tipoMime, contenido: Uint8Array | string }`). `contexto` trae
      el sistema, la fecha y la metadata ya armada: si el formato tiene dónde,
      el generador la mete adentro. **Determinista**: nada de `Date.now()` ni
-     azar; la fecha viene en el contexto.
+     azar; la fecha viene en el contexto. Cada archivo puede traer un
+     `detalle` (qué trae, en palabras), que el LEEME pone junto a su nombre.
+   - `comoUsar` (opcional): si el generador sabe decir mejor que la receta
+     del formato cómo se usan sus archivos (una grilla se coloca y se
+     bloquea), el LEEME pone ese texto en «Cómo usarlo».
 2. Sumarlo a `GENERADORES` en `registro.ts` y reexportarlo en `index.ts`. Si
    lee preguntas nuevas, darles nombre corto en `NOMBRE_CORTO_DE_PREGUNTA`
    (`leeme.ts`); si entrega un formato nuevo, decir cómo se usa en
@@ -159,7 +166,7 @@ compresión fija. Mismo ADN, parámetros y fecha → mismos bytes.
 El taller guarda cada generación en `Sistema.celulasMadre` (metadata y huella
 de cada archivo, no los archivos) y muestra el sello en el menú.
 
-## Los dos primeros generadores
+## Los generadores
 
 **Paleta de color (`.ase`).** Un grupo por familia: institucionales, neutros
 (`dim1.req01`), roles (`dim1.req02`, con el rol como nombre de muestra), cada
@@ -182,6 +189,48 @@ Illustrator: 0° de izquierda a derecha, 90° de abajo hacia arriba) o radial.
 lo usa como nombre de la muestra), paradas en hex sRGB y una lámina donde cada
 degradado pinta una franja con su nombre.
 
+**Grilla (`.svg`).** Lee la dimensión 3, como está en el manifiesto:
+
+- `dim3.req04` **Retícula** (indispensable): `reticulas[]` con `contexto`,
+  `columns` (1 a 8), `gap` (referencia a un paso de la escala de
+  `dim3.req01`; también se acepta una longitud escrita) y `minColumnWidth`.
+  No trae márgenes, filas ni módulos: es relativa a la hoja. Sin retícula,
+  `disponible` dice «Define la retícula primero…».
+- `dim3.req08` **Formatos de hoja** (indispensable, porque la retícula se
+  reparte en la hoja): `formatos[]` con `nombre`, `formato` (letter, a4,
+  legal, tabloid, a5, a3 o medida-declarada), `medida`, `orientacion` y
+  `modo` (página fija o contenido corrido).
+- `dim3.req09` **Sangrado y márgenes por formato** (opcional): el
+  `sangrado`, la `zonaSegura` y el `margenTextoCorrido` del formato (se
+  cruzan por nombre, como en el predicado). El margen del texto corrido es el
+  margen de la grilla, igual en los cuatro lados. Sin él, la retícula ocupa la
+  hoja entera y el LEEME lo dice.
+- `dim3.req03` **Línea base** (opcional, sólo si se pide la capa) y
+  `dim3.req01` **Unidad y escala** (el medianil y la línea base apuntan a su
+  escala; la unidad base es una capa opcional, apagada por defecto).
+
+Un SVG por cada retícula y cada formato elegidos (parámetros «Retículas» y
+«Formatos de hoja»; por defecto, todos): la retícula no dice en qué hoja va.
+Unidades: una hoja impresa con nombre se dibuja en mm (`width="210mm"`,
+`viewBox` en mm: calza 1:1 al abrirla en Illustrator); una medida declarada,
+en su propia unidad; el contenido corrido, en px (las hojas del insumo a
+96/in: A4 794 × 1123). Las longitudes del ADN pasan por px CSS
+(`lengthCssToPx`, que no adivina `%`, `em` ni `vw`) y de ahí a la unidad de la
+hoja; las cotas dicen la medida en la unidad de la hoja y, si el ADN la
+escribió en otra, como está escrita («4,23 mm (12pt)»).
+
+Capas (un `<g>` de primer nivel cada una, con `id` ASCII y el nombre legible
+en `inkscape:label` y `data-name`): Sangrado, Hoja, Zona segura, Márgenes,
+Unidad base, Medianiles, Columnas, Línea base y Cotas. La hoja empieza en
+(0, 0); si se dibuja el sangrado, el lienzo crece por fuera (`viewBox` con
+origen negativo). Estilo «sólo líneas» (trazo de 0,25 pt, o 1 px en
+pantalla, sin relleno) o «áreas translúcidas»; color de guía cian (o
+magenta, o un color de rol o del fundamento, que entonces pasa a ser
+ancestro). Las cotas escriben el ancho de cada columna, el medianil, el
+margen y la línea base. Una retícula que no cabe en una hoja no genera y
+dice cuál. El LEEME describe cada grilla en palabras y explica cómo usarla
+en Illustrator, Figma e InDesign.
+
 ## Lo que falta
 
 - **Animación vectorial de «Nocturno»** (texturas SVG animadas): el primer
@@ -190,8 +239,9 @@ degradado pinta una franja con su nombre.
   (y su `meta`, si exporta JSON, lleva esta metadata).
 - **Texturas** (SVG y PNG con la metadata en `iTXt`): falta el codificador PNG
   en el núcleo (deflate sin dependencias, o un PNG sin comprimir).
-- **Grillas** (desde la dimensión 3: retícula, columnas, medianil): como SVG,
-  y quizás como guías de InDesign/Illustrator.
+- **Grillas como guías nativas** (InDesign: márgenes y columnas de la página
+  maestra; Illustrator: guías): hoy la grilla es un SVG para colocar o
+  convertir en guías a mano. Y **módulos**: el ADN no declara filas.
 - **Librerías de estilo** (estilos de párrafo y carácter desde la dimensión 2:
   IDML parcial, o tokens W3C).
 - Abrir un `.zip` de Célula Madre (o su `LEEME.md`) en el taller y decir de
