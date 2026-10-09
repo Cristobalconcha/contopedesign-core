@@ -55,6 +55,8 @@ export const CAPAS_DE_GRILLA = [
   { valor: 'medianiles', id: 'Medianiles', etiqueta: 'Medianiles' },
   { valor: 'columnas', id: 'Columnas', etiqueta: 'Columnas' },
   { valor: 'linea-base', id: 'Linea_base', etiqueta: 'Línea base' },
+  { valor: 'division-binaria', id: 'Division_binaria', etiqueta: 'División binaria' },
+  { valor: 'division-ternaria', id: 'Division_ternaria', etiqueta: 'División ternaria' },
 ] as const;
 type CapaDeGrilla = (typeof CAPAS_DE_GRILLA)[number]['valor'];
 
@@ -63,8 +65,28 @@ export const CAPA_COTAS = { id: 'Cotas', etiqueta: 'Cotas' } as const;
 
 const CAPAS_POR_DEFECTO: CapaDeGrilla[] = CAPAS_DE_GRILLA.map((c) => c.valor).filter((v) => v !== 'unidad-base');
 
-/** Los colores de guía de siempre: el cian de Illustrator y el magenta de los márgenes de InDesign. */
+/**
+ * Las divisiones de la retícula (Cristóbal, 2026-10-09: «es conveniente siempre disponer de dos
+ * colores con combinaciones binarias y ternarias»): el medianil que parte la grilla en dos
+ * mitades va en magenta; los que la parten en tres tercios, en cian. Con 6 columnas, el 3.º en
+ * magenta y el 2.º y el 4.º en cian. Es una práctica del diseño de diarios y revistas, donde la
+ * página se arma en módulos de dos y de tres partes. Colores fijos, para que se reconozcan en
+ * cualquier sistema.
+ */
+export const COLOR_DIVISION_BINARIA = '#ff00ff';
+export const COLOR_DIVISION_TERNARIA = '#00aeef';
+
+/** Los medianiles (contados desde 1) donde la grilla se parte en mitades y en tercios. */
+export function medianilesDeDivision(columnas: number): { binaria: number[]; ternaria: number[] } {
+  return {
+    binaria: columnas >= 2 && columnas % 2 === 0 ? [columnas / 2] : [],
+    ternaria: columnas >= 3 && columnas % 3 === 0 ? [columnas / 3, (2 * columnas) / 3] : [],
+  };
+}
+
+/** Los colores de guía: el gris por defecto (deja que destaquen las divisiones), y el cian de Illustrator y el magenta de InDesign. */
 const COLORES_DE_GUIA: readonly OpcionDeParametro[] = [
+  { valor: 'guia:gris', etiqueta: 'Gris de guía', muestra: '#9aa3ad' },
   { valor: 'guia:cian', etiqueta: 'Cian de guía', muestra: '#00aeef' },
   { valor: 'guia:magenta', etiqueta: 'Magenta de guía', muestra: '#ff00ff' },
 ];
@@ -78,7 +100,7 @@ function colorElegido(designSet: DesignSetV0, parametros: Parametros): { hex: st
   const guia = COLORES_DE_GUIA.find((c) => c.valor === clave);
   if (guia?.muestra) return { hex: guia.muestra };
   const adn = coloresDelAdn(designSet).find((c) => c.clave === clave);
-  return adn ? { hex: rgbAHex(adn.rgb), adn } : { hex: '#00aeef' };
+  return adn ? { hex: rgbAHex(adn.rgb), adn } : { hex: '#9aa3ad' };
 }
 
 function capasElegidas(parametros: Parametros): Set<CapaDeGrilla> {
@@ -175,6 +197,14 @@ export function grillaEnPalabras(reticula: ReticulaDelAdn, hoja: HojaDelAdn, ext
   if (hoja.sangrado) partes.push(`sangrado de ${medidaEnPalabras(hoja.sangrado, u)} por fuera de la hoja`);
   if (hoja.zonaSegura) partes.push(`zona segura a ${medidaEnPalabras(hoja.zonaSegura, u)} del borde`);
   if (extras.lineaBase) partes.push(`línea base cada ${medidaEnPalabras(extras.lineaBase, u)}`);
+  const div = medianilesDeDivision(g.columnas);
+  const ordinal = (n: number): string => `${n}.º`;
+  const enLista = (ns: number[]): string => (ns.length === 2 ? `${ordinal(ns[0] as number)} y ${ordinal(ns[1] as number)}` : ns.map(ordinal).join(', '));
+  if (div.binaria.length) partes.push(`división binaria (mitades) en el ${enLista(div.binaria)} medianil, en magenta`);
+  if (div.ternaria.length) partes.push(`división ternaria (tercios) en el ${enLista(div.ternaria)} medianil, en cian`);
+  if (g.columnas > 1 && !div.binaria.length && !div.ternaria.length) partes.push(`con ${g.columnas} columnas la grilla no se parte en mitades ni en tercios por un medianil`);
+  else if (g.columnas > 1 && !div.binaria.length) partes.push('no se parte en mitades por un medianil (columnas impares)');
+  else if (g.columnas > 1 && !div.ternaria.length) partes.push('no se parte en tercios por un medianil');
   let texto = `Retícula «${reticula.contexto}» en «${hoja.nombre}» (${etiquetaDeFormato(hoja.formato)}, ${hoja.orientacion}, ${tamano}, ${modo}): ${partes.join('; ')}.`;
   if (reticula.anchoMinimo && enUnidad(reticula.anchoMinimo.px, u) > g.columna + 1e-9) {
     texto += ` Ojo: en esta hoja la columna queda bajo el ancho mínimo que pide la retícula (${reticula.anchoMinimo.css}).`;
@@ -265,6 +295,20 @@ function svgDeGrilla(entrada: {
       case 'columnas':
         for (const x of g.xs) cuerpo.push(rect(x, g.margen, g.columna, g.alto - 2 * g.margen, areas ? relleno(0.16) : ''));
         break;
+      case 'division-binaria':
+      case 'division-ternaria': {
+        if (g.columnas < 2) continue;
+        const binaria = c.valor === 'division-binaria';
+        const medianiles = medianilesDeDivision(g.columnas)[binaria ? 'binaria' : 'ternaria'];
+        if (medianiles.length === 0) continue;
+        const tono = binaria ? COLOR_DIVISION_BINARIA : COLOR_DIVISION_TERNARIA;
+        for (const n of medianiles) {
+          const x = (g.xs[n - 1] as number) + g.columna;
+          cuerpo.push(rect(x, g.margen, g.medianil, g.alto - 2 * g.margen, areas ? ` fill="${tono}" fill-opacity="0.3" stroke="none"` : ''));
+        }
+        grupos.push(capa(c.id, c.etiqueta, cuerpo, ` fill="none" stroke="${tono}" stroke-width="${r4(trazo * 1.5)}"`));
+        continue;
+      }
       case 'linea-base': {
         if (!entrada.lineaBase) continue;
         const paso = enUnidad(entrada.lineaBase.px, u);
@@ -322,7 +366,7 @@ function svgDeGrilla(entrada: {
 }
 
 const COMO_USAR_GRILLA = [
-  'Cada SVG es una plantilla de grilla a escala real (1:1): la hoja mide lo que dice el ADN, en su unidad (mm si es impresa, px si es contenido corrido), y cada parte viene en su propia capa con nombre: Sangrado, Hoja, Zona segura, Márgenes, Unidad base, Medianiles, Columnas, Línea base y Cotas (sólo las que elegiste). No la escales al usarla.',
+  'Cada SVG es una plantilla de grilla a escala real (1:1): la hoja mide lo que dice el ADN, en su unidad (mm si es impresa, px si es contenido corrido), y cada parte viene en su propia capa con nombre: Sangrado, Hoja, Zona segura, Márgenes, Unidad base, Medianiles, Columnas, Línea base, División binaria, División ternaria y Cotas (sólo las que elegiste). Las divisiones marcan los medianiles que parten la grilla en mitades (magenta) y en tercios (cian), para armar composiciones de dos y de tres partes, como se hace en el diseño de diarios y revistas. No la escales al usarla.',
   '',
   '- **Illustrator**: Archivo → Abrir (la mesa de trabajo queda del tamaño del lienzo) o Archivo → Colocar sobre tu documento, al 100 %. Cada capa llega como un grupo con su nombre, que puedes ocultar o bloquear por separado; bloquéala para trabajar encima. Para tenerla como guías, selecciona lo que quieras (por ejemplo Márgenes y Columnas) y usa Ver → Guías → Crear guías.',
   '- **Figma**: arrastra el SVG al lienzo o usa Importar; queda un marco con las capas adentro. Ponlo sobre el diseño, bájale la opacidad si quieres y bloquéalo (Mayús + Ctrl + L, o ⇧⌘L en Mac).',
@@ -338,7 +382,7 @@ export const generadorGrillaSvg: Generador = {
   version: '1.0.0',
   nombre: 'Grilla',
   descripcion:
-    'La retícula del sistema dibujada a escala real sobre cada formato de hoja que soporta: hoja, sangrado, márgenes, columnas, medianiles y línea base, cada uno en su capa, con las medidas escritas. Para superponer o usar de plantilla.',
+    'La retícula del sistema dibujada a escala real sobre cada formato de hoja que soporta: hoja, sangrado, márgenes, columnas, medianiles y línea base, cada uno en su capa, con las medidas escritas, y las divisiones que parten la grilla en mitades (magenta) y en tercios (cian). Para superponer o usar de plantilla.',
   formato: '.svg · Illustrator, Figma, InDesign, Inkscape',
   queLee: 'La retícula (columnas y medianil), los formatos de hoja, el sangrado y el margen de cada formato y, si la pides, la línea base.',
   lee: (designSet, parametros) => {
@@ -403,10 +447,10 @@ export const generadorGrillaSvg: Generador = {
       id: 'color',
       tipo: 'seleccion',
       etiqueta: 'Color de la guía',
-      ayuda: 'Uno. Por defecto, el cian de las guías; también puedes usar un color del sistema.',
+      ayuda: 'Uno, para las guías comunes. Por defecto, gris, para que destaquen las divisiones en magenta (mitades) y cian (tercios); también puedes usar un color del sistema.',
       minimo: 1,
       maximo: 1,
-      porDefecto: () => ['guia:cian'],
+      porDefecto: () => ['guia:gris'],
       opciones: (designSet) => [
         ...COLORES_DE_GUIA,
         ...coloresDelAdn(designSet).map((c) => ({ valor: c.clave, etiqueta: `${c.nombre} · ${c.etiquetaGrupo}`, muestra: c.css })),

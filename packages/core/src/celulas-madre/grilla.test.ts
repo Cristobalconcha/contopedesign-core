@@ -5,7 +5,7 @@ import type { DesignSetV0 } from '../design-set/types.js';
 import { emptyRectoras } from '../design-set/dim1-fixture.js';
 import { evaluateManifest } from '../requirement-manifest/evaluate.js';
 import { DIM3_MANIFEST_V0 } from '../requirement-manifest/manifest-v0-dim3.js';
-import { generadorGrillaSvg } from './generador-grilla-svg.js';
+import { generadorGrillaSvg, medianilesDeDivision } from './generador-grilla-svg.js';
 import { huella } from './huella.js';
 import { leerMetadataDeLeeme } from './leeme.js';
 import { leerMetadataDeCelula } from './metadata.js';
@@ -168,7 +168,7 @@ describe('Células Madre · grilla .svg', () => {
 
   it('las capas pedidas existen, con su nombre legible, y las no pedidas no', () => {
     const todas = svgDe(A4);
-    expect(capasDe(todas).map((g) => g.atributos['id'])).toEqual(['Sangrado', 'Hoja', 'Zona_segura', 'Margenes', 'Medianiles', 'Columnas', 'Linea_base', 'Cotas']);
+    expect(capasDe(todas).map((g) => g.atributos['id'])).toEqual(['Sangrado', 'Hoja', 'Zona_segura', 'Margenes', 'Medianiles', 'Columnas', 'Linea_base', 'Division_binaria', 'Division_ternaria', 'Cotas']);
     const margenes = capa(todas, 'Margenes')!;
     expect(margenes.atributos['inkscape:label']).toBe('Márgenes');
     expect(margenes.atributos['data-name']).toBe('Márgenes');
@@ -183,6 +183,40 @@ describe('Células Madre · grilla .svg', () => {
     expect(unidad).toHaveLength(209 + 296); // una línea por milímetro, sin los bordes
   });
 
+  it('divisiones: el medianil de la mitad en magenta y los de los tercios en cian', () => {
+    // 6 columnas de 25 mm, medianil 4 mm, margen 20 mm: el 3.º medianil parte en dos; el 2.º y el 4.º, en tres.
+    const svg = svgDe(A4);
+    const binaria = capa(svg, 'Division_binaria')!;
+    expect(binaria.atributos['stroke']).toBe('#ff00ff');
+    expect(binaria.atributos['inkscape:label']).toBe('División binaria');
+    expect(binaria.hijos.map((r) => num(r, 'x'))).toEqual([20 + 3 * 25 + 2 * 4]);
+    const ternaria = capa(svg, 'Division_ternaria')!;
+    expect(ternaria.atributos['stroke']).toBe('#00aeef');
+    expect(ternaria.hijos.map((r) => num(r, 'x'))).toEqual([20 + 2 * 25 + 1 * 4, 20 + 4 * 25 + 3 * 4]);
+    ternaria.hijos.forEach((r) => expect(num(r, 'width')).toBeCloseTo(4, 6));
+
+    // La portada tiene 2 columnas: se parte en mitades, no en tercios (y el LEEME lo dice).
+    const portada = generar({ reticulas: ['portada'], formatos: ['a4-vertical'] });
+    const p = leerXml(portada.archivos[0]!.contenido as string);
+    expect(capa(p, 'Division_binaria')!.hijos).toHaveLength(1);
+    expect(capa(p, 'Division_ternaria')).toBeUndefined();
+    expect(portada.leeme.contenido).toContain('división binaria (mitades) en el 1.º medianil, en magenta');
+    expect(portada.leeme.contenido).toContain('no se parte en tercios por un medianil');
+
+    const texto = generar(A4).leeme.contenido;
+    expect(texto).toContain('división binaria (mitades) en el 3.º medianil, en magenta');
+    expect(texto).toContain('división ternaria (tercios) en el 2.º y 4.º medianil, en cian');
+  });
+
+  it('medianilesDeDivision: mitades con columnas pares, tercios con múltiplos de 3', () => {
+    expect(medianilesDeDivision(1)).toEqual({ binaria: [], ternaria: [] });
+    expect(medianilesDeDivision(2)).toEqual({ binaria: [1], ternaria: [] });
+    expect(medianilesDeDivision(3)).toEqual({ binaria: [], ternaria: [1, 2] });
+    expect(medianilesDeDivision(6)).toEqual({ binaria: [3], ternaria: [2, 4] });
+    expect(medianilesDeDivision(12)).toEqual({ binaria: [6], ternaria: [4, 8] });
+    expect(medianilesDeDivision(5)).toEqual({ binaria: [], ternaria: [] });
+  });
+
   it('las cotas escriben ancho de columna, medianil y márgenes', () => {
     const textos = capa(svgDe(A4), 'Cotas')!.hijos.map((t) => t.texto);
     expect(textos.filter((t) => t === '25 mm')).toHaveLength(6);
@@ -195,7 +229,7 @@ describe('Células Madre · grilla .svg', () => {
     const lineas = svgDe(A4);
     const cols = capa(lineas, 'Columnas')!;
     expect(cols.atributos['fill']).toBe('none');
-    expect(cols.atributos['stroke']).toBe('#00aeef');
+    expect(cols.atributos['stroke']).toBe('#9aa3ad');
     expect(cols.hijos.every((c) => c.atributos['fill'] === undefined)).toBe(true);
 
     const r = generar({ ...A4, estilo: 'areas', color: ['roles:accent'] });
@@ -212,7 +246,7 @@ describe('Células Madre · grilla .svg', () => {
   it('color: se elige uno solo', () => {
     const set = buildDim3EspacioDesignSet();
     expect(resolverParametros(generadorGrillaSvg, set, { color: ['guia:magenta', 'roles:accent'] })['color']).toEqual(['guia:magenta']);
-    expect(resolverParametros(generadorGrillaSvg, set, { color: [] })['color']).toEqual(['guia:cian']);
+    expect(resolverParametros(generadorGrillaSvg, set, { color: [] })['color']).toEqual(['guia:gris']);
   });
 
   it('por defecto, una grilla por cada retícula y cada formato, todas en el zip con su LEEME', () => {
@@ -236,13 +270,13 @@ describe('Células Madre · grilla .svg', () => {
   it('el LEEME describe la retícula en palabras y dice cómo usarla en Illustrator, Figma e InDesign', () => {
     const t = generar(A4).leeme.contenido;
     expect(t).toContain(
-      '- `econut-grilla-texto-corrido-a4-vertical.svg`: Retícula «texto corrido» en «A4 vertical» (A4, vertical, 210 × 297 mm, página fija): 6 columnas de 25 mm con medianil de 4 mm; márgenes de 20 mm por lado (el margen del texto corrido); sangrado de 3 mm por fuera de la hoja; zona segura a 12 mm del borde; línea base cada 4,23 mm (12pt).',
+      '- `econut-grilla-texto-corrido-a4-vertical.svg`: Retícula «texto corrido» en «A4 vertical» (A4, vertical, 210 × 297 mm, página fija): 6 columnas de 25 mm con medianil de 4 mm; márgenes de 20 mm por lado (el margen del texto corrido); sangrado de 3 mm por fuera de la hoja; zona segura a 12 mm del borde; línea base cada 4,23 mm (12pt); división binaria (mitades) en el 3.º medianil, en magenta; división ternaria (tercios) en el 2.º y 4.º medianil, en cian.',
     );
     expect(t).toContain('Ver → Guías → Crear guías');
     expect(t).toContain('**Figma**');
     expect(t).toContain('página maestra');
     expect(t).toContain('Hay un archivo por cada retícula y cada formato de hoja elegidos');
-    expect(t).toContain('- Capas: Sangrado, Hoja, Zona segura, Márgenes, Medianiles, Columnas, Línea base');
+    expect(t).toContain('- Capas: Sangrado, Hoja, Zona segura, Márgenes, Medianiles, Columnas, Línea base, División binaria, División ternaria');
     const carta = generar({ reticulas: ['texto-corrido'], formatos: ['carta-corrida'] }).leeme.contenido;
     expect(carta).toContain('(Carta, vertical, 816 × 1056 px, contenido corrido, en px como pantalla): 6 columnas de 99,4 px con medianil de 15,12 px (4mm); márgenes de 72 px por lado');
   });
