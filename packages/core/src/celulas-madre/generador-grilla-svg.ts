@@ -498,6 +498,9 @@ function svgDeGrilla(entrada: {
         const enElMargen = g.margen >= letra * (lineas.length * 1.3 + 0.8);
         const y0 = enElMargen ? g.alto - g.margen + letra * 1.4 : g.alto - g.margen - letra * 0.5 - (lineas.length - 1) * salto;
         const x = g.margen > 0 ? g.margen : letra;
+        // Un fondo blanco detrás del bloque, para que ninguna guía (la zona segura, el margen) lo cruce.
+        const derecha = g.margen > 0 ? g.ancho - g.margen : g.ancho - letra;
+        cuerpo.push(rect(x - letra * 0.3, y0 - letra * 1.05, derecha - x + letra * 0.6, (lineas.length - 1) * salto + letra * 1.5, ' fill="#ffffff" stroke="none"'));
         lineas.forEach((l, i) => cuerpo.push(`<text x="${r4(x)}" y="${r4(y0 + i * salto)}">${escaparXml(l)}</text>`));
         grupos.push(
           capa(c.id, c.etiqueta, cuerpo, ` fill="${color}" stroke="none" font-family="Archivo, Helvetica, Arial, sans-serif" font-size="${r4(letra)}" text-anchor="start"`),

@@ -368,7 +368,7 @@ function conCuerpo(cambio: Record<string, unknown>, set: DesignSetV0 = buildDim3
 }
 
 function textosDelCalculo(svg: Nodo): string[] {
-  return capa(svg, 'Calculo_de_texto')?.hijos.map((t) => t.texto) ?? [];
+  return capa(svg, 'Calculo_de_texto')?.hijos.filter((h) => h.nombre === 'text').map((t) => t.texto) ?? [];
 }
 
 describe('Células Madre · grilla .svg · cálculo de texto', () => {
@@ -431,7 +431,10 @@ describe('Células Madre · grilla .svg · cálculo de texto', () => {
       '60 líneas por columna · ≈ 840 caracteres por columna · ≈ 5.040 por página · ≈ 33 por cm de columna',
     ]);
     // En el margen inferior: bajo las columnas (que terminan en 277 mm) y dentro de la hoja.
-    for (const l of c.hijos) {
+    // Con un fondo blanco detrás, para que la zona segura no tache el texto.
+    expect(c.hijos[0]!.nombre).toBe('rect');
+    expect(c.hijos[0]!.atributos['fill']).toBe('#ffffff');
+    for (const l of c.hijos.filter((h) => h.nombre === 'text')) {
       expect(num(l, 'y')).toBeGreaterThan(277);
       expect(num(l, 'y')).toBeLessThan(297);
       expect(num(l, 'x')).toBe(20);
