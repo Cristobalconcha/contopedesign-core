@@ -56,7 +56,7 @@ del §4.
 | `persistence.ts` | Exportar/importar el set con validación fail-closed. |
 | `project-to-designruleset.ts` | Proyección a las reglas del compilador del plugin. Cubre `color`, `surface` (dim1) y `typography` (dim2.req02). `spacing`/`layout` (dim3) sin proyector a propósito. Tres requisitos declarados «sin cobertura» porque piden decisión de producto (ver `pendientes-aprobacion-cristobal.md` en el vault). |
 | `dim1-fixture.ts` | Un set de ejemplo que resuelve dim1 entera; lo usan las pruebas de integración. |
-| `dim3-fixture.ts` | Un sistema editorial impreso (espacio de dim3 en mm: retículas, tres formatos de hoja, sangrado, línea base) más los colores de dim1; lo usan las pruebas de la Grilla. |
+| `dim3-fixture.ts` | Un sistema editorial impreso (espacio de dim3 en mm: retículas, tres formatos de hoja, sangrado, línea base) más los colores de dim1; lo usan las pruebas de la Grilla. `buildDim3EspacioConTipografiaDesignSet` le suma la tipografía de dim2 (el cuerpo de texto en Source Serif 4, 10/12 pt) para el cálculo de texto. |
 
 ### 2.3 `nucleo/` — los núcleos por mundo
 
@@ -92,12 +92,12 @@ formato de la metadata y cómo se agrega uno: [`packages/core/src/celulas-madre/
 | `tipos.ts` | `Generador` (id, versión, nombre, descripción, formato, `queLee`, `lee`, `disponible`, `parametros`, `comoUsar` opcional, `generar`), `MetadataDeCelula` (kind `contope/celula-madre`, schemaVersion 1), `FichaDeCelula` (la metadata más la huella de cada archivo), `Vigencia`. |
 | `huella.ts` | SHA-256 propio y síncrono + JSON canónico → `huella(payload)`. |
 | `metadata.ts` | `metadataDeAncestro`, `fichaDe`, `vigencia` (vigente / desactualizada / huérfana), `leerMetadataDeCelula`, `leerFichaDeCelula`. |
-| `leeme.ts` | `escribirLeeme`: el `LEEME.md` para personas, que termina con la ficha en un bloque ```json; `leerMetadataDeLeeme` la vuelve a sacar. Nombres cortos de las preguntas y cómo se usa cada formato. |
+| `leeme.ts` | `escribirLeeme`: el `LEEME.md` para personas (con una sección propia por archivo si el generador trae `anexo`), que termina con la ficha en un bloque ```json; `leerMetadataDeLeeme` la vuelve a sacar. Nombres cortos de las preguntas y cómo se usa cada formato. |
 | `zip.ts` | `armarZip` (con `fflate`, determinista), `entradasDeCelula` (LEEME + archivos, en una carpeta si se pide), `zipDeCelula` (`<sistema>-<generador>.zip`). |
 | `registro.ts` | **`GENERADORES`: acá se registra cada generador nuevo**; `resolverParametros`, `generarCelula` (archivos, LEEME y zip). |
 | `color-del-adn.ts`, `ase.ts` | Colores de dim1 a sRGB; escritor de `.ase`. |
 | `generador-paleta-ase.ts`, `generador-degradados-svg.ts` | Paleta `.ase` y degradados `.svg` (desde la dimensión 1). |
-| `espacio-del-adn.ts`, `generador-grilla-svg.ts` | Grilla `.svg` (desde la dimensión 3): la retícula sobre cada formato de hoja, con márgenes, sangrado y línea base, una capa por parte y las cotas. |
+| `espacio-del-adn.ts`, `texto-del-adn.ts`, `generador-grilla-svg.ts` | Grilla `.svg` (desde la dimensión 3): la retícula sobre cada formato de hoja, con márgenes, sangrado y línea base, una capa por parte y las cotas, las divisiones binaria y ternaria, y el **cálculo de texto** con la familia por defecto del cuerpo de texto (rol «cuerpo» de `dim2.req02`): caracteres por línea, por columna, por página y por cm de columna (ancho medio estimado: el ADN no trae métricas de fuente). |
 
 Lee el DesignSet; no depende de ningún manifiesto en particular (los ids que
 lee cada generador están en su `lee`). En el escritorio: `dominio/celulas.ts`
