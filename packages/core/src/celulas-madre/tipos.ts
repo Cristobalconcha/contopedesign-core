@@ -22,6 +22,12 @@ export interface ArchivoGenerado {
   nombre: string;
   tipoMime: string;
   contenido: Uint8Array | string;
+  /**
+   * Qué trae este archivo, en palabras («Retícula «artículo» en carta
+   * vertical: 8 columnas de…»). Opcional: el `LEEME.md` lo pone junto al
+   * nombre del archivo. No entra en la huella ni en el registro.
+   */
+  detalle?: string;
 }
 
 /** Una opción que el diseñador elige; `muestra` es un color CSS para dibujarla, si tiene. */
@@ -55,6 +61,8 @@ export type Parametro =
       ordenada?: boolean;
       /** Con menos de esto elegido (o que siga existiendo en el ADN), vale el valor por defecto. */
       minimo?: number;
+      /** Lo más que se puede elegir; con `1`, el menú la muestra como elección de una sola opción. */
+      maximo?: number;
     });
 
 export type ValorDeParametro = boolean | number | string | string[];
@@ -106,6 +114,13 @@ export interface Generador {
   lee: readonly string[] | ((designSet: DesignSetV0, parametros: Parametros) => string[]);
   disponible(designSet: DesignSetV0): Disponibilidad;
   parametros: readonly Parametro[];
+  /**
+   * Cómo se usan sus archivos, si el generador sabe decirlo mejor que la
+   * receta del formato (`comoUsarArchivo`): una grilla se coloca y se bloquea,
+   * no sólo se abre. El `LEEME.md` lo pone en «Cómo usarlo», una vez para
+   * todos los archivos.
+   */
+  comoUsar?: string;
   generar(designSet: DesignSetV0, parametros: Parametros, contexto: ContextoDeGeneracion): ArchivoGenerado[];
 }
 

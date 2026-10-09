@@ -6,6 +6,7 @@
  */
 import type { DesignSetV0 } from '../design-set/types.js';
 import { generadorDegradadosSvg } from './generador-degradados-svg.js';
+import { generadorGrillaSvg } from './generador-grilla-svg.js';
 import { generadorPaletaAse } from './generador-paleta-ase.js';
 import { escribirLeeme } from './leeme.js';
 import { metadataDeAncestro, registroDe } from './metadata.js';
@@ -21,7 +22,7 @@ import type {
 } from './tipos.js';
 import { zipDeCelula } from './zip.js';
 
-export const GENERADORES: readonly Generador[] = [generadorPaletaAse, generadorDegradadosSvg];
+export const GENERADORES: readonly Generador[] = [generadorPaletaAse, generadorDegradadosSvg, generadorGrillaSvg];
 
 export function generadorPorId(id: string): Generador | undefined {
   return GENERADORES.find((g) => g.id === id);
@@ -39,7 +40,8 @@ function resolverUno(p: Parametro, designSet: DesignSetV0, crudo: unknown): Valo
     case 'seleccion': {
       const validas = new Set(p.opciones(designSet).map((o) => o.valor));
       const elegidas = Array.isArray(crudo) ? [...new Set(crudo.filter((v): v is string => typeof v === 'string' && validas.has(v)))] : [];
-      return elegidas.length >= Math.max(1, p.minimo ?? 1) ? elegidas : p.porDefecto(designSet);
+      const acotadas = p.maximo !== undefined ? elegidas.slice(0, Math.max(1, p.maximo)) : elegidas;
+      return acotadas.length >= Math.max(1, p.minimo ?? 1) ? acotadas : p.porDefecto(designSet);
     }
   }
 }

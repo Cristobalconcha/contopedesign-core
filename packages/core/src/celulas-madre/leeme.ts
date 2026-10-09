@@ -24,6 +24,11 @@ export const NOMBRE_CORTO_DE_PREGUNTA: Readonly<Record<string, string>> = {
   'dim1.req02': 'Colores por rol',
   'dim1.req04': 'Rampas',
   'dim1.req14': 'Reproducción en imprenta',
+  'dim3.req01': 'Unidad y escala de espacio',
+  'dim3.req03': 'Ritmo vertical (línea base)',
+  'dim3.req04': 'Retícula',
+  'dim3.req08': 'Formatos de hoja',
+  'dim3.req09': 'Sangrado y márgenes por formato',
 };
 
 export function nombreCortoDePregunta(id: string): string {
@@ -103,7 +108,7 @@ function cercaPara(texto: string): string {
  * archivos del generador. Determinista: la fecha sale de la metadata.
  */
 export function escribirLeeme(entrada: {
-  generador: Pick<Generador, 'nombre' | 'descripcion' | 'formato' | 'parametros'>;
+  generador: Pick<Generador, 'nombre' | 'descripcion' | 'formato' | 'parametros' | 'comoUsar'>;
   designSet: DesignSetV0;
   metadata: MetadataDeCelula;
   archivos: readonly ArchivoGenerado[];
@@ -132,7 +137,7 @@ export function escribirLeeme(entrada: {
     '',
     uno ? 'Trae un archivo:' : 'Trae estos archivos:',
     '',
-    ...archivos.map((a) => `- \`${a.nombre}\``),
+    ...archivos.map((a) => `- \`${a.nombre}\`${a.detalle ? `: ${a.detalle}` : ''}`),
     '',
     `Formato: ${generador.formato}.`,
     '',
@@ -152,7 +157,9 @@ export function escribirLeeme(entrada: {
     '',
     '## Cómo usarlo',
     '',
-    ...archivos.flatMap((a) => [`**\`${a.nombre}\`**. ${comoUsarArchivo(a.nombre)}`, '']),
+    ...(generador.comoUsar !== undefined
+      ? [generador.comoUsar, '']
+      : archivos.flatMap((a) => [`**\`${a.nombre}\`**. ${comoUsarArchivo(a.nombre)}`, ''])),
     '## Ojo: nace del ADN',
     '',
     `${uno ? 'Este archivo se hizo' : 'Estos archivos se hicieron'} con las definiciones del sistema «${sistema}» tal como estaban ese día. ` +
