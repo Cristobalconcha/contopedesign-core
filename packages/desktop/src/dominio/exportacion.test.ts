@@ -145,6 +145,6 @@ describe('Exportar el ADN', () => {
     expect(svg).toContain('width="225.9mm" height="289.4mm" viewBox="-5 -5 225.9 289.4"');
     const leeme = strFromU8(dentro['celulas-madre/econut-grilla-svg/LEEME.md']!);
     expect(leeme).toContain('3 columnas de 55,3 mm con medianil de 5 mm; márgenes de 20 mm por lado');
-    expect(strFromU8(dentro['LEEME.md']!)).toContain('- `celulas-madre/econut-grilla-svg/`: Grilla (versión 1.0.0), con `econut-grilla-folleto-carta.svg`.');
+    expect(strFromU8(dentro['LEEME.md']!)).toContain('- `celulas-madre/econut-grilla-svg/`: Grilla (versión 1.1.0), con `econut-grilla-folleto-carta.svg`.');
   });
 });

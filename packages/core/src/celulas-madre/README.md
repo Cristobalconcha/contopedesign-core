@@ -45,7 +45,8 @@ sigue fuera de Core.
 | `generador-paleta-ase.ts` | **Paleta de color** (`.ase`). |
 | `generador-degradados-svg.ts` | **Degradados** (`.svg`). |
 | `espacio-del-adn.ts` | Lee la dimensión 3 para dibujar: retículas, formatos de hoja (con su sangrado, zona segura y margen), línea base y unidad base, en px CSS y con la unidad en que se dibuja cada hoja. |
-| `generador-grilla-svg.ts` | **Grilla** (`.svg`): la retícula sobre cada formato de hoja, en capas. |
+| `texto-del-adn.ts` | Lee la dimensión 2 para el cálculo de texto: la familia por defecto del cuerpo de texto (rol «cuerpo»), su tamaño, interlínea y espaciado, y el ancho medio del carácter (estimado, y dicho así). |
+| `generador-grilla-svg.ts` | **Grilla** (`.svg`): la retícula sobre cada formato de hoja, en capas, con el cálculo de texto. |
 
 Todo es puro: nada toca el disco. La única dependencia es `fflate` (zip puro,
 sin `node:fs` ni DOM). Guardar es trabajo del escritorio (el puente:
@@ -76,7 +77,9 @@ sin `node:fs` ni DOM). Guardar es trabajo del escritorio (el puente:
      el sistema, la fecha y la metadata ya armada: si el formato tiene dónde,
      el generador la mete adentro. **Determinista**: nada de `Date.now()` ni
      azar; la fecha viene en el contexto. Cada archivo puede traer un
-     `detalle` (qué trae, en palabras), que el LEEME pone junto a su nombre.
+     `detalle` (qué trae, en palabras), que el LEEME pone junto a su nombre,
+     y un `anexo` (`{ titulo, texto }` en Markdown), que el LEEME pone como
+     sección propia del archivo («Cálculo de texto · `econut-grilla-….svg`»).
    - `comoUsar` (opcional): si el generador sabe decir mejor que la receta
      del formato cómo se usan sus archivos (una grilla se coloca y se
      bloquea), el LEEME pone ese texto en «Cómo usarlo».
@@ -221,7 +224,9 @@ escribió en otra, como está escrita («4,23 mm (12pt)»).
 
 Capas (un `<g>` de primer nivel cada una, con `id` ASCII y el nombre legible
 en `inkscape:label` y `data-name`): Sangrado, Hoja, Zona segura, Márgenes,
-Unidad base, Medianiles, Columnas, Línea base y Cotas. La hoja empieza en
+Unidad base, Medianiles, Columnas, Línea base, División binaria (magenta, el
+medianil de la mitad), División ternaria (cian, los de los tercios), Cálculo
+de texto y Cotas. La hoja empieza en
 (0, 0); si se dibuja el sangrado, el lienzo crece por fuera (`viewBox` con
 origen negativo). Estilo «sólo líneas» (trazo de 0,25 pt, o 1 px en
 pantalla, sin relleno) o «áreas translúcidas»; color de guía cian (o
@@ -230,6 +235,57 @@ ancestro). Las cotas escriben el ancho de cada columna, el medianil, el
 margen y la línea base. Una retícula que no cabe en una hoja no genera y
 dice cuál. El LEEME describe cada grilla en palabras y explica cómo usarla
 en Illustrator, Figma e InDesign.
+
+**El cálculo de texto** (versión 1.1.0). Cristóbal (decisión 35): *«se
+maqueteaba con lápiz; para calcular la cantidad de texto se multiplicaban los
+cm de columna por cantidad de caracteres»*; *«era la forma de diseñar primero
+la estructura, y luego se recibían los textos, las fotos e infografías»*. Y:
+*«esto se debería calcular a partir de la familia tipográfica por defecto para
+el cuerpo de texto»*.
+
+- **Qué lee** (`texto-del-adn.ts`): en `dim2.req02` el estilo del rol Core
+  **«cuerpo»** (no otro rol, ni un promedio): `family` (referencia a una
+  familia de `dim2.req01`, que entonces también se lee, o una pila escrita),
+  `fontSize` (medida absoluta: pt, px, mm…; en `em` o `%` no hay cálculo),
+  `lineHeight` (multiplicador) y, si es absoluto, `letterSpacing`. El peso no
+  entra. Para contar líneas, la línea base (`dim3.req03`) si existe: si la
+  interlínea del cuerpo es mayor, cada línea de texto ocupa varias líneas
+  base; sin línea base, la interlínea del cuerpo.
+- **Ancho medio del carácter**: el ADN no guarda métricas de fuente
+  (`dim2.req01` trae nombre, pila, idiomas y licencia; el catálogo de Google
+  Fonts del escritorio, categoría y ejes; el lector de fuentes del escritorio
+  lee `OS/2` pero sólo peso e itálica). Se **estima** con el promedio estándar
+  para texto en castellano, contando los espacios: **0,5 em**; 0,42 si el
+  nombre de la familia la declara condensada o estrecha, 0,56 si ancha o
+  extendida, 0,6 si su pila cae en `monospace`. La cota y el LEEME dicen
+  «estimado… mide la fuente para afinar». `origenDelAncho` admite `medido`
+  para cuando el ADN traiga la medida.
+- **Las cuentas**, por retícula y formato: caracteres por línea (ancho /
+  ancho medio, al entero hacia abajo) en 1 columna, en la mitad (las columnas
+  de la división binaria con su medianil), en un tercio (la ternaria) y a
+  ancho completo, sólo las que existen; líneas por columna (alto útil = hoja −
+  márgenes, entre el paso de línea, al entero hacia abajo); caracteres por
+  columna y por página (todas las columnas); y la **regla del lápiz**:
+  caracteres por cm de alto de columna (caracteres por línea × líneas por cm;
+  por cada 100 px en una hoja de pantalla). Lo que depende del texto va con
+  «≈». Ejemplo (A4, 6 columnas de 25 mm, medianil 4 mm, márgenes de 20 mm,
+  Source Serif 4 a 10/12 pt): 14 caracteres por línea en una columna, 47 en
+  la mitad, 30 en un tercio, 96 a ancho completo; 60 líneas; ≈ 840 por
+  columna, ≈ 5.040 por página, ≈ 33 por cm: un texto de 4.000 caracteres
+  ocupa ≈ 121 cm de columna, o ≈ 4,8 columnas.
+- **Dónde se escribe**: la capa «Cálculo de texto» (en el parámetro Capas,
+  marcada por defecto sólo si el ADN trae la tipografía), cuatro líneas en el
+  margen inferior con la letra y el gris de las cotas (si va, la cota del
+  margen inferior se omite: queda la del costado); en el LEEME, una sección
+  «Cálculo de texto» por archivo, con la tabla (columna / mitad / tercio /
+  ancho completo / página), la regla del lápiz con un ejemplo, de dónde sale
+  el ancho y la tipografía usada; y una línea resumida junto al nombre del
+  archivo y en el `<desc>` del SVG.
+- **Ancestros**: `dim2.req02` (y `dim2.req01` si la familia es referencia) y
+  `dim3.req03` entran en `consulta` sólo cuando el cálculo va: la capa
+  marcada y la tipografía legible. Sin tipografía, la grilla sale igual, sin
+  cálculo, y el LEEME dice «define la tipografía del texto corrido para el
+  cálculo de texto» y dónde.
 
 ## Lo que falta
 

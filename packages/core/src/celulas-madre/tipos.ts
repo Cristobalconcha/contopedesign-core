@@ -28,6 +28,11 @@ export interface ArchivoGenerado {
    * nombre del archivo. No entra en la huella ni en el registro.
    */
   detalle?: string;
+  /**
+   * Una sección propia del archivo en el `LEEME.md` («Cálculo de texto»), en
+   * Markdown. Opcional; tampoco entra en la huella ni en el registro.
+   */
+  anexo?: { titulo: string; texto: string };
 }
 
 /** Una opción que el diseñador elige; `muestra` es un color CSS para dibujarla, si tiene. */

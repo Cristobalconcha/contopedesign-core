@@ -43,6 +43,7 @@ import {
   type ReticulaDelAdn,
   type UnidadSvg,
 } from './espacio-del-adn.js';
+import { tipografiaDelTexto, type TipografiaDelTexto } from './texto-del-adn.js';
 import type { Generador, OpcionDeParametro, Parametros } from './tipos.js';
 
 /** Las capas, en el orden en que se apilan (la primera queda abajo). `id` va al SVG; `etiqueta`, al nombre de la capa. */
@@ -57,13 +58,19 @@ export const CAPAS_DE_GRILLA = [
   { valor: 'linea-base', id: 'Linea_base', etiqueta: 'Línea base' },
   { valor: 'division-binaria', id: 'Division_binaria', etiqueta: 'División binaria' },
   { valor: 'division-ternaria', id: 'Division_ternaria', etiqueta: 'División ternaria' },
+  { valor: 'calculo-texto', id: 'Calculo_de_texto', etiqueta: 'Cálculo de texto' },
 ] as const;
 type CapaDeGrilla = (typeof CAPAS_DE_GRILLA)[number]['valor'];
 
 /** La capa de las medidas escritas, que se pide aparte (casilla «Escribir las cotas»). */
 export const CAPA_COTAS = { id: 'Cotas', etiqueta: 'Cotas' } as const;
 
-const CAPAS_POR_DEFECTO: CapaDeGrilla[] = CAPAS_DE_GRILLA.map((c) => c.valor).filter((v) => v !== 'unidad-base');
+const CAPAS_POR_DEFECTO: CapaDeGrilla[] = CAPAS_DE_GRILLA.map((c) => c.valor).filter((v) => v !== 'unidad-base' && v !== 'calculo-texto');
+
+/** Por defecto: todas menos la unidad base; el cálculo de texto, sólo si el ADN trae la tipografía del texto corrido. */
+function capasPorDefecto(designSet: DesignSetV0): CapaDeGrilla[] {
+  return tipografiaDelTexto(designSet).ok ? CAPAS_DE_GRILLA.map((c) => c.valor).filter((v) => v !== 'unidad-base') : [...CAPAS_POR_DEFECTO];
+}
 
 /**
  * Las divisiones de la retícula (Cristóbal, 2026-10-09: «es conveniente siempre disponer de dos
@@ -212,6 +219,179 @@ export function grillaEnPalabras(reticula: ReticulaDelAdn, hoja: HojaDelAdn, ext
   return texto;
 }
 
+// ---------------------------------------------------------------------------
+// El cálculo de texto (Cristóbal, decisión 35: «se maqueteaba con lápiz; para
+// calcular la cantidad de texto se multiplicaban los cm de columna por
+// cantidad de caracteres»). Con la familia por defecto del cuerpo de texto.
+// ---------------------------------------------------------------------------
+
+export interface MedidaDeTexto {
+  clave: 'columna' | 'mitad' | 'tercio' | 'completo';
+  /** «1 columna», «mitad (3 columnas)»… */
+  etiqueta: string;
+  /** El ancho, en la unidad de la hoja. */
+  ancho: number;
+  /** Caracteres por línea, al entero hacia abajo. */
+  porLinea: number;
+  /** Caracteres a todo el alto útil (se escribe con «≈»). */
+  aTodoElAlto: number;
+}
+
+export interface CalculoDeTexto {
+  tipografia: TipografiaDelTexto;
+  unidad: UnidadSvg;
+  /** El ancho medio de un carácter (con espacios), en la unidad de la hoja. */
+  anchoDeCaracter: number;
+  /** Con qué paso se cuentan las líneas, en la unidad de la hoja. */
+  pasoDeLinea: number;
+  /** La línea base del ADN, si con ella se cuentan las líneas. */
+  lineaBase: LongitudDelAdn | null;
+  /** Cuántas líneas base ocupa cada línea de texto (1 si no hay línea base o si la interlínea cabe en una). */
+  lineasBasePorLinea: number;
+  altoUtil: number;
+  margen: number;
+  lineas: number;
+  medidas: MedidaDeTexto[];
+  /** Caracteres por columna completa y por página (todas las columnas). */
+  porColumna: number;
+  porPagina: number;
+  columnas: number;
+  /** La regla del lápiz: caracteres por unidad de alto de columna (cm, o 100 px en pantalla). */
+  regla: { unidad: string; caracteres: number; lineas: number };
+}
+
+/** «10/12 pt»: el cuerpo y la interlínea en la unidad en que el ADN escribió el cuerpo. */
+export function cuerpoEInterlinea(t: TipografiaDelTexto): string {
+  const escrita = /[a-z]+$/i.exec(t.cuerpoCss)?.[0]?.toLowerCase() ?? 'px';
+  const u: UnidadSvg = escrita in PX_POR_UNIDAD ? (escrita as UnidadSvg) : 'px';
+  return `${cifra(enUnidad(t.cuerpoPx, u))}/${cifra(enUnidad(t.interlineaPx, u))} ${u}`;
+}
+
+/**
+ * Caracteres por línea (en 1 columna, la mitad, un tercio y a ancho
+ * completo, las que existan), líneas por columna, caracteres por columna y
+ * por página, y caracteres por cm de alto de columna.
+ */
+export function calculoDeTexto(reticula: ReticulaDelAdn, hoja: HojaDelAdn, tipografia: TipografiaDelTexto, lineaBase: LongitudDelAdn | null): CalculoDeTexto {
+  const g = geometria(reticula, hoja);
+  const u = g.u;
+  const anchoDeCaracter = enUnidad(tipografia.cuerpoPx * tipografia.anchoMedioEm + tipografia.espaciadoPx, u);
+  // Las líneas se cuentan con la línea base del ADN; si la interlínea del cuerpo es mayor, cada línea de texto ocupa varias.
+  const interlinea = enUnidad(tipografia.interlineaPx, u);
+  const base = lineaBase ? enUnidad(lineaBase.px, u) : 0;
+  const lineasBasePorLinea = base > 0 ? Math.max(1, Math.ceil(interlinea / base - 1e-9)) : 1;
+  const pasoDeLinea = base > 0 ? base * lineasBasePorLinea : interlinea;
+  const altoUtil = g.alto - 2 * g.margen;
+  const lineas = Math.floor(altoUtil / pasoDeLinea + 1e-9);
+  const porLinea = (ancho: number): number => Math.max(0, Math.floor(ancho / anchoDeCaracter + 1e-9));
+  const tramo = (k: number): number => k * g.columna + (k - 1) * g.medianil;
+  const n = g.columnas;
+  const medida = (clave: MedidaDeTexto['clave'], etiqueta: string, ancho: number): MedidaDeTexto => ({ clave, etiqueta, ancho, porLinea: porLinea(ancho), aTodoElAlto: porLinea(ancho) * lineas });
+  const igualA = n === 2 ? ' (la mitad)' : n === 3 ? ' (un tercio)' : '';
+  const medidas = [medida('columna', `1 columna${igualA}`, g.columna)];
+  const div = medianilesDeDivision(n);
+  if (div.binaria.length && n / 2 > 1) medidas.push(medida('mitad', `mitad (${n / 2} columnas)`, tramo(n / 2)));
+  if (div.ternaria.length && n / 3 > 1) medidas.push(medida('tercio', `tercio (${n / 3} columnas)`, tramo(n / 3)));
+  if (n > 1) medidas.push(medida('completo', `ancho completo (${n} columnas)`, tramo(n)));
+  const columna = medidas[0] as MedidaDeTexto;
+  const porUnidad = u === 'px' ? { unidad: '100 px', largo: 100 } : { unidad: 'cm', largo: enUnidad(PX_POR_UNIDAD.cm, u) };
+  const lineasPorUnidad = porUnidad.largo / pasoDeLinea;
+  return {
+    tipografia,
+    unidad: u,
+    anchoDeCaracter,
+    pasoDeLinea,
+    lineaBase: base > 0 ? lineaBase : null,
+    lineasBasePorLinea,
+    altoUtil,
+    margen: g.margen,
+    lineas,
+    medidas,
+    porColumna: columna.aTodoElAlto,
+    porPagina: columna.aTodoElAlto * n,
+    columnas: n,
+    regla: { unidad: porUnidad.unidad, caracteres: columna.porLinea * lineasPorUnidad, lineas: lineasPorUnidad },
+  };
+}
+
+/** Un entero para leer, con punto de miles: 5040 → «5.040». */
+export function entero(v: number): string {
+  return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function origenDelAnchoEnPalabras(c: CalculoDeTexto, corto = false): string {
+  const t = c.tipografia;
+  const em = `${cifra(t.anchoMedioEm)} em`;
+  if (t.origenDelAncho.tipo === 'medido') return `${corto ? 'Ancho' : 'ancho'} medio ${em}, medido en ${t.origenDelAncho.fuente}`;
+  if (corto) return `Ancho medio estimado con el promedio estándar (${em}, con espacios): mide la fuente para afinar`;
+  const clase = t.origenDelAncho.clase;
+  const porque =
+    clase === 'normal'
+      ? 'el promedio estándar para texto en castellano'
+      : clase === 'condensada'
+        ? 'el promedio estándar para una letra condensada (lo dice el nombre de la familia)'
+        : clase === 'ancha'
+          ? 'el promedio estándar para una letra ancha o extendida (lo dice el nombre de la familia)'
+          : 'el ancho habitual de una letra monoespaciada (su pila cae en monospace)';
+  return `ancho medio de un carácter **${em}** (≈ ${cifra(c.anchoDeCaracter)} ${c.unidad}), estimado con ${porque}, contando los espacios entre palabras; el ADN no trae la medida de la fuente. Es una estimación, no una medición: mide la fuente para afinar`;
+}
+
+/** La línea resumida del cálculo, para el detalle del archivo en el LEEME. */
+export function calculoEnPalabras(c: CalculoDeTexto): string {
+  const col = c.medidas[0] as MedidaDeTexto;
+  return (
+    `Cálculo de texto con ${c.tipografia.familia} ${cuerpoEInterlinea(c.tipografia)} (la familia por defecto del cuerpo de texto del ADN; ancho medio ${c.tipografia.origenDelAncho.tipo === 'medido' ? 'medido' : 'estimado'}): ` +
+    `${col.porLinea} caracteres por línea en 1 columna, ${c.lineas} líneas por columna, ≈ ${entero(c.porColumna)} caracteres por columna, ≈ ${entero(c.porPagina)} por página y ≈ ${entero(c.regla.caracteres)} por ${c.regla.unidad} de columna.`
+  );
+}
+
+/** Las líneas que se escriben en la capa «Cálculo de texto». */
+function lineasDeLaCapa(c: CalculoDeTexto): string[] {
+  const nombres: Record<MedidaDeTexto['clave'], string> = { columna: 'en 1 columna', mitad: 'en la mitad', tercio: 'en un tercio', completo: 'a ancho completo' };
+  return [
+    `Cálculo de texto · calculado con ${c.tipografia.familia}, ${cuerpoEInterlinea(c.tipografia)}, la familia por defecto del cuerpo de texto del ADN`,
+    origenDelAnchoEnPalabras(c, true),
+    `Caracteres por línea: ${c.medidas.map((m) => `${m.porLinea} ${nombres[m.clave]}`).join(' · ')}`,
+    `${c.lineas} líneas por columna · ≈ ${entero(c.porColumna)} caracteres por columna · ≈ ${entero(c.porPagina)} por página · ≈ ${entero(c.regla.caracteres)} por ${c.regla.unidad} de columna`,
+  ];
+}
+
+/** La sección «Cálculo de texto» del LEEME, para un archivo. */
+export function calculoParaElLeeme(c: CalculoDeTexto, hoja: HojaDelAdn): string {
+  const t = c.tipografia;
+  const u = c.unidad;
+  const col = c.medidas[0] as MedidaDeTexto;
+  const lineasDe = c.lineaBase
+    ? `la línea base del ADN, de ${medidaEnPalabras(c.lineaBase, u)}` +
+      (c.lineasBasePorLinea > 1 ? `, de a ${c.lineasBasePorLinea} líneas base por línea de texto porque la interlínea del cuerpo es mayor` : '')
+    : `la interlínea del cuerpo (${cifra(enUnidad(t.interlineaPx, u))} ${u}; el ADN no declara línea base)`;
+  const alto = c.margen > 0 ? `${cifra(hoja.alto)} − 2 × ${cifra(c.margen)} = ${cifra(c.altoUtil)} ${u}` : `${cifra(c.altoUtil)} ${u}, la hoja entera (no hay márgenes declarados)`;
+  const ejemplo = 4000;
+  const enCm = c.regla.unidad === 'cm';
+  const ocupa = enCm ? `${entero(ejemplo / c.regla.caracteres)} cm` : `${entero((ejemplo / c.regla.caracteres) * 100)} px`;
+  const altoDeColumna = enCm ? `${cifra(enUnidad(c.altoUtil * PX_POR_UNIDAD[u], 'cm'))} cm` : `${entero(c.altoUtil)} px`;
+  const hueco = enCm ? '10 cm' : '1.000 px';
+  const filas = c.medidas.map((m) => `| ${m.etiqueta} | ${cifra(m.ancho)} ${u} | ${m.porLinea} | ≈ ${entero(m.aTodoElAlto)} |`);
+  return [
+    `Calculado con **${t.familia}, ${cuerpoEInterlinea(t)}** (interlineado ${cifra(t.interlineado)}), la familia por defecto del cuerpo de texto del ADN (el estilo del rol «cuerpo»).` +
+      (t.espaciadoPx ? ' Incluye el espaciado entre letras del cuerpo.' : '') +
+      (t.avisos.length ? ` Ojo: ${t.avisos.join('; ')}.` : ''),
+    '',
+    `- Ancho: ${origenDelAnchoEnPalabras(c)}.`,
+    `- Alto útil de la columna: ${alto}. Las líneas se cuentan con ${lineasDe}: **${c.lineas} líneas por columna**.`,
+    '- Caracteres por línea: el ancho dividido por el ancho medio, al entero hacia abajo. El resto va con «≈»: depende del texto.',
+    '',
+    `| medida | ancho | caracteres por línea | a todo el alto (${c.lineas} líneas) |`,
+    '|---|---|---|---|',
+    ...filas,
+    `| página (${c.columnas === 1 ? '1 columna' : `${c.columnas} columnas`} de texto) | — | — | ≈ ${entero(c.porPagina)} |`,
+    '',
+    `**La regla del lápiz**: ≈ ${entero(c.regla.caracteres)} caracteres por ${c.regla.unidad} de alto de columna (${col.porLinea} caracteres por línea × ${cifra(c.regla.lineas)} líneas por ${c.regla.unidad}). ` +
+      `Para saber cuánto ocupa un texto, divide sus caracteres (con espacios) por esa cifra: un texto de ${entero(ejemplo)} caracteres ocupa ≈ ${ocupa} de una columna${c.porColumna > 0 ? `, o ≈ ${cifra(Math.round((ejemplo / c.porColumna) * 10) / 10)} columnas de ${altoDeColumna}` : ''}. ` +
+      `Al revés, multiplica: un hueco de ${hueco} de una columna recibe ≈ ${entero(c.regla.caracteres * 10)} caracteres.`,
+  ].join('\n');
+}
+
 /** Más de esto, la unidad base no se dibuja: serían miles de líneas que tapan la grilla. */
 const MAXIMO_DE_LINEAS_DE_UNIDAD = 2000;
 
@@ -227,6 +407,7 @@ function svgDeGrilla(entrada: {
   cotas: boolean;
   lineaBase: LongitudDelAdn | null;
   unidadBase: LongitudDelAdn | null;
+  calculo: CalculoDeTexto | null;
 }): { svg: string; avisos: string[] } {
   const { reticula, hoja, capas, areas, color } = entrada;
   const g = geometria(reticula, hoja);
@@ -309,6 +490,20 @@ function svgDeGrilla(entrada: {
         grupos.push(capa(c.id, c.etiqueta, cuerpo, ` fill="none" stroke="${tono}" stroke-width="${r4(trazo * 1.5)}"`));
         continue;
       }
+      case 'calculo-texto': {
+        // Abajo, en el margen inferior (o, si no cabe, al pie de las columnas), en letra chica y con el color de las cotas.
+        if (!entrada.calculo) continue;
+        const lineas = lineasDeLaCapa(entrada.calculo);
+        const salto = letra * 1.3;
+        const enElMargen = g.margen >= letra * (lineas.length * 1.3 + 0.8);
+        const y0 = enElMargen ? g.alto - g.margen + letra * 1.4 : g.alto - g.margen - letra * 0.5 - (lineas.length - 1) * salto;
+        const x = g.margen > 0 ? g.margen : letra;
+        lineas.forEach((l, i) => cuerpo.push(`<text x="${r4(x)}" y="${r4(y0 + i * salto)}">${escaparXml(l)}</text>`));
+        grupos.push(
+          capa(c.id, c.etiqueta, cuerpo, ` fill="${color}" stroke="none" font-family="Archivo, Helvetica, Arial, sans-serif" font-size="${r4(letra)}" text-anchor="start"`),
+        );
+        continue;
+      }
       case 'linea-base': {
         if (!entrada.lineaBase) continue;
         const paso = enUnidad(entrada.lineaBase.px, u);
@@ -337,7 +532,8 @@ function svgDeGrilla(entrada: {
     if (hoja.margen && g.margen > 0) {
       const m = `margen ${medidaEnPalabras(hoja.margen, u)}`;
       cuerpo.push(t(g.margen / 2 + alzado, g.alto / 2, m, true));
-      cuerpo.push(t(g.ancho / 2, g.alto - g.margen / 2 + alzado, m));
+      // Abajo, el margen lo ocupa el cálculo de texto si va: ahí la cota del margen queda sólo a la izquierda.
+      if (!(entrada.calculo && capas.has('calculo-texto'))) cuerpo.push(t(g.ancho / 2, g.alto - g.margen / 2 + alzado, m));
     }
     if (entrada.lineaBase && capas.has('linea-base') && g.margen > 0) {
       cuerpo.push(t(g.ancho - g.margen / 2 + alzado, g.alto / 2, `línea base ${medidaEnPalabras(entrada.lineaBase, u)}`, true));
@@ -366,7 +562,9 @@ function svgDeGrilla(entrada: {
 }
 
 const COMO_USAR_GRILLA = [
-  'Cada SVG es una plantilla de grilla a escala real (1:1): la hoja mide lo que dice el ADN, en su unidad (mm si es impresa, px si es contenido corrido), y cada parte viene en su propia capa con nombre: Sangrado, Hoja, Zona segura, Márgenes, Unidad base, Medianiles, Columnas, Línea base, División binaria, División ternaria y Cotas (sólo las que elegiste). Las divisiones marcan los medianiles que parten la grilla en mitades (magenta) y en tercios (cian), para armar composiciones de dos y de tres partes, como se hace en el diseño de diarios y revistas. No la escales al usarla.',
+  'Cada SVG es una plantilla de grilla a escala real (1:1): la hoja mide lo que dice el ADN, en su unidad (mm si es impresa, px si es contenido corrido), y cada parte viene en su propia capa con nombre: Sangrado, Hoja, Zona segura, Márgenes, Unidad base, Medianiles, Columnas, Línea base, División binaria, División ternaria, Cálculo de texto y Cotas (sólo las que elegiste). Las divisiones marcan los medianiles que parten la grilla en mitades (magenta) y en tercios (cian), para armar composiciones de dos y de tres partes, como se hace en el diseño de diarios y revistas. No la escales al usarla.',
+  '',
+  'El cálculo de texto (capa «Cálculo de texto», al pie de la hoja, y su sección en este LEEME) es la cuenta con que se maqueteaba con lápiz: con la familia por defecto del cuerpo de texto del ADN, cuántos caracteres caben por línea, por columna y por página, y cuántos por centímetro de alto de columna. Se diseña primero la estructura y después llegan los textos: divide los caracteres de un texto (con espacios) por los caracteres por cm y sabes cuántos cm de columna ocupa. Es una estimación: el ancho medio de la letra se mide en la fuente, y lo que trae el ADN se dice en cada sección.',
   '',
   '- **Illustrator**: Archivo → Abrir (la mesa de trabajo queda del tamaño del lienzo) o Archivo → Colocar sobre tu documento, al 100 %. Cada capa llega como un grupo con su nombre, que puedes ocultar o bloquear por separado; bloquéala para trabajar encima. Para tenerla como guías, selecciona lo que quieras (por ejemplo Márgenes y Columnas) y usa Ver → Guías → Crear guías.',
   '- **Figma**: arrastra el SVG al lienzo o usa Importar; queda un marco con las capas adentro. Ponlo sobre el diseño, bájale la opacidad si quieres y bloquéalo (Mayús + Ctrl + L, o ⇧⌘L en Mac).',
@@ -379,15 +577,19 @@ const COMO_USAR_GRILLA = [
 
 export const generadorGrillaSvg: Generador = {
   id: 'grilla-svg',
-  version: '1.0.0',
+  version: '1.1.0',
   nombre: 'Grilla',
   descripcion:
-    'La retícula del sistema dibujada a escala real sobre cada formato de hoja que soporta: hoja, sangrado, márgenes, columnas, medianiles y línea base, cada uno en su capa, con las medidas escritas, y las divisiones que parten la grilla en mitades (magenta) y en tercios (cian). Para superponer o usar de plantilla.',
+    'La retícula del sistema dibujada a escala real sobre cada formato de hoja que soporta: hoja, sangrado, márgenes, columnas, medianiles y línea base, cada uno en su capa, con las medidas escritas, y las divisiones que parten la grilla en mitades (magenta) y en tercios (cian). Con la tipografía del texto corrido, el cálculo de texto: cuántos caracteres caben por línea, por columna, por página y por cm de columna. Para superponer o usar de plantilla.',
   formato: '.svg · Illustrator, Figma, InDesign, Inkscape',
-  queLee: 'La retícula (columnas y medianil), los formatos de hoja, el sangrado y el margen de cada formato y, si la pides, la línea base.',
+  queLee: 'La retícula (columnas y medianil), los formatos de hoja, el sangrado y el margen de cada formato, la línea base y, para el cálculo de texto, la familia por defecto del cuerpo de texto con su tamaño e interlínea.',
   lee: (designSet, parametros) => {
     const ids = ['dim3.req01', 'dim3.req04', 'dim3.req08', 'dim3.req09'];
-    if (capasElegidas(parametros).has('linea-base')) ids.push('dim3.req03');
+    const capas = capasElegidas(parametros);
+    if (capas.has('linea-base')) ids.push('dim3.req03');
+    // La tipografía es ancestro sólo cuando el cálculo de texto va incluido (la capa marcada y la tipografía legible).
+    const tipografia = capas.has('calculo-texto') ? tipografiaDelTexto(designSet) : null;
+    if (tipografia?.ok) ids.push(...tipografia.tipografia.requisitos, 'dim3.req03');
     const adn = colorElegido(designSet, parametros).adn;
     if (adn) ids.push(adn.requirementId);
     return [...new Set(ids)].sort();
@@ -429,8 +631,8 @@ export const generadorGrillaSvg: Generador = {
       id: 'capas',
       tipo: 'seleccion',
       etiqueta: 'Capas',
-      ayuda: 'Las que no marques no van en el archivo. La unidad base es una cuadrícula fina, apagada por defecto.',
-      porDefecto: () => [...CAPAS_POR_DEFECTO],
+      ayuda: 'Las que no marques no van en el archivo. La unidad base es una cuadrícula fina, apagada por defecto. El cálculo de texto va encendido cuando el ADN trae la tipografía del texto corrido.',
+      porDefecto: (designSet) => capasPorDefecto(designSet),
       opciones: () => CAPAS_DE_GRILLA.map((c) => ({ valor: c.valor, etiqueta: c.etiqueta })),
     },
     {
@@ -473,11 +675,15 @@ export const generadorGrillaSvg: Generador = {
     if (capas.size === 0) throw new Error('Elige al menos una capa.');
     const color = colorElegido(designSet, parametros).hex;
     const lineaBase = capas.has('linea-base') ? lineaBaseDelAdn(designSet) : null;
+    const tipografia = tipografiaDelTexto(designSet);
+    const conCalculo = capas.has('calculo-texto') && tipografia.ok;
+    const lineaBaseDelCalculo = conCalculo ? lineaBaseDelAdn(designSet) : null;
     const unidadBase = capas.has('unidad-base') ? unidadBaseDelAdn(designSet) : null;
     const sistema = contexto.sistema.nombre.trim() || 'Sistema';
     const base = baseDeNombre(contexto.sistema.nombre);
     const metadata = JSON.stringify(contexto.metadata, null, 2);
     const faltantes: string[] = [];
+    if (!tipografia.ok) faltantes.push(`Sin cálculo de texto. ${tipografia.falta}`);
     if (capas.has('linea-base') && !lineaBase) {
       faltantes.push(`${payloadDe(designSet, 'dim3.req03') ? 'La línea base del ADN no se puede medir' : 'El ADN no declara línea base'}: la capa Línea base no va.`);
     }
@@ -485,9 +691,10 @@ export const generadorGrillaSvg: Generador = {
     return reticulas.flatMap((reticula) =>
       hojas.map((hoja) => {
         const descripcion = grillaEnPalabras(reticula, hoja, { lineaBase });
+        const calculo = conCalculo && tipografia.ok ? calculoDeTexto(reticula, hoja, tipografia.tipografia, lineaBaseDelCalculo) : null;
         const { svg, avisos } = svgDeGrilla({
           titulo: `${sistema} · Grilla «${reticula.contexto}» · ${hoja.nombre}`,
-          descripcion,
+          descripcion: calculo ? `${descripcion} ${calculoEnPalabras(calculo)}` : descripcion,
           metadata,
           reticula,
           hoja,
@@ -497,12 +704,14 @@ export const generadorGrillaSvg: Generador = {
           cotas: parametros['cotas'] !== false,
           lineaBase,
           unidadBase,
+          calculo,
         });
         return {
           nombre: `${base}-grilla-${reticula.clave}-${hoja.clave}.svg`,
           tipoMime: 'image/svg+xml',
           contenido: svg,
-          detalle: [descripcion, ...faltantes, ...avisos].join(' '),
+          detalle: [descripcion, ...(calculo ? [calculoEnPalabras(calculo)] : []), ...faltantes, ...avisos].join(' '),
+          ...(calculo ? { anexo: { titulo: 'Cálculo de texto', texto: calculoParaElLeeme(calculo, hoja) } } : {}),
         };
       }),
     );

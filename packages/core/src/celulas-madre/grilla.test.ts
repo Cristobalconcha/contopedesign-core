@@ -1,11 +1,18 @@
 import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
-import { buildDim3EspacioDesignSet, resolvedDim3EspacioPayloads } from '../design-set/dim3-fixture.js';
+import {
+  buildDim3EspacioConTipografiaDesignSet,
+  buildDim3EspacioDesignSet,
+  resolvedDim3EspacioPayloads,
+  resolvedTipografiaDelTextoPayloads,
+} from '../design-set/dim3-fixture.js';
 import type { DesignSetV0 } from '../design-set/types.js';
 import { emptyRectoras } from '../design-set/dim1-fixture.js';
 import { evaluateManifest } from '../requirement-manifest/evaluate.js';
+import { DIM2_MANIFEST_V0 } from '../requirement-manifest/manifest-v0-dim2.js';
 import { DIM3_MANIFEST_V0 } from '../requirement-manifest/manifest-v0-dim3.js';
-import { generadorGrillaSvg, medianilesDeDivision } from './generador-grilla-svg.js';
+import { entero, generadorGrillaSvg, medianilesDeDivision } from './generador-grilla-svg.js';
+import { tipografiaDelTexto } from './texto-del-adn.js';
 import { huella } from './huella.js';
 import { leerMetadataDeLeeme } from './leeme.js';
 import { leerMetadataDeCelula } from './metadata.js';
@@ -288,7 +295,7 @@ describe('Células Madre · grilla .svg', () => {
     const dentro = leerMetadataDeCelula(JSON.parse(svg.hijos.find((h) => h.nombre === 'metadata')!.texto));
     if (!dentro.ok) throw new Error(dentro.motivo);
     expect(dentro.metadata).toEqual(r.metadata);
-    expect(r.metadata.generador).toEqual({ id: 'grilla-svg', version: '1.0.0', nombre: 'Grilla' });
+    expect(r.metadata.generador).toEqual({ id: 'grilla-svg', version: '1.1.0', nombre: 'Grilla' });
     expect(r.metadata.consulta).toEqual(['dim3.req01', 'dim3.req03', 'dim3.req04', 'dim3.req08', 'dim3.req09']);
     for (const a of r.metadata.ancestros) {
       const e = set.entries.find((x) => x.requirementId === a.requirementId)!;
@@ -341,5 +348,183 @@ describe('Células Madre · grilla .svg', () => {
     const c = generarCelula(generadorGrillaSvg, buildDim3EspacioDesignSet(), { sistema: SISTEMA, generadoEn: '2027-01-01T00:00:00.000Z' });
     if (!c.ok) throw new Error(c.falta);
     expect((c.archivos[0]!.contenido as string).replace('2027-01-01T00:00:00.000Z', AHORA)).toBe(a.archivos[0]!.contenido);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// El cálculo de texto, con la familia por defecto del cuerpo de texto.
+// ---------------------------------------------------------------------------
+
+/** El set con tipografía, con el estilo del rol «cuerpo» cambiado. */
+function conCuerpo(cambio: Record<string, unknown>, set: DesignSetV0 = buildDim3EspacioConTipografiaDesignSet()): DesignSetV0 {
+  return {
+    ...set,
+    entries: set.entries.map((e) => {
+      if (e.requirementId !== 'dim2.req02') return e;
+      const p = e.payload as { roleStyles: Record<string, unknown>[] };
+      return { ...e, payload: { roleStyles: p.roleStyles.map((r) => (r['role'] === 'cuerpo' ? { ...r, ...cambio } : r)) } };
+    }),
+  };
+}
+
+function textosDelCalculo(svg: Nodo): string[] {
+  return capa(svg, 'Calculo_de_texto')?.hijos.map((t) => t.texto) ?? [];
+}
+
+describe('Células Madre · grilla .svg · cálculo de texto', () => {
+  const conTipografia = (parametros: Record<string, unknown> = A4, set: DesignSetV0 = buildDim3EspacioConTipografiaDesignSet()) => generar(parametros, set);
+
+  it('la fixture con tipografía es ADN válido para la dimensión 2 (fundamento y roles)', () => {
+    const evaluacion = evaluateManifest({ manifest: DIM2_MANIFEST_V0, payloads: resolvedTipografiaDelTextoPayloads(), rectoras: emptyRectoras() });
+    for (const id of ['dim2.req01', 'dim2.req02']) expect(evaluacion.resultados.find((r) => r.requisitoId === id)?.resultado, id).toBe('resuelto');
+  });
+
+  it('lee la familia por defecto del cuerpo de texto: el rol «cuerpo», con su familia del fundamento, tamaño e interlínea', () => {
+    const t = tipografiaDelTexto(buildDim3EspacioConTipografiaDesignSet());
+    if (!t.ok) throw new Error(t.falta);
+    expect(t.tipografia.familia).toBe('Source Serif 4'); // no Archivo, que es la de los títulos
+    expect(t.tipografia.cuerpoCss).toBe('10pt');
+    expect(t.tipografia.interlineado).toBe(1.2);
+    expect(t.tipografia.anchoMedioEm).toBe(0.5);
+    expect(t.tipografia.origenDelAncho).toEqual({ tipo: 'estimado', clase: 'normal' });
+    expect(t.tipografia.requisitos).toEqual(['dim2.req01', 'dim2.req02']);
+  });
+
+  it('las cifras del A4, hechas a mano', () => {
+    // Cuerpo 10 pt = 10 × 25,4 / 72 = 3,5278 mm; ancho medio 0,5 em = 1,7639 mm por carácter (con espacios).
+    // Caracteres por línea, al entero hacia abajo:
+    //   1 columna      25 mm / 1,7639 = 14,17 → 14
+    //   mitad          3 × 25 + 2 × 4 = 83 mm / 1,7639 = 47,05 → 47
+    //   tercio         2 × 25 + 4 = 54 mm / 1,7639 = 30,61 → 30
+    //   ancho completo 170 mm / 1,7639 = 96,38 → 96
+    // Líneas: interlínea 10 × 1,2 = 12 pt = la línea base del ADN (4,2333 mm): 257 mm / 4,2333 = 60,71 → 60.
+    // Por columna 14 × 60 = 840; por página 840 × 6 = 5.040.
+    // Regla del lápiz: 14 × (10 mm / 4,2333 mm) = 14 × 2,3622 = 33,07 ≈ 33 caracteres por cm de columna.
+    // 4.000 caracteres: 4.000 / 33,07 = 120,95 ≈ 121 cm, o 4.000 / 840 = 4,76 ≈ 4,8 columnas de 25,7 cm.
+    const r = conTipografia();
+    const t = r.leeme.contenido;
+    expect(t).toContain('## Cálculo de texto · `econut-grilla-texto-corrido-a4-vertical.svg`');
+    expect(t).toContain('Calculado con **Source Serif 4, 10/12 pt** (interlineado 1,2), la familia por defecto del cuerpo de texto del ADN');
+    expect(t).toContain('| 1 columna | 25 mm | 14 | ≈ 840 |');
+    expect(t).toContain('| mitad (3 columnas) | 83 mm | 47 | ≈ 2.820 |');
+    expect(t).toContain('| tercio (2 columnas) | 54 mm | 30 | ≈ 1.800 |');
+    expect(t).toContain('| ancho completo (6 columnas) | 170 mm | 96 | ≈ 5.760 |');
+    expect(t).toContain('| página (6 columnas de texto) | — | — | ≈ 5.040 |');
+    expect(t).toContain('297 − 2 × 20 = 257 mm');
+    expect(t).toContain('**60 líneas por columna**');
+    expect(t).toContain('≈ 33 caracteres por cm de alto de columna (14 caracteres por línea × 2,36 líneas por cm)');
+    expect(t).toContain('un texto de 4.000 caracteres ocupa ≈ 121 cm de una columna, o ≈ 4,8 columnas de 25,7 cm');
+    // Dice que es una estimación, no una medición.
+    expect(t).toContain('estimado con el promedio estándar para texto en castellano, contando los espacios entre palabras');
+    expect(t).toContain('mide la fuente para afinar');
+    // La línea resumida, junto al nombre del archivo.
+    expect(t).toContain('Cálculo de texto con Source Serif 4 10/12 pt (la familia por defecto del cuerpo de texto del ADN; ancho medio estimado): 14 caracteres por línea en 1 columna, 60 líneas por columna, ≈ 840 caracteres por columna, ≈ 5.040 por página y ≈ 33 por cm de columna.');
+
+    const svg = leerXml(r.archivos[0]!.contenido as string);
+    const c = capa(svg, 'Calculo_de_texto')!;
+    expect(c.atributos['inkscape:label']).toBe('Cálculo de texto');
+    expect(c.atributos['fill']).toBe('#9aa3ad'); // el gris de las cotas
+    expect(textosDelCalculo(svg)).toEqual([
+      'Cálculo de texto · calculado con Source Serif 4, 10/12 pt, la familia por defecto del cuerpo de texto del ADN',
+      'Ancho medio estimado con el promedio estándar (0,5 em, con espacios): mide la fuente para afinar',
+      'Caracteres por línea: 14 en 1 columna · 47 en la mitad · 30 en un tercio · 96 a ancho completo',
+      '60 líneas por columna · ≈ 840 caracteres por columna · ≈ 5.040 por página · ≈ 33 por cm de columna',
+    ]);
+    // En el margen inferior: bajo las columnas (que terminan en 277 mm) y dentro de la hoja.
+    for (const l of c.hijos) {
+      expect(num(l, 'y')).toBeGreaterThan(277);
+      expect(num(l, 'y')).toBeLessThan(297);
+      expect(num(l, 'x')).toBe(20);
+    }
+    expect(capasDe(svg).map((g) => g.atributos['id'])).toEqual([
+      'Sangrado', 'Hoja', 'Zona_segura', 'Margenes', 'Medianiles', 'Columnas', 'Linea_base', 'Division_binaria', 'Division_ternaria', 'Calculo_de_texto', 'Cotas',
+    ]);
+  });
+
+  it('la portada de 2 columnas: la columna es la mitad, y no hay tercio', () => {
+    // 2 columnas, medianil 8 mm: (170 − 8) / 2 = 81 mm / 1,7639 = 45,92 → 45; ancho completo 170 → 96.
+    const t = conTipografia({ reticulas: ['portada'], formatos: ['a4-vertical'] }).leeme.contenido;
+    expect(t).toContain('| 1 columna (la mitad) | 81 mm | 45 | ≈ 2.700 |');
+    expect(t).not.toContain('| tercio');
+    expect(t).toContain('| ancho completo (2 columnas) | 170 mm | 96 | ≈ 5.760 |');
+  });
+
+  it('la interlínea mayor que la línea base ocupa varias líneas base; sin línea base, se cuenta con la interlínea', () => {
+    // Interlineado 1,5: 15 pt = 5,2917 mm > 12 pt: cada línea de texto ocupa 2 líneas base (8,4667 mm): 257 / 8,4667 = 30,35 → 30.
+    const holgado = conCuerpo({ lineHeight: 1.5 });
+    const t = conTipografia(A4, holgado).leeme.contenido;
+    expect(t).toContain('de a 2 líneas base por línea de texto');
+    expect(t).toContain('**30 líneas por columna**');
+    expect(t).toContain('| 1 columna | 25 mm | 14 | ≈ 420 |');
+    // Sin línea base: 257 / 5,2917 = 48,57 → 48.
+    const sinBase = generar({ ...A4, capas: ['hoja', 'columnas', 'calculo-texto'] }, sin(holgado, 'dim3.req03')).leeme.contenido;
+    expect(sinBase).toContain('la interlínea del cuerpo (5,29 mm; el ADN no declara línea base): **48 líneas por columna**');
+  });
+
+  it('una familia condensada (por su nombre) usa 0,42 em', () => {
+    // 10 pt × 0,42 = 1,4817 mm: 25 / 1,4817 = 16,87 → 16.
+    const set = buildDim3EspacioConTipografiaDesignSet();
+    const condensada = conCuerpo({ family: 'Roboto Condensed, sans-serif' }, set);
+    const t = conTipografia(A4, condensada).leeme.contenido;
+    expect(t).toContain('Calculado con **Roboto Condensed, 10/12 pt**');
+    expect(t).toContain('| 1 columna | 25 mm | 16 |');
+    expect(t).toContain('una letra condensada');
+    // Con la familia escrita (no del fundamento), el fundamento no es ancestro.
+    expect(conTipografia(A4, condensada).metadata.consulta).not.toContain('dim2.req01');
+  });
+
+  it('en una hoja de pantalla, la regla va por cada 100 px', () => {
+    const t = conTipografia({ reticulas: ['texto-corrido'], formatos: ['carta-corrida'] }).leeme.contenido;
+    expect(t).toMatch(/≈ \d+ caracteres por 100 px de alto de columna/);
+  });
+
+  it('la metadata trae las preguntas tipográficas sólo cuando va el cálculo', () => {
+    const set = buildDim3EspacioConTipografiaDesignSet();
+    const r = conTipografia(A4, set);
+    expect(r.metadata.consulta).toEqual(['dim2.req01', 'dim2.req02', 'dim3.req01', 'dim3.req03', 'dim3.req04', 'dim3.req08', 'dim3.req09']);
+    for (const a of r.metadata.ancestros) expect(a.huella).toBe(huella(set.entries.find((x) => x.requirementId === a.requirementId)!.payload));
+    // Con la capa apagada, no.
+    const apagada = conTipografia({ ...A4, capas: ['hoja', 'columnas'] }, set);
+    expect(apagada.metadata.consulta).toEqual(['dim3.req01', 'dim3.req04', 'dim3.req08', 'dim3.req09']);
+    // Sin tipografía, tampoco, aunque se marque la capa.
+    expect(generar({ ...A4, capas: ['hoja', 'columnas', 'calculo-texto'] }).metadata.consulta).toEqual(['dim3.req01', 'dim3.req04', 'dim3.req08', 'dim3.req09']);
+  });
+
+  it('sin tipografía del texto corrido, la grilla sale igual, sin la capa, y el LEEME dice qué falta', () => {
+    const r = generar({ ...A4, capas: ['hoja', 'columnas', 'calculo-texto'] });
+    const svg = leerXml(r.archivos[0]!.contenido as string);
+    expect(capasDe(svg).map((g) => g.atributos['id'])).toEqual(['Hoja', 'Columnas', 'Cotas']);
+    expect(r.leeme.contenido).toContain('Sin cálculo de texto. El ADN no declara la tipografía del texto corrido: define la tipografía del texto corrido para el cálculo de texto, en Definición › Tipografía y jerarquía');
+    expect(r.leeme.contenido).not.toContain('## Cálculo de texto');
+    // Por defecto, sin tipografía, la capa no va marcada; con tipografía, sí.
+    expect(resolverParametros(generadorGrillaSvg, buildDim3EspacioDesignSet(), {})['capas']).not.toContain('calculo-texto');
+    expect(resolverParametros(generadorGrillaSvg, buildDim3EspacioConTipografiaDesignSet(), {})['capas']).toContain('calculo-texto');
+    // Un cuerpo en em (relativo) no se puede medir: tampoco hay cálculo, y se dice.
+    const relativo = generar(A4, conCuerpo({ fontSize: '1em' }));
+    expect(relativo.leeme.contenido).toContain('El tamaño del texto corrido (1em) no es una medida absoluta');
+    expect(capa(leerXml(relativo.archivos[0]!.contenido as string), 'Calculo_de_texto')).toBeUndefined();
+  });
+
+  it('la capa se puede apagar: sin capa, sin sección en el LEEME, y la cota del margen inferior vuelve', () => {
+    const capas = (resolverParametros(generadorGrillaSvg, buildDim3EspacioConTipografiaDesignSet(), {})['capas'] as string[]).filter((c) => c !== 'calculo-texto');
+    const r = conTipografia({ ...A4, capas });
+    const svg = leerXml(r.archivos[0]!.contenido as string);
+    expect(capa(svg, 'Calculo_de_texto')).toBeUndefined();
+    expect(r.leeme.contenido).not.toContain('Cálculo de texto ·');
+    expect(r.leeme.contenido).not.toContain('Cálculo de texto con');
+    expect(capa(svg, 'Cotas')!.hijos.filter((t) => t.texto === 'margen 20 mm')).toHaveLength(2);
+    expect(capa(leerXml(conTipografia().archivos[0]!.contenido as string), 'Cotas')!.hijos.filter((t) => t.texto === 'margen 20 mm')).toHaveLength(1);
+  });
+
+  it('es determinista', () => {
+    const a = conTipografia({});
+    const b = conTipografia({});
+    expect(a.archivos).toEqual(b.archivos);
+    expect(a.leeme.contenido).toBe(b.leeme.contenido);
+    expect(a.zip.contenido).toEqual(b.zip.contenido);
+  });
+
+  it('entero: punto de miles', () => {
+    expect([entero(840), entero(5040), entero(12345.6), entero(1000000)]).toEqual(['840', '5.040', '12.346', '1.000.000']);
   });
 });
