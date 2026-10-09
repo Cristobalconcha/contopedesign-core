@@ -62,7 +62,7 @@ function resumenDeParametros(generador: Generador | undefined, metadata: Metadat
       if (p.tipo === 'si-no') return v === true ? minuscula(p.etiqueta) : null;
       if (p.tipo === 'opcion') return p.opciones.find((o) => o.valor === v)?.etiqueta ?? String(v);
       if (p.tipo === 'numero') return `${minuscula(p.etiqueta)} ${String(v)}${p.unidad ?? ''}`;
-      return Array.isArray(v) ? v.map((k) => opciones.get(k)?.split(' · ')[0] ?? k).join(' → ') : null;
+      return Array.isArray(v) ? v.map((k) => opciones.get(k)?.split(' · ')[0] ?? k).join(p.ordenada ? ' → ' : ', ') : null;
     })
     .filter((x): x is string => x !== null && x !== '')
     .join(' · ');
@@ -124,16 +124,30 @@ function ControlDeParametro(props: {
     );
   }
   // Selección: fichas que se marcan; si es ordenada, el número dice el orden.
+  // Con `maximo: 1` es elegir una: marcar otra reemplaza a la marcada.
   const elegidos = Array.isArray(valor) ? valor : [];
-  const alternar = (v: string): void => cambiar(elegidos.includes(v) ? elegidos.filter((x) => x !== v) : [...elegidos, v]);
+  const unaSola = p.maximo === 1;
+  const alternar = (v: string): void => {
+    if (unaSola) cambiar([v]);
+    else cambiar(elegidos.includes(v) ? elegidos.filter((x) => x !== v) : [...elegidos, v]);
+  };
   return (
     <div className="cm-param">
       <span className="cm-et">{p.etiqueta}</span>
-      <div className="cm-fichas">
+      <div className="cm-fichas" role={unaSola ? 'radiogroup' : undefined} aria-label={p.etiqueta}>
         {opciones.map((o) => {
           const i = elegidos.indexOf(o.valor);
           return (
-            <button key={o.valor} type="button" className={`cm-ficha ${i >= 0 ? 'on' : ''}`} onClick={() => alternar(o.valor)} title={o.etiqueta}>
+            <button
+              key={o.valor}
+              type="button"
+              role={unaSola ? 'radio' : undefined}
+              aria-checked={unaSola ? i >= 0 : undefined}
+              aria-pressed={unaSola ? undefined : i >= 0}
+              className={`cm-ficha ${i >= 0 ? 'on' : ''}`}
+              onClick={() => alternar(o.valor)}
+              title={o.etiqueta}
+            >
               {o.muestra ? <i style={{ background: o.muestra }} /> : null}
               <span>{o.etiqueta.split(' · ')[0]}</span>
               {i >= 0 && p.ordenada ? <b>{i + 1}</b> : null}

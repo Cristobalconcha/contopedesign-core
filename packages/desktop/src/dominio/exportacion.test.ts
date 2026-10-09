@@ -1,4 +1,4 @@
-import { generadorDegradadosSvg, generadorPaletaAse, huella, leerMetadataDeLeeme } from '@contope/core';
+import { GENERADORES, generadorDegradadosSvg, generadorGrillaSvg, generadorPaletaAse, huella, leerMetadataDeLeeme, type Generador } from '@contope/core';
 import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import { generarEnElTaller, type CelulaGenerada } from './celulas.js';
@@ -28,7 +28,7 @@ function conColor(): Sistema {
   );
 }
 
-function registrar(s: Sistema, generador: typeof generadorPaletaAse, parametros: Record<string, unknown> = {}): { sistema: Sistema; celula: CelulaGenerada } {
+function registrar(s: Sistema, generador: Generador, parametros: Record<string, unknown> = {}): { sistema: Sistema; celula: CelulaGenerada } {
   const r = generarEnElTaller(s, generador, parametros, AHORA);
   if (!r.ok) throw new Error(r.falta);
   return { sistema: reducir(s, { tipo: 'registrar-celula', celula: r.celula }, AHORA), celula: r.celula };
@@ -121,5 +121,30 @@ describe('Exportar el ADN', () => {
     const dentro = unzipSync(e.zip.contenido);
     expect(Object.keys(dentro)).toEqual(['LEEME.md', 'design-contract.json', 'DESIGN.md']);
     expect(strFromU8(dentro['LEEME.md']!)).toContain('Este sistema todavía no tiene Células Madre generadas.');
+  });
+
+  it('la Grilla entra sola, por estar en el registro: su carpeta trae el LEEME y un SVG por retícula y formato', () => {
+    expect(GENERADORES).toContain(generadorGrillaSvg);
+    const definir = (sis: Sistema, requirementId: string, payload: Record<string, unknown>): Sistema =>
+      reducir(sis, { tipo: 'definir', requirementId, payload, camino: 'diseñador', fuerza: 'prioritaria' }, AHORA);
+    let s = conColor();
+    s = definir(s, 'dim3.req01', { unidad: '1mm', escala: [{ step: 4, value: '4mm' }, { step: 5, value: '5mm' }] });
+    s = definir(s, 'dim3.req04', { reticulas: [{ contexto: 'folleto', columns: 3, gap: { refReqId: 'dim3.req01', refPath: ['escala', 1] } }] });
+    s = definir(s, 'dim3.req08', { formatos: [{ nombre: 'carta', formato: 'letter', orientacion: 'vertical', modo: 'pagina-fija' }] });
+    s = definir(s, 'dim3.req09', {
+      porFormato: [{ formato: { refReqId: 'dim3.req08', refPath: ['formatos', 0] }, sangrado: '5mm', zonaSegura: '15mm', margenTextoCorrido: '20mm', aSangre: ['fondos'] }],
+    });
+    s = registrar(s, generadorGrillaSvg).sistema;
+    const e = exportarAdn(s, DESPUES);
+    const dentro = unzipSync(e.zip.contenido);
+    expect(Object.keys(dentro).filter((r) => r.startsWith('celulas-madre/'))).toEqual([
+      'celulas-madre/econut-grilla-svg/LEEME.md',
+      'celulas-madre/econut-grilla-svg/econut-grilla-folleto-carta.svg',
+    ]);
+    const svg = strFromU8(dentro['celulas-madre/econut-grilla-svg/econut-grilla-folleto-carta.svg']!);
+    expect(svg).toContain('width="225.9mm" height="289.4mm" viewBox="-5 -5 225.9 289.4"');
+    const leeme = strFromU8(dentro['celulas-madre/econut-grilla-svg/LEEME.md']!);
+    expect(leeme).toContain('3 columnas de 55,3 mm con medianil de 5 mm; márgenes de 20 mm por lado');
+    expect(strFromU8(dentro['LEEME.md']!)).toContain('- `celulas-madre/econut-grilla-svg/`: Grilla (versión 1.0.0), con `econut-grilla-folleto-carta.svg`.');
   });
 });
