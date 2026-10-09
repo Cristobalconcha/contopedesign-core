@@ -8,9 +8,13 @@
     "dev": "pnpm --filter @contope/desktop dev",
     "dev:web": "pnpm --filter @contope/desktop dev:web",
     "build": "pnpm --filter @contope/desktop build",
-    "start": "pnpm --filter @contope/desktop start"
+    "start": "pnpm --filter @contope/desktop start",
+    "trama:construir": "pnpm --filter @contope/trama construir"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["electron", "esbuild"]
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
   }
 }
