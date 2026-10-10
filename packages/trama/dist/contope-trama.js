@@ -33,6 +33,7 @@ var ContopeTrama = (() => {
     COLOR_CERCA_POR_DEFECTO: () => COLOR_CERCA_POR_DEFECTO,
     COLOR_FONDO_POR_DEFECTO: () => COLOR_FONDO_POR_DEFECTO,
     COLOR_LEJOS_POR_DEFECTO: () => COLOR_LEJOS_POR_DEFECTO,
+    COLOR_V7: () => COLOR_V7,
     CONFIGURACION_POR_DEFECTO: () => CONFIGURACION_POR_DEFECTO,
     CUADROS_POR_SEGUNDO_LINEA: () => CUADROS_POR_SEGUNDO_LINEA,
     CURSOR_EN_REPOSO: () => CURSOR_EN_REPOSO,
@@ -61,8 +62,12 @@ var ContopeTrama = (() => {
     PREFIJO_CODIGO: () => PREFIJO_CODIGO,
     PREFIJO_SP1: () => PREFIJO_SP1,
     PUNTOS_POR_TRAMO: () => PUNTOS_POR_TRAMO,
+    RUTA_DE_V7: () => RUTA_DE_V7,
+    RUTA_V7: () => RUTA_V7,
     SUAVIZADO: () => SUAVIZADO,
     SUAVIZADOS: () => SUAVIZADOS,
+    SUAVIZADO_DE_V7: () => SUAVIZADO_DE_V7,
+    SUAVIZADO_V7: () => SUAVIZADO_V7,
     TINTAS: () => TINTAS,
     TONOS: () => TONOS,
     TRAMA_KIND: () => TRAMA_KIND,
@@ -76,12 +81,17 @@ var ContopeTrama = (() => {
     bytesABase64: () => bytesABase64,
     bytesAUtf8: () => bytesAUtf8,
     calcularLamina: () => calcularLamina,
+    capturaDeV7: () => capturaDeV7,
     capturaEn: () => capturaEn,
     capturaV7ATrama: () => capturaV7ATrama,
+    cfgV7DeConfiguracion: () => cfgV7DeConfiguracion,
     codificarTrama: () => codificarTrama,
+    coloresDeV7: () => coloresDeV7,
     compactarTrama: () => compactarTrama,
     conLineas: () => conLineas,
     conPuntos: () => conPuntos,
+    configuracionDeV7: () => configuracionDeV7,
+    configuracionLimpiaDeV7: () => configuracionLimpiaDeV7,
     configuracionPorDefecto: () => configuracionPorDefecto,
     crearAtendedor: () => crearAtendedor,
     cuadroASvg: () => cuadroASvg,
@@ -94,16 +104,24 @@ var ContopeTrama = (() => {
     empaquetar: () => empaquetar,
     esModo: () => esModo,
     esRutaAnimable: () => esRutaAnimable,
+    escenaAV7: () => escenaAV7,
+    escenaDeV7: () => escenaDeV7,
     escribirLamina: () => escribirLamina,
     escribirTrama: () => escribirTrama,
     estadoDeDocumento: () => estadoDeDocumento,
     estadoEn: () => estadoEn,
+    estadoV7DeCaptura: () => estadoV7DeCaptura,
+    estadoV7DeTrama: () => estadoV7DeTrama,
     evolucionEn: () => evolucionEn,
     grupoDePunto: () => grupoDePunto,
     hexARgb: () => hexARgb,
     instanteDeCuadro: () => instanteDeCuadro,
     interpolar: () => interpolar,
+    keyframeAV7: () => keyframeAV7,
+    keyframeDeV7: () => keyframeDeV7,
+    keyframesDeV7: () => keyframesDeV7,
     leerTrama: () => leerTrama,
+    lineaEnUso: () => lineaEnUso,
     luminancia: () => luminancia,
     mezclarCuadros: () => mezclarCuadros,
     mezclarHex: () => mezclarHex,
@@ -113,8 +131,11 @@ var ContopeTrama = (() => {
     multiplicar: () => multiplicar,
     nivelDeAlfa: () => nivelDeAlfa,
     normalizarTrama: () => normalizarTrama,
+    pistasAV7: () => pistasAV7,
+    pistasDeV7: () => pistasDeV7,
     recorrerPuntos: () => recorrerPuntos,
     regenerarPistas: () => regenerarPistas,
+    regenerarPistasV7: () => regenerarPistasV7,
     rotacionX: () => rotacionX,
     rotacionY: () => rotacionY,
     rotacionZ: () => rotacionZ,
@@ -125,6 +146,7 @@ var ContopeTrama = (() => {
     tirasDeTramos: () => tirasDeTramos,
     tonoDeCercania: () => tonoDeCercania,
     tonosPorProfundidad: () => tonosPorProfundidad,
+    tramaDeEstadoV7: () => tramaDeEstadoV7,
     tramaPorDefecto: () => tramaPorDefecto,
     tramosDeLinea: () => tramosDeLinea,
     traslacion: () => traslacion,
@@ -1601,6 +1623,275 @@ var ContopeTrama = (() => {
   }
   function escribirTrama(trama) {
     return JSON.stringify(trama, null, 2) + "\n";
+  }
+
+  // src/formato/generador-v7.ts
+  var COLOR_V7 = Object.freeze({ lejos: "colorDeep", cerca: "colorAccent", fondo: "colorBg" });
+  var RUTA_V7 = Object.freeze(
+    Object.fromEntries(
+      PARAMETROS_ANIMABLES.map((p) => {
+        const r = p.ruta;
+        if (r === "evolucion") return [r, "time"];
+        if (r === "cursor.presencia") return [r, "cursor.presence"];
+        if (r === "cursor.x" || r === "cursor.y") return [r, r];
+        if (r.startsWith("color.")) return [r, COLOR_V7[r.slice(6)]];
+        return [r, NOMBRE_V7[r]];
+      })
+    )
+  );
+  var RUTA_DE_V7 = Object.freeze(
+    Object.fromEntries(Object.entries(RUTA_V7).map(([r, p]) => [p, r]))
+  );
+  var SUAVIZADO_DE_V7 = Object.freeze({
+    linear: "lineal",
+    ease: "suave",
+    in: "entrada",
+    out: "salida",
+    hold: "mantener",
+    curve: "curva"
+  });
+  var SUAVIZADO_V7 = Object.freeze({
+    lineal: "linear",
+    suave: "ease",
+    entrada: "in",
+    salida: "out",
+    mantener: "hold",
+    curva: "curve"
+  });
+  function configuracionDeV7(cfg) {
+    const o = {};
+    for (const p of PARAMETROS_MOTOR) o[p] = cfg[NOMBRE_V7[p]];
+    return o;
+  }
+  function configuracionLimpiaDeV7(cfg) {
+    const o = { ...CONFIGURACION_POR_DEFECTO };
+    for (const p of PARAMETROS_MOTOR) {
+      const v = cfg[NOMBRE_V7[p]];
+      if (typeof v === "number" && Number.isFinite(v)) o[p] = v;
+    }
+    return o;
+  }
+  function cfgV7DeConfiguracion(c) {
+    const o = {};
+    for (const p of PARAMETROS_MOTOR) if (c[p] !== void 0) o[NOMBRE_V7[p]] = c[p];
+    return o;
+  }
+  var hexDe = (cfg, k, porDefecto) => {
+    const v = cfg[COLOR_V7[k]];
+    return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : porDefecto;
+  };
+  function coloresDeV7(cfg) {
+    return { lejos: hexDe(cfg, "lejos", "#2a52d6"), cerca: hexDe(cfg, "cerca", "#3dd6c0"), fondo: hexDe(cfg, "fondo", "#000000") };
+  }
+  function keyframeDeV7(k) {
+    var _a;
+    let ease = (_a = SUAVIZADO_DE_V7[k.ease]) != null ? _a : "lineal";
+    if (ease === "curva" && !k.curve) ease = "lineal";
+    const o = { t: k.t, v: k.v, ease };
+    if (ease === "curva" && k.curve) o.curva = [...k.curve];
+    if (typeof k.scene === "number") o.escena = k.scene;
+    return o;
+  }
+  function keyframeAV7(k) {
+    var _a;
+    const o = { t: k.t, v: k.v, ease: (_a = SUAVIZADO_V7[k.ease]) != null ? _a : "linear" };
+    if (k.curva) o.curve = [...k.curva];
+    if (typeof k.escena === "number") o.scene = k.escena;
+    return o;
+  }
+  function keyframesDeV7(keys) {
+    return keys.map(keyframeDeV7);
+  }
+  function pistasDeV7(tracks, soloManuales = false) {
+    const o = {};
+    for (const [path, keys] of Object.entries(tracks)) {
+      const ruta = RUTA_DE_V7[path];
+      if (!ruta || !Array.isArray(keys)) continue;
+      const lista = (soloManuales ? keys.filter((k) => !k.scene) : keys).map(keyframeDeV7);
+      if (lista.length) o[ruta] = lista;
+    }
+    return o;
+  }
+  function pistasAV7(pistas) {
+    const o = {};
+    for (const [ruta, keys] of Object.entries(pistas)) if (keys.length) o[RUTA_V7[ruta]] = keys.map(keyframeAV7);
+    return o;
+  }
+  function capturaDeV7(st) {
+    var _a;
+    const c = {};
+    if (typeof st.time === "number") c.evolucion = st.time;
+    const cursor = {};
+    if (Array.isArray(st.mouse)) {
+      if (typeof st.mouse[0] === "number") cursor.x = st.mouse[0];
+      if (typeof st.mouse[1] === "number") cursor.y = st.mouse[1];
+    }
+    if (typeof st.presence === "number") cursor.presencia = st.presence;
+    if (Object.keys(cursor).length) c.cursor = cursor;
+    const cfg = (_a = st.cfg) != null ? _a : {};
+    const configuracion = {};
+    for (const p of PARAMETROS_MOTOR) {
+      const v = cfg[NOMBRE_V7[p]];
+      if (typeof v === "number" && Number.isFinite(v)) configuracion[p] = v;
+    }
+    if (Object.keys(configuracion).length) c.configuracion = configuracion;
+    const color2 = {};
+    for (const k of CLAVES_DE_COLOR) {
+      const v = cfg[COLOR_V7[k]];
+      if (typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v)) color2[k] = v.toLowerCase();
+    }
+    if (Object.keys(color2).length) c.color = color2;
+    return c;
+  }
+  function estadoV7DeCaptura(c) {
+    var _a, _b, _c, _d, _e;
+    const cfg = cfgV7DeConfiguracion((_a = c.configuracion) != null ? _a : {});
+    for (const k of CLAVES_DE_COLOR) if ((_b = c.color) == null ? void 0 : _b[k]) cfg[COLOR_V7[k]] = c.color[k];
+    const st = { cfg };
+    if (c.evolucion !== void 0) st.time = c.evolucion;
+    if (((_c = c.cursor) == null ? void 0 : _c.x) !== void 0 && ((_d = c.cursor) == null ? void 0 : _d.y) !== void 0) st.mouse = [c.cursor.x, c.cursor.y];
+    if (((_e = c.cursor) == null ? void 0 : _e.presencia) !== void 0) st.presence = c.cursor.presencia;
+    return st;
+  }
+  function escenaDeV7(sc) {
+    const e = {
+      id: sc.id,
+      t: sc.t,
+      captura: capturaDeV7(sc.st),
+      transicion: sc.type === "cut" ? "corte" : "morph",
+      duracion: sc.dur,
+      curva: Array.isArray(sc.curve) && sc.curve.length === 4 ? [...sc.curve] : [...CURVA_SUAVE],
+      evolucion: !!sc.evo
+    };
+    if (sc.snap !== void 0 && sc.snap !== "?") e.nombre = `Captura ${sc.snap}`;
+    return e;
+  }
+  function escenaAV7(e) {
+    const n = e.nombre ? /^Captura (\d+)$/.exec(e.nombre) : null;
+    return {
+      id: e.id,
+      t: e.t,
+      snap: n ? Number(n[1]) : e.id,
+      st: estadoV7DeCaptura(e.captura),
+      type: e.transicion === "corte" ? "cut" : "morph",
+      dur: e.duracion,
+      curve: [...e.curva],
+      evo: e.evolucion
+    };
+  }
+  function secuenciaDeLinea(tl, soloManuales) {
+    return {
+      modo: "secuencia",
+      inicio: tl.startTime,
+      duracion: tl.duration,
+      pistas: pistasDeV7(tl.tracks, soloManuales),
+      escenas: tl.scenes.map(escenaDeV7),
+      cerrarCiclo: false,
+      cierre: { ...CIERRE_POR_DEFECTO, curva: [...CIERRE_POR_DEFECTO.curva] },
+      cursor: { x: tl.cursor.x, y: tl.cursor.y, presencia: tl.cursor.presence },
+      alTerminar: "repetir"
+    };
+  }
+  function regenerarPistasV7(tl, cfg) {
+    const pistas = regenerarPistas(secuenciaDeLinea(tl, true), { configuracion: configuracionDeV7(cfg), colores: coloresDeV7(cfg) });
+    return pistasAV7(pistas);
+  }
+  function lineaEnUso(tl) {
+    return !!tl && (Object.values(tl.tracks).some((k) => k.length > 0) || tl.scenes.length > 0);
+  }
+  function recortar(ruta, keys, fin, doc) {
+    if (!keys.some((k) => k.t > fin)) return keys;
+    const dentro = keys.filter((k) => k.t < fin - 1e-9);
+    const v = ruta === "evolucion" ? evolucionEn({ ...doc, pistas: { evolucion: keys } }, fin).tiempo : interpolar(keys, fin, PARAMETRO_ANIMABLE[ruta]);
+    dentro.push({ t: fin, v, ease: "lineal" });
+    return dentro;
+  }
+  function tramaDeEstadoV7(e, opciones = {}) {
+    var _a, _b;
+    const configuracion = configuracionLimpiaDeV7(e.cfg);
+    const hex = coloresDeV7(e.cfg);
+    const color2 = { lejos: { hex: hex.lejos, origen: "manual" }, cerca: { hex: hex.cerca, origen: "manual" }, fondo: { hex: hex.fondo, origen: "manual" } };
+    for (const k of CLAVES_DE_COLOR) {
+      const dado = (_a = opciones.colores) == null ? void 0 : _a[k];
+      if (dado && dado.hex.toLowerCase() === hex[k]) color2[k] = { ...dado, hex: hex[k] };
+    }
+    const tinta = e.cfg["inkMode"] === "luz" || e.cfg["inkMode"] === "tinta" ? e.cfg["inkMode"] : "auto";
+    const modo = esModo(e.render) ? e.render : "puntos";
+    const medida = /^(\d+)x(\d+)$/.exec(e.format);
+    const lienzo = (_b = opciones.lienzo) != null ? _b : medida ? { tipo: "medida", ancho: Number(medida[1]), alto: Number(medida[2]) } : { tipo: "libre" };
+    const documento = {
+      kind: TRAMA_KIND,
+      version: FORMATO_VERSION,
+      motor: { id: MOTOR_ID, version: MOTOR_VERSION },
+      lienzo,
+      dibujo: { modo, tinta },
+      color: color2,
+      configuracion,
+      // v7 en vivo sigue al cursor y gira la cámara con él (si el paralaje no es 0)
+      interaccion: { cursor: true, paralaje: configuracion.paralaje > 0 },
+      cuadroQuieto: 0
+    };
+    if (e.nombre && e.nombre.trim()) documento["nombre"] = e.nombre.trim().slice(0, 200);
+    if (opciones.procedencia) documento["procedencia"] = opciones.procedencia;
+    if (!lineaEnUso(e.tl)) {
+      documento["tiempo"] = { modo: "vivo", inicio: e.time };
+    } else {
+      const tl = e.tl;
+      const fin = tl.duration;
+      const s = secuenciaDeLinea(tl, true);
+      const doc = { configuracion, colores: hex, pistas: {}, inicio: tl.startTime, cursor: s.cursor };
+      const pistas = {};
+      for (const [ruta, keys] of Object.entries(s.pistas)) pistas[ruta] = recortar(ruta, keys, fin, doc);
+      documento["tiempo"] = { ...s, pistas, escenas: s.escenas.filter((sc) => sc.t <= fin) };
+    }
+    return normalizarTrama(documento);
+  }
+  function estadoV7DeTrama(trama) {
+    const cfg = cfgV7DeConfiguracion(trama.configuracion);
+    for (const k of CLAVES_DE_COLOR) cfg[COLOR_V7[k]] = trama.color[k].hex;
+    cfg["inkMode"] = trama.dibujo.tinta;
+    const l = trama.lienzo;
+    const e = {
+      cfg,
+      render: trama.dibujo.modo,
+      time: trama.tiempo.inicio,
+      format: l.tipo === "medida" ? `${l.ancho}x${l.alto}` : "free",
+      tl: null
+    };
+    if (trama.nombre) e.nombre = trama.nombre;
+    const t = trama.tiempo;
+    if (t.modo === "secuencia") {
+      const manuales = {};
+      for (const [ruta, keys] of Object.entries(t.pistas)) {
+        const m = keys.filter((k) => k.escena === void 0);
+        if (m.length) manuales[ruta] = m;
+      }
+      const scenes = t.escenas.map(escenaAV7);
+      if (t.cerrarCiclo) {
+        const id = scenes.reduce((m, s) => Math.max(m, s.id), 0) + 1;
+        const fin = t.duracion;
+        const sinCierre = scenes.filter((s) => Math.abs(s.t - fin) >= 1 / 48);
+        sinCierre.push({
+          id,
+          t: fin,
+          snap: id,
+          st: estadoV7DeCaptura(capturaEn(documentoDeTrama(trama), 0)),
+          type: t.cierre.transicion === "corte" ? "cut" : "morph",
+          dur: t.cierre.duracion,
+          curve: [...t.cierre.curva],
+          evo: true
+        });
+        scenes.splice(0, scenes.length, ...sinCierre);
+      }
+      e.tl = {
+        duration: t.duracion,
+        startTime: t.inicio,
+        cursor: { x: t.cursor.x, y: t.cursor.y, presence: t.cursor.presencia },
+        tracks: pistasAV7(manuales),
+        scenes
+      };
+    }
+    return e;
   }
 
   // src/reproduccion.ts

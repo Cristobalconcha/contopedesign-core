@@ -35,6 +35,7 @@ export * from './formato/validar.js';
 export * from './formato/normalizar.js';
 export * from './formato/base64.js';
 export * from './formato/codigo.js';
+export * from './formato/generador-v7.js';
 
 // una trama en el tiempo
 export * from './reproduccion.js';
