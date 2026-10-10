@@ -188,6 +188,28 @@
   body.strip-hidden .panel { bottom: 76px; }
   .perf { position: fixed; left: 14px; top: 36px; background: var(--panel); padding: 2px 8px; border-radius: 6px; color: var(--muted); font: 11px ui-monospace, Menlo, monospace; margin: 0; }
   @media (max-width: 640px) { .hint { display: none; } }
+  /* ---- capas: menús arriba, snapshots, performances ---- */
+  body { --fsh: 252px; }
+  #filmstrip { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  #fsItems, #pfItems { flex: 0 0 auto; height: calc((var(--fsh) - 72px) / 2); }
+  #pfItems { display: flex; gap: 8px; padding: 8px 10px; overflow-x: auto; overflow-y: hidden; align-items: stretch; }
+  .pf-head { border-top: 1px solid var(--line); }
+  #pfActions { display: inline-flex; gap: 5px; }
+  #pfActions button { background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 12px; }
+  .pf-item .pf-meta { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 6px; font-size: 10.5px; color: var(--ink); background: linear-gradient(transparent, rgba(0,0,0,.8)); font-variant-numeric: tabular-nums; }
+  .pf-item .pf-blank { height: 100%; aspect-ratio: 16 / 9; background: #000; }
+  .fs-add.rec { color: #ff4d5e; border-color: rgba(255,77,94,.6); background: rgba(255,77,94,.12); border-style: solid; }
+  .fs-add.rec span { color: #ff4d5e; font-size: 18px; }
+  .fs-empty.rec-hint { color: #ff9aa4; }
+  .bar { bottom: calc(var(--fsh) + 22px + env(safe-area-inset-bottom, 0px)); }
+  body.strip-hidden .bar { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  #room { bottom: calc(var(--fsh) + 84px); }
+  .panel { bottom: calc(var(--fsh) + 84px); }
+  #timeline { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  body.tl-open .bar { left: calc(50% + (var(--tlw) + 12px) / 2); max-width: calc(100vw - var(--tlw) - 48px); }
+  body.tl-open .bar #perfAudio { display: none; }
+  .bar #capSnap { display: none; }
+  #tlStRec { display: none !important; }
 </style>
 </head>
 <body>
@@ -209,6 +231,7 @@
   <button id="toggleGallery" aria-pressed="true">Galería <span class="count" id="count">0</span></button>
   <button class="capture" id="capSnap">Capturar</button>
   <button id="toggleTl" aria-pressed="false" aria-controls="timeline">Línea de tiempo</button>
+  <button id="perfAudio" title="Cargar la pista de audio para la próxima performance: la línea de tiempo corre con ella y el video sale con sonido">Audio</button>
   <button id="toggle" aria-pressed="true" aria-controls="panel">Ajustar</button>
   <button id="tramaExport" title="Guardar el archivo de trama (.trama.json) para el reproductor de Publisher: configuración, modo de dibujo, colores y, si hay, la línea de tiempo con sus escenas. También copia su código CT1.">Exportar trama</button>
 </div>
@@ -244,8 +267,10 @@
 </div>
 
 <div id="filmstrip" class="ui">
-  <div class="fs-head"><b>Galería</b><span id="fsSelInfo" class="muted"></span><span id="fsActions"></span><span style="flex:1"></span><label class="tl-only" title="Al aplicar una captura, llevar también su momento de evolución"><input type="checkbox" id="fsTime" checked> Incluir evolución</label></div>
+  <div class="fs-head"><b>Snapshots</b><span id="fsSelInfo" class="muted"></span><span id="fsActions"></span><span style="flex:1"></span><label class="tl-only" title="Al aplicar una captura, llevar también su momento de evolución"><input type="checkbox" id="fsTime" checked> Incluir evolución</label></div>
   <div id="fsItems"></div>
+  <div class="fs-head pf-head"><b>Performances</b><span id="pfSelInfo" class="muted"></span><span id="pfActions" class="fs-acts"></span></div>
+  <div id="pfItems"></div>
 </div>
 
 <div id="timeline" class="ui" hidden>
@@ -904,7 +929,7 @@ function persistSnaps() {
 function renderStrip() {
   document.getElementById('count').textContent = snaps.length;
   const host = document.getElementById('fsItems'), keep = host.scrollLeft;
-  let h = `<button class="fs-add" id="fsCapture" title="Capturar este momento (C)"><span>+</span>Capturar</button>`;
+  let h = `<button class="fs-add" id="fsCapture" title="Capturar este momento (C)"><span>+</span>Snapshot</button>`;
   snaps.forEach((s, i) => {
     h += `<figure class="fs-item${s === snapSel ? ' sel' : ''}" data-i="${i}"${i < 9 ? ` data-n="${i + 1}"` : ''} tabindex="0" title="${tl.open ? 'Clic: vista previa · doble clic o botón: aplicar en el cabezal' : 'Clic: ir a esta captura'}"><img alt="" src="${s.thumb}"><figcaption>Captura ${s.num}</figcaption></figure>`;
   });
@@ -1833,29 +1858,181 @@ async function pickAudioCodec() {
 try { const d = JSON.parse(localStorage.getItem(TL_STORE) || 'null'); if (d && d.sceneDefaults) Object.assign(sceneDefaults, d.sceneDefaults); } catch (e) {}
 
 /* =========================================================
-   Archivo de trama (fase 4)
+   Archivo de trama
    ---------------------------------------------------------
-   El contrato con el reproductor de Publisher: lo que se arma
-   aquí sale como un archivo .trama.json (formato contope/trama,
-   versión 1). Sin línea de tiempo, la trama es en vivo (sin
-   final, parte en la evolución en pantalla y sigue al cursor);
-   con keyframes o escenas, es la secuencia tal como se ve en la
-   línea de tiempo. Además se copia su código CT1.
+   El contrato con el reproductor de Publisher (formato
+   contope/trama, versión 1). Sin línea de tiempo, la trama es
+   en vivo (sin final, sigue al cursor); con keyframes o
+   escenas, es la secuencia tal como se ve en la línea de
+   tiempo. Además se copia su código CT1.
    ========================================================= */
-document.getElementById('tramaExport').addEventListener('click', async () => {
+async function exportTrama(nombre) {
   if (morph) finishMorphNow();
   const estado = {
     cfg: JSON.parse(JSON.stringify(config)), render, time: r5(live.time), format,
     tl: { duration: tl.duration, startTime: tl.startTime, cursor: { ...tl.cursor }, tracks: JSON.parse(JSON.stringify(tl.tracks)), scenes: JSON.parse(JSON.stringify(tl.scenes || [])) }
   };
+  if (nombre) estado.nombre = nombre;
   let trama;
   try { trama = ContopeTramaFormato.tramaDeEstadoV7(estado); }
   catch (e) { toast('No se pudo armar la trama: ' + (e.message || e)); return; }
   const secuencia = trama.tiempo.modo === 'secuencia';
-  const nombre = 'superficie-' + (secuencia ? 'secuencia-' + String(trama.tiempo.duracion).replace('.', '_') + 's' : 'vivo') + '.trama.json';
-  await save(nombre, JSON.stringify(trama, null, 2), 'application/json');
+  const base = nombre ? nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : 'superficie-' + (secuencia ? 'secuencia-' + String(trama.tiempo.duracion).replace('.', '_') + 's' : 'vivo');
+  await save(base + '.trama.json', JSON.stringify(trama, null, 2), 'application/json');
   try { await navigator.clipboard.writeText(ContopeTramaFormato.codificarTrama(trama)); toast((secuencia ? 'Trama de secuencia' : 'Trama en vivo') + ' guardada · código CT1 copiado'); } catch (e) {}
+}
+document.getElementById('tramaExport').addEventListener('click', () => exportTrama());
+
+/* =========================================================
+   Performances
+   ---------------------------------------------------------
+   Dos capas bajo los menús: los snapshots (+ Snapshot crea
+   uno) y las performances. + Performance graba: la línea de
+   tiempo corre desde el inicio, con la pista de audio si hay,
+   y cada snapshot que pinches (o su número 1–9) entra como
+   escena en ese momento. Al detener, la performance queda en
+   su galería como una secuencia; al tocarla se abre en la
+   línea de tiempo para afinar entradas y ease, y desde ahí sale
+   como video o como trama de secuencia. Una performance nueva
+   no borra las anteriores; cada una guarda su pista de audio.
+   ========================================================= */
+const PF_STORE = 'superficie-performances-v1';
+let perfs = [], perfSel = null, perfRecording = false, perfAudioBlob = null;
+try { perfs = JSON.parse(localStorage.getItem(PF_STORE) || '[]'); } catch (e) { perfs = []; }
+const perfById = id => perfs.find(p => p.id === id);
+const persistPerfs = () => { try { localStorage.setItem(PF_STORE, JSON.stringify(perfs)); } catch (e) { toast('El navegador no tiene espacio para más performances'); } };
+
+/* pista de audio de cada performance (IndexedDB; si no está disponible, sigue sin ella) */
+const audioDB = (() => {
+  let db = null;
+  const open = () => db || (db = new Promise((res, rej) => { const r = indexedDB.open('superficie-v1', 1); r.onupgradeneeded = () => r.result.createObjectStore('audio'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const run = (mode, fn) => open().then(d => new Promise((res, rej) => { const t = d.transaction('audio', mode), q = fn(t.objectStore('audio')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }));
+  return { put: (k, v) => run('readwrite', s => s.put(v, k)).catch(() => {}), get: k => run('readonly', s => s.get(k)).catch(() => null), del: k => run('readwrite', s => s.delete(k)).catch(() => {}) };
+})();
+/* el archivo de audio cargado, para guardarlo con la performance */
+document.addEventListener('change', e => { if (e.target.id === 'tlAudioFile' && e.target.files && e.target.files[0]) perfAudioBlob = e.target.files[0]; }, true);
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#tlAudioDel')) perfAudioBlob = null; }, true);
+function clearAudio() { audioStop(); Object.assign(audio, { buffer: null, peaks: null, name: '' }); perfAudioBlob = null; document.body.classList.remove('has-audio'); document.getElementById('tlAudioName').textContent = ''; renderWave(); }
+
+const timelineDoc = () => JSON.parse(JSON.stringify({ duration: tl.duration, startTime: tl.startTime, cursor: tl.cursor, tracks: tl.tracks, scenes: tl.scenes || [], collapsed: tl.collapsed, applyPoints: tl.applyPoints }));
+const timelineHasContent = () => (tl.scenes && tl.scenes.length) || Object.values(tl.tracks).some(k => k && k.length);
+function perfThumb(doc) {
+  const list = (doc.scenes || []).slice().sort((a, b) => a.t - b.t), st = list.length ? list[0].st : null;
+  if (!st) return '';
+  const [W, H] = exportSize(), tw = 240, th = Math.round(240 * H / W);
+  const c = document.createElement('canvas'); c.width = tw; c.height = th;
+  drawSheet(c.getContext('2d'), computeState(st, tw, th, 0.5), st.blend && st.blend.e > 0.5 ? st.blend.state.cfg : st.cfg, tw, th, modeOf(st));
+  return c.toDataURL('image/png');
+}
+function refreshTimeline() {
+  document.getElementById('tlDur').value = tl.duration;
+  fitView(); renderRuler(); renderLanes(); renderNav(); renderScenes(); renderWave(); setHead(0);
+}
+/* lo que se edita en la línea de tiempo queda en la performance abierta */
+function perfStoreCurrent() {
+  const p = perfSel && perfById(perfSel); if (!p || perfRecording) return;
+  const doc = timelineDoc(), firstOld = (p.doc.scenes || []).map(s => s.t + ':' + s.snap).sort()[0], firstNew = doc.scenes.map(s => s.t + ':' + s.snap).sort()[0];
+  p.doc = doc; if (firstOld !== firstNew || !p.thumb) p.thumb = perfThumb(doc);
+  persistPerfs(); renderPerfs();
+}
+{ const save0 = saveTimeline; saveTimeline = function () { save0(); perfStoreCurrent(); }; }
+
+function perfAdd(doc, extra = {}) {
+  const num = perfs.reduce((m, p) => Math.max(m, p.num), 0) + 1;
+  const p = { id: Date.now() + Math.floor(Math.random() * 1000), num, name: 'Performance ' + num, doc, thumb: perfThumb(doc), audioName: '', ...extra };
+  perfs.unshift(p); persistPerfs(); return p;
+}
+async function perfLoad(p) {
+  if (perfRecording) return;
+  perfStoreCurrent();
+  if (stRec.on) stRecStop(); if (tlRec.on) tlRecStop(); tlPlay(false);
+  if (!tl.open) openTimeline(true);
+  Object.assign(tl, JSON.parse(JSON.stringify(p.doc))); tl.sel = null; tl.selScene = null;
+  sceneSeq = tl.scenes.reduce((m, s) => Math.max(m, s.id), 0);
+  perfSel = p.id; undoDoc = null; document.getElementById('tlUndo').hidden = true;
+  clearAudio();
+  refreshTimeline(); renderPerfs(); saveTimeline();
+  if (p.audioName) {
+    const a = await audioDB.get(p.id);
+    if (a && a.blob && perfSel === p.id) {
+      await loadAudio(new File([a.blob], a.name || p.audioName));
+      perfAudioBlob = a.blob; tl.duration = p.doc.duration; refreshTimeline();
+    } else if (perfSel === p.id) toast('La pista de audio de esta performance no está en este navegador');
+  }
+}
+function perfStart() {
+  if (!snaps.length) { toast('Primero crea los snapshots con + Snapshot (C)'); return; }
+  if (tlRec.on) tlRecStop(); tlPlay(false);
+  if (!tl.open) openTimeline(true);
+  if (!perfSel && timelineHasContent()) { const p = perfAdd(timelineDoc(), { name: 'Línea de tiempo anterior' }); toast(`Lo que había en la línea de tiempo quedó como «${p.name}»`); }
+  else perfStoreCurrent();
+  perfSel = null;
+  Object.assign(tl, { tracks: {}, scenes: [], applyPoints: [], sel: null, selScene: null, startTime: live.time, duration: audio.buffer ? Math.ceil(audio.buffer.duration * 10) / 10 : 10 });
+  refreshTimeline(); renderPerfs();
+  perfRecording = true;
+  stRecStart();
+  if (!stRec.on) { perfRecording = false; renderPerfs(); return; }
+  renderPerfs();
+}
+function perfFinish() {
+  perfRecording = false;
+  if (!tl.scenes.length) { renderPerfs(); toast('No pinchaste snapshots: la performance no se guardó'); return; }
+  const last = Math.max(...tl.scenes.map(s => s.t));
+  tl.duration = Math.min(600, Math.max(1, Math.ceil(Math.max(tl.head, last + 0.5) * 10) / 10));
+  refreshTimeline();
+  const p = perfAdd(timelineDoc(), { audioName: audio.buffer ? audio.name : '' });
+  if (audio.buffer && perfAudioBlob) audioDB.put(p.id, { blob: perfAudioBlob, name: audio.name });
+  perfSel = p.id; renderPerfs(); saveTimeline();
+  toast(`${p.name} guardada · afínala en la línea de tiempo`);
+}
+{
+  const start0 = stRecStart, stop0 = stRecStop;
+  stRecStart = function () { start0(); renderPerfs(); };
+  stRecStop = function () { const was = stRec.on; stop0(); if (was && perfRecording) perfFinish(); else renderPerfs(); };
+}
+function fmtDur(s) { return s < 60 ? s.toFixed(1).replace('.', ',') + ' s' : Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0'); }
+function renderPerfs() {
+  const host = document.getElementById('pfItems'); if (!host) return;
+  const keep = host.scrollLeft;
+  let h = perfRecording
+    ? `<button class="fs-add rec" id="perfRec" title="Detener la grabación y guardar la performance"><span>■</span>Detener</button>`
+    : `<button class="fs-add" id="perfRec" title="Grabar una performance: la línea de tiempo corre (con la pista de audio, si hay) y cada snapshot que pinches, o su número 1–9, entra como escena en ese momento"><span>+</span>Performance</button>`;
+  for (const p of perfs) {
+    const n = (p.doc.scenes || []).length;
+    h += `<figure class="fs-item pf-item${p.id === perfSel ? ' sel' : ''}" data-id="${p.id}" tabindex="0" title="Clic: abrir en la línea de tiempo">${p.thumb ? `<img alt="" src="${p.thumb}">` : '<div class="pf-blank"></div>'}<figcaption></figcaption><span class="pf-meta">${fmtDur(p.doc.duration)} · ${n} escena${n === 1 ? '' : 's'}${p.audioName ? ' · ♪' : ''}</span></figure>`;
+  }
+  if (!perfs.length && !perfRecording) h += `<p class="fs-empty">Crea snapshots arriba y graba una performance: pínchalos mientras corre el tiempo (y la música).</p>`;
+  if (perfRecording) h += `<p class="fs-empty rec-hint">Grabando · pincha los snapshots de arriba, o sus números 1–9, en el momento en que quieras que entren</p>`;
+  host.innerHTML = h; host.scrollLeft = keep;
+  perfs.forEach(p => { const f = host.querySelector(`.pf-item[data-id="${p.id}"] figcaption`); if (f) f.textContent = p.name; });
+  const info = document.getElementById('pfSelInfo'), acts = document.getElementById('pfActions'), p = perfSel && perfById(perfSel);
+  if (p && !perfRecording) {
+    info.textContent = ''; const b = document.createElement('b'); b.textContent = p.name; info.appendChild(b);
+    acts.innerHTML = `<button data-a="video">Video</button><button data-a="trama">Trama de secuencia</button><button data-a="nombre">Renombrar</button><button data-a="del">Quitar</button>`;
+  } else { info.textContent = perfRecording ? 'Grabando…' : (perfs.length ? 'Selecciona una performance' : ''); acts.innerHTML = ''; }
+}
+document.getElementById('pfItems').addEventListener('click', e => {
+  if (e.target.closest('#perfRec')) { if (perfRecording) stRecStop(); else perfStart(); return; }
+  const f = e.target.closest('.pf-item'); if (!f) return;
+  const p = perfById(+f.dataset.id); if (p) perfLoad(p);
 });
+document.getElementById('pfItems').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.closest('.pf-item')) e.target.click(); });
+document.getElementById('pfItems').addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.currentTarget.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+document.getElementById('pfActions').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-a]'), p = perfSel && perfById(perfSel); if (!b || !p) return;
+  const a = b.dataset.a;
+  if (a === 'video') { if (!tl.open) openTimeline(true); renderVideo(); }
+  if (a === 'trama') exportTrama(p.name);
+  if (a === 'nombre') { const n = prompt('Nombre de la performance', p.name); if (n && n.trim()) { p.name = n.trim().slice(0, 60); persistPerfs(); renderPerfs(); } }
+  if (a === 'del') {
+    if (!confirm(`¿Quitar «${p.name}»?`)) return;
+    perfs.splice(perfs.indexOf(p), 1); audioDB.del(p.id); perfSel = null; persistPerfs();
+    tl.tracks = {}; tl.scenes = []; tl.applyPoints = []; tl.sel = null; tl.selScene = null; clearAudio(); refreshTimeline(); saveTimeline(); renderPerfs();
+  }
+});
+document.getElementById('perfAudio').addEventListener('click', () => document.getElementById('tlAudioFile').click());
+renderPerfs();
+
 renderStrip();
 layout();
 requestAnimationFrame(frame);
