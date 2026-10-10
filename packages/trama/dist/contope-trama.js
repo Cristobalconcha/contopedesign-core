@@ -28,6 +28,10 @@ var ContopeTrama = (() => {
   __export(global_exports, {
     ALFA_MINIMO_PUNTO: () => ALFA_MINIMO_PUNTO,
     ALFA_MINIMO_TRAMO: () => ALFA_MINIMO_TRAMO,
+    ANGULO_AUREO: () => ANGULO_AUREO,
+    AVISO_TRAMA_ESPIRAL: () => AVISO_TRAMA_ESPIRAL,
+    B_AUREA: () => B_AUREA,
+    CICLO_ESPIRAL: () => CICLO_ESPIRAL,
     CIERRE_POR_DEFECTO: () => CIERRE_POR_DEFECTO,
     CLAVES_DE_COLOR: () => CLAVES_DE_COLOR,
     COLOR_CERCA_POR_DEFECTO: () => COLOR_CERCA_POR_DEFECTO,
@@ -50,6 +54,7 @@ var ContopeTrama = (() => {
     MOTOR_ID: () => MOTOR_ID,
     MOTOR_VERSION: () => MOTOR_VERSION,
     NIVELES_DE_ALFA: () => NIVELES_DE_ALFA,
+    NOMBRE_ESPIRAL_V7: () => NOMBRE_ESPIRAL_V7,
     NOMBRE_V7: () => NOMBRE_V7,
     OPACIDAD_MINIMA_LINEAS: () => OPACIDAD_MINIMA_LINEAS,
     OPACIDAD_MINIMA_PUNTOS: () => OPACIDAD_MINIMA_PUNTOS,
@@ -59,6 +64,7 @@ var ContopeTrama = (() => {
     PARAMETRO_ANIMABLE: () => PARAMETRO_ANIMABLE,
     PATRON_HEX: () => PATRON_HEX,
     PERMUTACION: () => PERMUTACION,
+    PHI: () => PHI,
     PREFIJO_CODIGO: () => PREFIJO_CODIGO,
     PREFIJO_SP1: () => PREFIJO_SP1,
     PUNTOS_POR_TRAMO: () => PUNTOS_POR_TRAMO,
@@ -76,10 +82,12 @@ var ContopeTrama = (() => {
     VALORES_POR_VERTICE: () => VALORES_POR_VERTICE,
     ajustarAGrilla: () => ajustarAGrilla,
     alfaDeNivel: () => alfaDeNivel,
+    aplicadorDeEscenas: () => aplicadorDeEscenas,
     base64ABytes: () => base64ABytes,
     bezierCubica: () => bezierCubica,
     bytesABase64: () => bytesABase64,
     bytesAUtf8: () => bytesAUtf8,
+    calcularEspiral: () => calcularEspiral,
     calcularLamina: () => calcularLamina,
     capturaDeV7: () => capturaDeV7,
     capturaEn: () => capturaEn,
@@ -91,6 +99,7 @@ var ContopeTrama = (() => {
     conLineas: () => conLineas,
     conPuntos: () => conPuntos,
     configuracionDeV7: () => configuracionDeV7,
+    configuracionEspiralDeV7: () => configuracionEspiralDeV7,
     configuracionLimpiaDeV7: () => configuracionLimpiaDeV7,
     configuracionPorDefecto: () => configuracionPorDefecto,
     crearAtendedor: () => crearAtendedor,
@@ -102,6 +111,7 @@ var ContopeTrama = (() => {
     dimensionesDeLamina: () => dimensionesDeLamina,
     documentoDeTrama: () => documentoDeTrama,
     empaquetar: () => empaquetar,
+    esEspiralV7: () => esEspiralV7,
     esModo: () => esModo,
     esRutaAnimable: () => esRutaAnimable,
     escenaAV7: () => escenaAV7,
@@ -443,6 +453,61 @@ var ContopeTrama = (() => {
     const e = estado.mezcla.e, salida = new Float32Array(n);
     for (let k = 0; k < n; k++) salida[k] = A[k] + (B[k] - A[k]) * e;
     return salida;
+  }
+
+  // src/motor/espiral.ts
+  var PHI = (1 + Math.sqrt(5)) / 2;
+  var ANGULO_AUREO = Math.PI * 2 * (1 - 1 / PHI);
+  var B_AUREA = Math.log(PHI) / (Math.PI / 2);
+  var CICLO_ESPIRAL = 25.4;
+  var acotar01 = (x) => Math.min(Math.max(x, 0), 1);
+  var suave = (x) => {
+    x = acotar01(x);
+    return x * x * (3 - 2 * x);
+  };
+  function calcularEspiral(estado, W, H, calidad = 1) {
+    const cfg = estado.configuracion, S = Math.min(W, H), px = S / 1080;
+    const u = (estado.tiempo * cfg.velocidad % CICLO_ESPIRAL + CICLO_ESPIRAL) % CICLO_ESPIRAL;
+    const N = Math.max(10, Math.round(cfg.puntos));
+    const nace = 1 - (1 - acotar01(u / 2)) ** 2, expa = suave((u - 9) / 9);
+    const vis = N * nace;
+    const c = cfg.escalaPuntos * 0.32 * S / Math.sqrt(N) * (1 + (cfg.expPuntos - 1) * expa);
+    const giro = (cfg.giro - 25 * (1 - nace)) * Math.PI / 180;
+    const cx = W / 2, cy = H / 2;
+    const puntos = new Float32Array(N * 4);
+    for (let n = 0; n < N; n++) {
+      const th = n * ANGULO_AUREO + giro, r = c * Math.sqrt(n);
+      puntos[n * 4] = cx + r * Math.cos(th);
+      puntos[n * 4 + 1] = cy - r * Math.sin(th);
+      puntos[n * 4 + 2] = cfg.tamPunto * px / 2;
+      puntos[n * 4 + 3] = acotar01(vis - n);
+    }
+    let L = 0;
+    if (u >= 1.5) L = 0.5 * S * (1 - (1 - acotar01((u - 1.5) / 1.5)) ** 2);
+    if (u >= 3) L = 0.5 * S + 0.7 * S * suave((u - 3) / 6);
+    if (u >= 9) L = 1.2 * S + 1 * S * expa;
+    L *= cfg.largo;
+    const enr = cfg.enrollado * Math.pow(suave((u - 3) / 6), 1.6);
+    const a = cfg.escalaEspiral * (1 + (cfg.expEspiral - 1) * expa);
+    const M = Math.max(60, Math.round(480 * calidad)), r0 = Math.max(1e-4, cfg.ojo) * S, k = B_AUREA / Math.sqrt(1 + B_AUREA * B_AUREA);
+    const curva = new Float32Array((M + 1) * 2);
+    let x = 0, y = 0;
+    const ds = L / M;
+    curva[0] = cx;
+    curva[1] = cy;
+    for (let j = 1; j <= M; j++) {
+      const s = (j - 0.5) * ds, h = enr * Math.log((r0 + s * k) / r0) / B_AUREA;
+      x += Math.cos(h) * ds;
+      y += Math.sin(h) * ds;
+      curva[j * 2] = cx + x * a;
+      curva[j * 2 + 1] = cy - y * a;
+    }
+    const hv = suave((u - 2) / 3) * cfg.hilos, hilos = [];
+    if (L > 0) for (let n = 0; n < N; n++) {
+      if (n >= vis || n >= hv * N) break;
+      hilos.push(n, Math.min(M, Math.round(n / N * M)));
+    }
+    return { puntos, curva, hilos, largo: L, px };
   }
 
   // src/dibujo/color.ts
@@ -883,6 +948,43 @@ var ContopeTrama = (() => {
     }
     return { evolucion: evolucionEn(doc, t).tiempo, cursor, configuracion, color: color2 };
   }
+  function aplicadorDeEscenas(parametros, pistas, antes, destino) {
+    const fr = 1 / CUADROS_POR_SEGUNDO_LINEA;
+    let prevT = -Infinity;
+    return (sc) => {
+      var _a;
+      const t = ajustarAGrilla(sc.t), corte = sc.transicion === "corte";
+      const espacio = Number.isFinite(prevT) ? Math.max(0, t - prevT - fr) : t;
+      const dur = corte ? 0 : Math.min(sc.duracion, espacio);
+      const t0 = ajustarAGrilla(Math.max(0, t - Math.max(dur, fr)));
+      for (const p of parametros) {
+        if (p.ruta === "evolucion" && !sc.evolucion) continue;
+        const meta = destino(sc, p);
+        if (meta === void 0 || meta === null) continue;
+        const previo = antes(p, t0);
+        if (mismoValor(previo, meta, p)) continue;
+        const keys = (_a = pistas[p.ruta]) != null ? _a : pistas[p.ruta] = [];
+        const poner = (k) => {
+          const i = keys.findIndex((x) => Math.abs(x.t - k.t) < fr / 2);
+          if (i >= 0) keys[i] = k;
+          else keys.push(k);
+        };
+        if (t < fr) {
+          poner({ t: 0, v: meta, ease: "lineal", escena: sc.id });
+          continue;
+        }
+        if (corte || p.entero || dur < fr) {
+          poner({ t: ajustarAGrilla(t - fr), v: previo, ease: "mantener", escena: sc.id });
+          poner({ t, v: meta, ease: "lineal", escena: sc.id });
+        } else {
+          poner({ t: t0, v: previo, ease: "curva", curva: [...sc.curva], escena: sc.id });
+          poner({ t, v: meta, ease: "lineal", escena: sc.id });
+        }
+        keys.sort((a, b) => a.t - b.t);
+      }
+      prevT = t;
+    };
+  }
   function regenerarPistas(tiempo2, base) {
     const fr = 1 / CUADROS_POR_SEGUNDO_LINEA;
     const pistas = {};
@@ -894,40 +996,12 @@ var ContopeTrama = (() => {
     let lista = tiempo2.escenas.slice().sort((a, b) => a.t - b.t);
     const fin = ajustarAGrilla(tiempo2.duracion);
     if (tiempo2.cerrarCiclo) lista = lista.filter((sc) => Math.abs(ajustarAGrilla(sc.t) - fin) >= fr / 2);
-    let prevT = -Infinity;
-    const aplicar = (sc) => {
-      var _a;
-      const t = ajustarAGrilla(sc.t), corte = sc.transicion === "corte";
-      const espacio = Number.isFinite(prevT) ? Math.max(0, t - prevT - fr) : t;
-      const dur = corte ? 0 : Math.min(sc.duracion, espacio);
-      const t0 = ajustarAGrilla(Math.max(0, t - Math.max(dur, fr)));
-      for (const p of PARAMETROS_ANIMABLES) {
-        if (p.ruta === "evolucion" && !sc.evolucion) continue;
-        const destino = valorDeCaptura(sc.captura, p.ruta);
-        if (destino === void 0 || destino === null) continue;
-        const antes = p.ruta === "evolucion" ? evolucionEn(doc, t0).tiempo : valorEn(doc, p.ruta, t0);
-        if (mismoValor(antes, destino, p)) continue;
-        const keys = (_a = pistas[p.ruta]) != null ? _a : pistas[p.ruta] = [];
-        const poner = (k) => {
-          const i = keys.findIndex((x) => Math.abs(x.t - k.t) < fr / 2);
-          if (i >= 0) keys[i] = k;
-          else keys.push(k);
-        };
-        if (t < fr) {
-          poner({ t: 0, v: destino, ease: "lineal", escena: sc.id });
-          continue;
-        }
-        if (corte || p.entero || dur < fr) {
-          poner({ t: ajustarAGrilla(t - fr), v: antes, ease: "mantener", escena: sc.id });
-          poner({ t, v: destino, ease: "lineal", escena: sc.id });
-        } else {
-          poner({ t: t0, v: antes, ease: "curva", curva: [...sc.curva], escena: sc.id });
-          poner({ t, v: destino, ease: "lineal", escena: sc.id });
-        }
-        keys.sort((a, b) => a.t - b.t);
-      }
-      prevT = t;
-    };
+    const aplicar = aplicadorDeEscenas(
+      PARAMETROS_ANIMABLES,
+      pistas,
+      (p, t0) => p.ruta === "evolucion" ? evolucionEn(doc, t0).tiempo : valorEn(doc, p.ruta, t0),
+      (sc, p) => valorDeCaptura(sc.captura, p.ruta)
+    );
     for (const sc of lista) aplicar(sc);
     if (tiempo2.cerrarCiclo) {
       aplicar({
@@ -1792,10 +1866,55 @@ var ContopeTrama = (() => {
       alTerminar: "repetir"
     };
   }
-  function regenerarPistasV7(tl, cfg) {
-    const pistas = regenerarPistas(secuenciaDeLinea(tl, true), { configuracion: configuracionDeV7(cfg), colores: coloresDeV7(cfg) });
-    return pistasAV7(pistas);
+  function regenerarPistasV7(tl, cfg, extras = []) {
+    var _a;
+    const pistas = pistasAV7(regenerarPistas(secuenciaDeLinea(tl, true), { configuracion: configuracionDeV7(cfg), colores: coloresDeV7(cfg) }));
+    if (!extras.length) return pistas;
+    const fuera = {};
+    for (const p of extras) {
+      const manuales = ((_a = tl.tracks[p.path]) != null ? _a : []).filter((k) => !k.scene).map(keyframeDeV7);
+      if (manuales.length) fuera[p.path] = manuales;
+    }
+    const parametros = extras.map((p) => ({ ruta: p.path, paso: p.paso, ...p.entero ? { entero: true } : {}, ...p.color ? { color: true } : {} }));
+    const aplicar = aplicadorDeEscenas(
+      parametros,
+      fuera,
+      (p, t0) => {
+        const k = fuera[p.ruta];
+        return k && k.length ? interpolar(k, t0, p) : cfg[p.ruta];
+      },
+      (sc, p) => {
+        var _a2;
+        return (_a2 = sc.st.cfg) == null ? void 0 : _a2[p.ruta];
+      }
+    );
+    for (const sc of tl.scenes.slice().sort((a, b) => a.t - b.t)) aplicar({ ...escenaDeV7(sc), st: sc.st });
+    for (const [path, keys] of Object.entries(fuera)) if (keys.length) pistas[path] = keys.map(keyframeAV7);
+    return pistas;
   }
+  var NOMBRE_ESPIRAL_V7 = Object.freeze({
+    velocidad: "speed",
+    puntos: "espPuntos",
+    giro: "espGiro",
+    escalaPuntos: "espEscalaPuntos",
+    expPuntos: "espExpPuntos",
+    escalaEspiral: "espEscalaEspiral",
+    expEspiral: "espExpEspiral",
+    largo: "espLargo",
+    enrollado: "espEnrollado",
+    ojo: "espOjo",
+    hilos: "espHilos",
+    tamPunto: "espTamPunto"
+  });
+  function esEspiralV7(cfg) {
+    return !!cfg && cfg["generator"] === "espiral";
+  }
+  function configuracionEspiralDeV7(cfg) {
+    const o = {};
+    for (const [k, n] of Object.entries(NOMBRE_ESPIRAL_V7)) o[k] = cfg[n];
+    return o;
+  }
+  var AVISO_TRAMA_ESPIRAL = "La trama de la espiral llega con la próxima versión del formato; por ahora sale como video, PNG o SVG";
   function lineaEnUso(tl) {
     return !!tl && (Object.values(tl.tracks).some((k) => k.length > 0) || tl.scenes.length > 0);
   }
@@ -1807,18 +1926,22 @@ var ContopeTrama = (() => {
     return dentro;
   }
   function tramaDeEstadoV7(e, opciones = {}) {
-    var _a, _b;
+    var _a, _b, _c, _d;
+    if (esEspiralV7(e.cfg) || ((_b = (_a = e.tl) == null ? void 0 : _a.scenes) != null ? _b : []).some((sc) => {
+      var _a2;
+      return esEspiralV7((_a2 = sc.st) == null ? void 0 : _a2.cfg);
+    })) throw new Error(AVISO_TRAMA_ESPIRAL);
     const configuracion = configuracionLimpiaDeV7(e.cfg);
     const hex = coloresDeV7(e.cfg);
     const color2 = { lejos: { hex: hex.lejos, origen: "manual" }, cerca: { hex: hex.cerca, origen: "manual" }, fondo: { hex: hex.fondo, origen: "manual" } };
     for (const k of CLAVES_DE_COLOR) {
-      const dado = (_a = opciones.colores) == null ? void 0 : _a[k];
+      const dado = (_c = opciones.colores) == null ? void 0 : _c[k];
       if (dado && dado.hex.toLowerCase() === hex[k]) color2[k] = { ...dado, hex: hex[k] };
     }
     const tinta = e.cfg["inkMode"] === "luz" || e.cfg["inkMode"] === "tinta" ? e.cfg["inkMode"] : "auto";
     const modo = esModo(e.render) ? e.render : "puntos";
     const medida = /^(\d+)x(\d+)$/.exec(e.format);
-    const lienzo = (_b = opciones.lienzo) != null ? _b : medida ? { tipo: "medida", ancho: Number(medida[1]), alto: Number(medida[2]) } : { tipo: "libre" };
+    const lienzo = (_d = opciones.lienzo) != null ? _d : medida ? { tipo: "medida", ancho: Number(medida[1]), alto: Number(medida[2]) } : { tipo: "libre" };
     const documento = {
       kind: TRAMA_KIND,
       version: FORMATO_VERSION,

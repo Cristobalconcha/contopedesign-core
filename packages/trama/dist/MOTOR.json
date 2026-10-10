@@ -19,13 +19,13 @@
   },
   "archivos": {
     "contope-trama.js": {
-      "sha256": "b67a6131e2bea18afb59f7734e7116b6bc19885399ca86daa29291f9ac2965a0",
-      "bytes": 82638
+      "sha256": "249ab947496f8d1d0a65692143afc432423853f26354fc02015e076416484e96",
+      "bytes": 87623
     },
     "contope-trama-worker.js": {
-      "sha256": "f0a0a0e58a3155590cbf343c4e502f30d13d103206765c37117ca3bb164d0040",
-      "bytes": 54864
+      "sha256": "91a2071222914c58b9f728eeeea88c5d3e9c25ce708959e9ba6ec6757d0b5038",
+      "bytes": 55098
     }
   },
-  "fecha": "2026-10-10T10:44:06.924Z"
+  "fecha": "2026-10-10T19:23:58.663Z"
 }

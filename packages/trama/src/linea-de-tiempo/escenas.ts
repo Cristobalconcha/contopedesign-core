@@ -33,7 +33,7 @@ export function valorDeCaptura(c: Captura, ruta: RutaAnimable): number | string 
 }
 
 /** ¿Son el mismo valor, a la precisión del parámetro? (`sameVal`). */
-export function mismoValor(a: number | string, b: number | string, p: ParametroAnimable): boolean {
+export function mismoValor(a: number | string, b: number | string, p: Pick<ParametroAnimable, 'paso' | 'color'>): boolean {
   return p.color ? String(a).toLowerCase() === String(b).toLowerCase() : Math.abs(+a - +b) < Math.max(p.paso / 2, 1e-6);
 }
 
@@ -54,6 +54,67 @@ export function capturaEn(doc: DocumentoDeLinea, t: number): Captura {
 
 type BaseDeDocumento = Pick<DocumentoDeLinea, 'configuracion' | 'colores'>;
 
+/** Lo que el aplicador de escenas necesita de un parámetro (los de `PARAMETROS_ANIMABLES` lo cumplen). */
+export interface ParametroDeEscena {
+  ruta: string;
+  paso: number;
+  entero?: true;
+  color?: true;
+}
+
+/** Lo que el aplicador necesita de una escena. */
+export type EscenaParaKeyframes = Pick<Escena, 'id' | 't' | 'transicion' | 'duracion' | 'curva' | 'evolucion'>;
+
+/**
+ * El corazón de `regenerateScenes` de v7: devuelve `aplicar(escena)`, que
+ * pone en `pistas` los keyframes de cada escena (en orden de t), sólo en
+ * los parámetros cuyo valor cambia. `antes(p, t0)` es el valor de un
+ * parámetro donde empieza la transición; `destino(escena, p)` el que pide
+ * la escena (`undefined`: no dice nada). La ruta `evolucion` sólo entra si
+ * la escena lleva la evolución. Sirve igual para rutas que no están en el
+ * formato (las de otro generador de v7).
+ */
+export function aplicadorDeEscenas<E extends EscenaParaKeyframes>(
+  parametros: readonly ParametroDeEscena[],
+  pistas: Record<string, Keyframe[]>,
+  antes: (p: ParametroDeEscena, t0: number) => number | string,
+  destino: (sc: E, p: ParametroDeEscena) => number | string | undefined | null,
+): (sc: E) => void {
+  const fr = 1 / CUADROS_POR_SEGUNDO_LINEA;
+  let prevT = -Infinity;
+  return (sc: E) => {
+    const t = ajustarAGrilla(sc.t), corte = sc.transicion === 'corte';
+    const espacio = Number.isFinite(prevT) ? Math.max(0, t - prevT - fr) : t;
+    const dur = corte ? 0 : Math.min(sc.duracion, espacio);
+    const t0 = ajustarAGrilla(Math.max(0, t - Math.max(dur, fr)));
+    for (const p of parametros) {
+      if (p.ruta === 'evolucion' && !sc.evolucion) continue;
+      const meta = destino(sc, p);
+      if (meta === undefined || meta === null) continue;
+      const previo = antes(p, t0);
+      if (mismoValor(previo, meta, p)) continue;
+      const keys = pistas[p.ruta] ?? (pistas[p.ruta] = []);
+      const poner = (k: Keyframe) => {
+        const i = keys.findIndex((x) => Math.abs(x.t - k.t) < fr / 2);
+        if (i >= 0) keys[i] = k; else keys.push(k);
+      };
+      if (t < fr) { // escena en el inicio: rige desde 0
+        poner({ t: 0, v: meta, ease: 'lineal', escena: sc.id });
+        continue;
+      }
+      if (corte || p.entero || dur < fr) {
+        poner({ t: ajustarAGrilla(t - fr), v: previo, ease: 'mantener', escena: sc.id });
+        poner({ t, v: meta, ease: 'lineal', escena: sc.id });
+      } else {
+        poner({ t: t0, v: previo, ease: 'curva', curva: [...sc.curva], escena: sc.id });
+        poner({ t, v: meta, ease: 'lineal', escena: sc.id });
+      }
+      keys.sort((a, b) => a.t - b.t);
+    }
+    prevT = t;
+  };
+}
+
 /**
  * Las pistas de una secuencia con los keyframes de sus escenas regenerados:
  * se quitan los que traían `escena` y se vuelven a generar en orden.
@@ -69,38 +130,12 @@ export function regenerarPistas(tiempo: TiempoSecuencia, base: BaseDeDocumento):
   let lista = tiempo.escenas.slice().sort((a, b) => a.t - b.t);
   const fin = ajustarAGrilla(tiempo.duracion);
   if (tiempo.cerrarCiclo) lista = lista.filter((sc) => Math.abs(ajustarAGrilla(sc.t) - fin) >= fr / 2);
-  let prevT = -Infinity;
-  const aplicar = (sc: Escena) => {
-    const t = ajustarAGrilla(sc.t), corte = sc.transicion === 'corte';
-    const espacio = Number.isFinite(prevT) ? Math.max(0, t - prevT - fr) : t;
-    const dur = corte ? 0 : Math.min(sc.duracion, espacio);
-    const t0 = ajustarAGrilla(Math.max(0, t - Math.max(dur, fr)));
-    for (const p of PARAMETROS_ANIMABLES) {
-      if (p.ruta === 'evolucion' && !sc.evolucion) continue;
-      const destino = valorDeCaptura(sc.captura, p.ruta);
-      if (destino === undefined || destino === null) continue;
-      const antes = p.ruta === 'evolucion' ? evolucionEn(doc, t0).tiempo : valorEn(doc, p.ruta, t0);
-      if (mismoValor(antes, destino, p)) continue;
-      const keys = pistas[p.ruta] ?? (pistas[p.ruta] = []);
-      const poner = (k: Keyframe) => {
-        const i = keys.findIndex((x) => Math.abs(x.t - k.t) < fr / 2);
-        if (i >= 0) keys[i] = k; else keys.push(k);
-      };
-      if (t < fr) { // escena en el inicio: rige desde 0
-        poner({ t: 0, v: destino, ease: 'lineal', escena: sc.id });
-        continue;
-      }
-      if (corte || p.entero || dur < fr) {
-        poner({ t: ajustarAGrilla(t - fr), v: antes, ease: 'mantener', escena: sc.id });
-        poner({ t, v: destino, ease: 'lineal', escena: sc.id });
-      } else {
-        poner({ t: t0, v: antes, ease: 'curva', curva: [...sc.curva], escena: sc.id });
-        poner({ t, v: destino, ease: 'lineal', escena: sc.id });
-      }
-      keys.sort((a, b) => a.t - b.t);
-    }
-    prevT = t;
-  };
+  const aplicar = aplicadorDeEscenas<Escena>(
+    PARAMETROS_ANIMABLES,
+    pistas as Record<string, Keyframe[]>,
+    (p, t0) => (p.ruta === 'evolucion' ? evolucionEn(doc, t0).tiempo : valorEn(doc, p.ruta as RutaAnimable, t0)),
+    (sc, p) => valorDeCaptura(sc.captura, p.ruta as RutaAnimable),
+  );
   for (const sc of lista) aplicar(sc);
   if (tiempo.cerrarCiclo) {
     aplicar({

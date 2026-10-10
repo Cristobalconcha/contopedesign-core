@@ -16,10 +16,11 @@
 import type { ModoDeDibujo } from '../dibujo/modo.js';
 import { esModo } from '../dibujo/modo.js';
 import type { TintaElegida } from '../dibujo/color.js';
-import { capturaEn, regenerarPistas } from '../linea-de-tiempo/escenas.js';
+import { aplicadorDeEscenas, capturaEn, regenerarPistas, type ParametroDeEscena } from '../linea-de-tiempo/escenas.js';
 import { documentoDeTrama, evolucionEn, interpolar } from '../linea-de-tiempo/evaluar.js';
 import { PARAMETRO_ANIMABLE, PARAMETROS_ANIMABLES } from '../linea-de-tiempo/parametros.js';
 import { CURVA_SUAVE } from '../linea-de-tiempo/suavizados.js';
+import type { ConfiguracionEspiral } from '../motor/espiral.js';
 import { CONFIGURACION_POR_DEFECTO, NOMBRE_V7, PARAMETROS_MOTOR, type ConfiguracionMotor, type ParametroMotor } from '../motor/configuracion.js';
 import { MOTOR_ID, MOTOR_VERSION } from '../motor/lamina.js';
 import { normalizarTrama } from './normalizar.js';
@@ -304,14 +305,70 @@ function secuenciaDeLinea(tl: LineaV7, soloManuales: boolean): TiempoSecuencia {
   };
 }
 
+/** Un parámetro animable de v7 que el formato todavía no tiene (los de la espiral): su `path` y cómo se compara. */
+export interface ParametroExtraV7 {
+  path: string;
+  /** El `step` de v7: dos valores a menos de medio paso son el mismo. */
+  paso: number;
+  /** `hold` de v7: salta en el keyframe. */
+  entero?: boolean;
+  color?: boolean;
+}
+
 /**
  * `regenerateScenes` de v7 con el motor único: los keyframes de las escenas
  * se vuelven a generar con `regenerarPistas`; los hechos a mano quedan.
+ * Los `extras` (parámetros de v7 fuera del formato, como los de la espiral)
+ * pasan por el mismo aplicador de escenas, con sus valores de la `config`.
  */
-export function regenerarPistasV7(tl: LineaV7, cfg: ConfiguracionV7): PistasV7 {
-  const pistas = regenerarPistas(secuenciaDeLinea(tl, true), { configuracion: configuracionDeV7(cfg), colores: coloresDeV7(cfg) });
-  return pistasAV7(pistas);
+export function regenerarPistasV7(tl: LineaV7, cfg: ConfiguracionV7, extras: readonly ParametroExtraV7[] = []): PistasV7 {
+  const pistas = pistasAV7(regenerarPistas(secuenciaDeLinea(tl, true), { configuracion: configuracionDeV7(cfg), colores: coloresDeV7(cfg) }));
+  if (!extras.length) return pistas;
+  const fuera: Record<string, Keyframe[]> = {};
+  for (const p of extras) {
+    const manuales = (tl.tracks[p.path] ?? []).filter((k) => !k.scene).map(keyframeDeV7);
+    if (manuales.length) fuera[p.path] = manuales;
+  }
+  const parametros: ParametroDeEscena[] = extras.map((p) => ({ ruta: p.path, paso: p.paso, ...(p.entero ? { entero: true as const } : {}), ...(p.color ? { color: true as const } : {}) }));
+  const aplicar = aplicadorDeEscenas<ReturnType<typeof escenaDeV7> & { st: EstadoCapturaV7 }>(
+    parametros,
+    fuera,
+    (p, t0) => {
+      const k = fuera[p.ruta];
+      return k && k.length ? interpolar(k, t0, p) : (cfg[p.ruta] as number | string);
+    },
+    (sc, p) => sc.st.cfg?.[p.ruta] as number | string | undefined,
+  );
+  for (const sc of tl.scenes.slice().sort((a, b) => a.t - b.t)) aplicar({ ...escenaDeV7(sc), st: sc.st });
+  for (const [path, keys] of Object.entries(fuera)) if (keys.length) pistas[path] = keys.map(keyframeAV7);
+  return pistas;
 }
+
+// ---------------------------------------------------------------------------
+// La espiral (v10)
+// ---------------------------------------------------------------------------
+
+/** Cómo se llama en v10 cada parámetro de la espiral. */
+export const NOMBRE_ESPIRAL_V7: Readonly<Record<keyof ConfiguracionEspiral, string>> = Object.freeze({
+  velocidad: 'speed', puntos: 'espPuntos', giro: 'espGiro', escalaPuntos: 'espEscalaPuntos', expPuntos: 'espExpPuntos',
+  escalaEspiral: 'espEscalaEspiral', expEspiral: 'espExpEspiral', largo: 'espLargo', enrollado: 'espEnrollado', ojo: 'espOjo',
+  hilos: 'espHilos', tamPunto: 'espTamPunto',
+});
+
+/** ¿Esta `config` de v7 dibuja la espiral? */
+export function esEspiralV7(cfg: ConfiguracionV7 | undefined | null): boolean {
+  return !!cfg && cfg['generator'] === 'espiral';
+}
+
+/** La configuración de la espiral con los valores de v10, sin tocarlos (para `calcularEspiral`, cuadro a cuadro). */
+export function configuracionEspiralDeV7(cfg: ConfiguracionV7): ConfiguracionEspiral {
+  const o: Record<string, unknown> = {};
+  for (const [k, n] of Object.entries(NOMBRE_ESPIRAL_V7)) o[k] = cfg[n];
+  return o as unknown as ConfiguracionEspiral;
+}
+
+/** El aviso de v10 cuando se pide la trama de la espiral. */
+export const AVISO_TRAMA_ESPIRAL = 'La trama de la espiral llega con la próxima versión del formato; por ahora sale como video, PNG o SVG';
 
 // ---------------------------------------------------------------------------
 // v7 → archivo de trama
@@ -346,6 +403,8 @@ function recortar(ruta: RutaAnimable, keys: Keyframe[], fin: number, doc: Parame
  * una trama en vivo que parte en la evolución en pantalla.
  */
 export function tramaDeEstadoV7(e: EstadoV7, opciones: OpcionesDeTramaV7 = {}): Trama {
+  // la versión 1 del formato es sólo la superficie de puntos
+  if (esEspiralV7(e.cfg) || (e.tl?.scenes ?? []).some((sc) => esEspiralV7(sc.st?.cfg))) throw new Error(AVISO_TRAMA_ESPIRAL);
   const configuracion = configuracionLimpiaDeV7(e.cfg);
   const hex = coloresDeV7(e.cfg);
   const color: Record<ClaveDeColor, ColorDeTrama> = { lejos: { hex: hex.lejos, origen: 'manual' }, cerca: { hex: hex.cerca, origen: 'manual' }, fondo: { hex: hex.fondo, origen: 'manual' } };

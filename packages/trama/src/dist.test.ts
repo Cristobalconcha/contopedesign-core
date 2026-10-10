@@ -61,6 +61,19 @@ describe('dist/', () => {
     expect(typeof modulo.exports['leerTrama']).toBe('function');
   });
 
+  it('contope-trama.js trae también el motor de la espiral (v10) y calcula lo mismo que el código fuente', async () => {
+    const ventana: Record<string, unknown> = {};
+    vm.runInNewContext(leer('contope-trama.js'), ventana);
+    const T = ventana['ContopeTrama'] as typeof import('./index.js');
+    const fuente = await import('./motor/espiral.js');
+    const configuracion = { velocidad: 1, puntos: 550, giro: 0, escalaPuntos: 1, expPuntos: 1.7, escalaEspiral: 1, expEspiral: 2.2, largo: 1, enrollado: 1, ojo: 0.015, hilos: 1, tamPunto: 4.5 };
+    const a = T.calcularEspiral({ tiempo: 7.3, configuracion }, 1080, 1920), b = fuente.calcularEspiral({ tiempo: 7.3, configuracion }, 1080, 1920);
+    expect(Array.from(a.puntos)).toEqual(Array.from(b.puntos));
+    expect(Array.from(a.curva)).toEqual(Array.from(b.curva));
+    expect(a.hilos).toEqual(b.hilos);
+    expect(typeof T.configuracionEspiralDeV7).toBe('function');
+  });
+
   it('el worker de dist atiende el protocolo y entrega los mismos cuadros que el código fuente', () => {
     const recibidos: MensajeDelWorker[] = [];
     const cola: (() => void)[] = [];

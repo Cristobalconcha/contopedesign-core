@@ -608,6 +608,43 @@
     }
     return { evolucion: evolucionEn(doc, t).tiempo, cursor, configuracion, color: color2 };
   }
+  function aplicadorDeEscenas(parametros, pistas, antes, destino) {
+    const fr = 1 / CUADROS_POR_SEGUNDO_LINEA;
+    let prevT = -Infinity;
+    return (sc) => {
+      var _a;
+      const t = ajustarAGrilla(sc.t), corte = sc.transicion === "corte";
+      const espacio = Number.isFinite(prevT) ? Math.max(0, t - prevT - fr) : t;
+      const dur = corte ? 0 : Math.min(sc.duracion, espacio);
+      const t0 = ajustarAGrilla(Math.max(0, t - Math.max(dur, fr)));
+      for (const p of parametros) {
+        if (p.ruta === "evolucion" && !sc.evolucion) continue;
+        const meta = destino(sc, p);
+        if (meta === void 0 || meta === null) continue;
+        const previo = antes(p, t0);
+        if (mismoValor(previo, meta, p)) continue;
+        const keys = (_a = pistas[p.ruta]) != null ? _a : pistas[p.ruta] = [];
+        const poner = (k) => {
+          const i = keys.findIndex((x) => Math.abs(x.t - k.t) < fr / 2);
+          if (i >= 0) keys[i] = k;
+          else keys.push(k);
+        };
+        if (t < fr) {
+          poner({ t: 0, v: meta, ease: "lineal", escena: sc.id });
+          continue;
+        }
+        if (corte || p.entero || dur < fr) {
+          poner({ t: ajustarAGrilla(t - fr), v: previo, ease: "mantener", escena: sc.id });
+          poner({ t, v: meta, ease: "lineal", escena: sc.id });
+        } else {
+          poner({ t: t0, v: previo, ease: "curva", curva: [...sc.curva], escena: sc.id });
+          poner({ t, v: meta, ease: "lineal", escena: sc.id });
+        }
+        keys.sort((a, b) => a.t - b.t);
+      }
+      prevT = t;
+    };
+  }
   function regenerarPistas(tiempo2, base) {
     const fr = 1 / CUADROS_POR_SEGUNDO_LINEA;
     const pistas = {};
@@ -619,40 +656,12 @@
     let lista = tiempo2.escenas.slice().sort((a, b) => a.t - b.t);
     const fin = ajustarAGrilla(tiempo2.duracion);
     if (tiempo2.cerrarCiclo) lista = lista.filter((sc) => Math.abs(ajustarAGrilla(sc.t) - fin) >= fr / 2);
-    let prevT = -Infinity;
-    const aplicar = (sc) => {
-      var _a;
-      const t = ajustarAGrilla(sc.t), corte = sc.transicion === "corte";
-      const espacio = Number.isFinite(prevT) ? Math.max(0, t - prevT - fr) : t;
-      const dur = corte ? 0 : Math.min(sc.duracion, espacio);
-      const t0 = ajustarAGrilla(Math.max(0, t - Math.max(dur, fr)));
-      for (const p of PARAMETROS_ANIMABLES) {
-        if (p.ruta === "evolucion" && !sc.evolucion) continue;
-        const destino = valorDeCaptura(sc.captura, p.ruta);
-        if (destino === void 0 || destino === null) continue;
-        const antes = p.ruta === "evolucion" ? evolucionEn(doc, t0).tiempo : valorEn(doc, p.ruta, t0);
-        if (mismoValor(antes, destino, p)) continue;
-        const keys = (_a = pistas[p.ruta]) != null ? _a : pistas[p.ruta] = [];
-        const poner = (k) => {
-          const i = keys.findIndex((x) => Math.abs(x.t - k.t) < fr / 2);
-          if (i >= 0) keys[i] = k;
-          else keys.push(k);
-        };
-        if (t < fr) {
-          poner({ t: 0, v: destino, ease: "lineal", escena: sc.id });
-          continue;
-        }
-        if (corte || p.entero || dur < fr) {
-          poner({ t: ajustarAGrilla(t - fr), v: antes, ease: "mantener", escena: sc.id });
-          poner({ t, v: destino, ease: "lineal", escena: sc.id });
-        } else {
-          poner({ t: t0, v: antes, ease: "curva", curva: [...sc.curva], escena: sc.id });
-          poner({ t, v: destino, ease: "lineal", escena: sc.id });
-        }
-        keys.sort((a, b) => a.t - b.t);
-      }
-      prevT = t;
-    };
+    const aplicar = aplicadorDeEscenas(
+      PARAMETROS_ANIMABLES,
+      pistas,
+      (p, t0) => p.ruta === "evolucion" ? evolucionEn(doc, t0).tiempo : valorEn(doc, p.ruta, t0),
+      (sc, p) => valorDeCaptura(sc.captura, p.ruta)
+    );
     for (const sc of lista) aplicar(sc);
     if (tiempo2.cerrarCiclo) {
       aplicar({

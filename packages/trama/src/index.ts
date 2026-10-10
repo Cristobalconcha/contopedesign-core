@@ -11,6 +11,7 @@ export * from './motor/ruido.js';
 export * from './motor/camara.js';
 export * from './motor/configuracion.js';
 export * from './motor/lamina.js';
+export * from './motor/espiral.js';
 
 // lo compartido del dibujo
 export * from './dibujo/color.js';

@@ -198,3 +198,36 @@ describe('v7 → archivo de trama → v7', () => {
     for (const s of [0, 1, 2, 3, 3.5, 4]) expect(estadoEn(otra, s).motor).toEqual(estadoEn(t, s).motor);
   });
 });
+
+describe('la espiral de v10 en la línea de tiempo', () => {
+  const ESP = [
+    { path: 'espPuntos', paso: 1, entero: true },
+    { path: 'espGiro', paso: 1 },
+  ];
+  const cfg = { ...CONFIG_V7, generator: 'espiral', espPuntos: 550, espGiro: 0 };
+  const tl = (): LineaV7 => ({
+    duration: 8, startTime: 0, cursor: { x: 0.5, y: 0.5, presence: 0 },
+    tracks: { espGiro: [{ t: 0.5, v: -20, ease: 'linear' }, { t: 1.5, v: 10, ease: 'linear' }] },
+    scenes: [
+      { id: 1, t: 4, snap: 1, st: st(3, { generator: 'espiral', espPuntos: 900, espGiro: 45 }), type: 'morph', dur: 1, curve: [0.42, 0, 0.58, 1], evo: true },
+    ],
+  });
+
+  it('sus parámetros (fuera del formato) también reciben los keyframes de las escenas, como en v7; los hechos a mano quedan', () => {
+    const p = regenerarPistasV7(tl(), cfg, ESP);
+    // entero: mantener hasta un cuadro antes y saltar
+    expect(p['espPuntos']).toEqual([{ t: 4 - 1 / 24, v: 550, ease: 'hold', scene: 1 }, { t: 4, v: 900, ease: 'linear', scene: 1 }]);
+    // numérico: morph con la curva de la escena desde el valor que traía la pista en t0
+    expect(p['espGiro']).toEqual([
+      { t: 0.5, v: -20, ease: 'linear' }, { t: 1.5, v: 10, ease: 'linear' },
+      { t: 3, v: 10, ease: 'curve', curve: [0.42, 0, 0.58, 1], scene: 1 }, { t: 4, v: 45, ease: 'linear', scene: 1 },
+    ]);
+    // sin extras, quedan fuera (como antes)
+    expect(regenerarPistasV7(tl(), cfg)['espPuntos']).toBeUndefined();
+  });
+
+  it('la trama de la espiral todavía no está en el formato: se avisa', () => {
+    expect(() => tramaDeEstadoV7({ cfg, render: 'puntos', time: 0, format: 'free', tl: null })).toThrow(/próxima versión del formato/);
+    expect(() => tramaDeEstadoV7({ cfg: CONFIG_V7, render: 'puntos', time: 0, format: 'free', tl: tl() })).toThrow(/próxima versión del formato/);
+  });
+});
