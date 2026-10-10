@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Superficie de puntos — prototipo</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&display=block">
-<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js"></script>
+<script src="mp4-muxer.js"></script>
+<script src="contope-trama.js"></script>
 <style>
   :root {
     --room: #07090b; --panel: rgba(6, 14, 22, 0.88); --ink: #dff8ff; --muted: #7fa4b3;
@@ -351,116 +352,19 @@ function modeOf(o, fallback = 'puntos') {
 }
 let render = 'puntos';
 
-/* ---------- Perlin mejorado, determinista ---------- */
-const PERM = (() => {
-  const p = new Uint8Array(256); for (let i = 0; i < 256; i++) p[i] = i;
-  let seed = 0x2f6b9a1d;
-  for (let i = 255; i > 0; i--) { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; const j = seed % (i + 1); const t = p[i]; p[i] = p[j]; p[j] = t; }
-  const out = new Uint8Array(512); for (let i = 0; i < 512; i++) out[i] = p[i & 255]; return out;
-})();
-function gd(h, x, y, z) {
-  switch (h & 15) {
-    case 0: return x + y; case 1: return -x + y; case 2: return x - y; case 3: return -x - y;
-    case 4: return x + z; case 5: return -x + z; case 6: return x - z; case 7: return -x - z;
-    case 8: return y + z; case 9: return -y + z; case 10: return y - z; case 11: return -y - z;
-    case 12: return x + y; case 13: return -y + z; case 14: return -x + y; default: return -y - z;
-  }
-}
-function noise(x, y, z) {
-  const fx = Math.floor(x), fy = Math.floor(y), fz = Math.floor(z);
-  const X = fx & 255, Y = fy & 255, Z = fz & 255;
-  x -= fx; y -= fy; z -= fz;
-  const u = x * x * x * (x * (x * 6 - 15) + 10), v = y * y * y * (y * (y * 6 - 15) + 10), w = z * z * z * (z * (z * 6 - 15) + 10);
-  const A = PERM[X] + Y, AA = PERM[A] + Z, AB = PERM[A + 1] + Z, B = PERM[X + 1] + Y, BA = PERM[B] + Z, BB = PERM[B + 1] + Z;
-  const a = gd(PERM[AA], x, y, z), b = gd(PERM[BA], x - 1, y, z), c = gd(PERM[AB], x, y - 1, z), d = gd(PERM[BB], x - 1, y - 1, z);
-  const e = gd(PERM[AA + 1], x, y, z - 1), f = gd(PERM[BA + 1], x - 1, y, z - 1), g = gd(PERM[AB + 1], x, y - 1, z - 1), h = gd(PERM[BB + 1], x - 1, y - 1, z - 1);
-  const ab = a + u * (b - a), cd = c + u * (d - c), ef = e + u * (f - e), gh = g + u * (h - g);
-  const l1 = ab + v * (cd - ab), l2 = ef + v * (gh - ef);
-  return (l1 + w * (l2 - l1)) * 0.7;
-}
-
-/* ---------- cámara ---------- */
-function mul(a, b) { const o = new Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) o[c*4+r] = a[r]*b[c*4] + a[4+r]*b[c*4+1] + a[8+r]*b[c*4+2] + a[12+r]*b[c*4+3]; return o; }
-const rotX = a => { const c = Math.cos(a), s = Math.sin(a); return [1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]; };
-const rotY = a => { const c = Math.cos(a), s = Math.sin(a); return [c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]; };
-const rotZ = a => { const c = Math.cos(a), s = Math.sin(a); return [c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1]; };
-const translate = (x, y, z) => [1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1];
+/* ---------- motor: el de @contope/trama ----------
+   [ContOpe] El ruido, la cámara y el cálculo de la lámina existen una sola
+   vez, en el motor de @contope/trama (window.ContopeTrama), el mismo que usa
+   Publisher. computeSheet queda como envoltorio: sigue devolviendo, por
+   línea, [x, y, radio, cercanía, alfa]. */
+const TRAMA = window.ContopeTrama;
 const hexToRgb = h => [0, 2, 4].map(i => parseInt(h.slice(1 + i, 3 + i), 16));
-const smooth = (a, b, x) => { const t = Math.min(Math.max((x - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); };
-
-/* ---------- motor: estado → puntos proyectados ----------
-   Devuelve, por línea, una lista de [x, y, radio, cercanía, alfa]. */
 function computeSheet(state, W, H, quality = 1) {
-  const cfg = state.cfg, t = state.time * cfg.speed;
-  const N = Math.max(2, Math.round(cfg.lineCount * Math.min(1, quality * 1.2)));
-  const M = Math.max(8, Math.round(cfg.points * quality));
-  const aspect = W / H, d2r = Math.PI / 180;
-  const f = 1 / Math.tan((aspect < 1 ? 60 : 42) * d2r / 2);
-  let view = translate(0, 0, -cfg.distance * (aspect < 1 ? 1.25 : 1));
-  view = mul(view, rotZ(cfg.roll * d2r));
-  view = mul(view, rotX((cfg.tilt + state.cam[1] * 6 * cfg.parallax) * d2r));
-  view = mul(view, rotY(state.cam[0] * 10 * cfg.parallax * d2r));
-  const scalePx = H / 1080;
+  const configuracion = TRAMA.configuracionDeV7(state.cfg);
+  const { lineas: N, puntos: M } = TRAMA.dimensionesDeLamina(configuracion, quality);
+  const cuadro = TRAMA.escribirLamina({ tiempo: state.time, camara: state.cam, cursor: state.mouse, presencia: state.presence, configuracion }, W, H, quality, new Float64Array(N * M * 5));
   const lines = [];
-  const mx = state.mouse[0], my = state.mouse[1], mForce = cfg.mouseForm * state.presence, mr2 = cfg.mouseRadius * cfg.mouseRadius;
-
-  // eje central y orientación de la sección: dependen solo de x, se calculan una vez por punto a lo largo
-  const axis = new Float32Array(M * 3);   // cy, cz, theta
-  for (let j = 0; j < M; j++) {
-    const u = j / (M - 1), x = (u - 0.5) * cfg.sheetLength;
-    axis[j*3]   = cfg.meander * (Math.sin(x * 0.35 + t * 0.5) * 0.45 + noise(x * 0.16 + 3.1, t * 0.18, 1.7) * 1.3);
-    axis[j*3+1] = cfg.meander * noise(x * 0.14 + 7.3, t * 0.15, 4.2) * 1.4;
-    axis[j*3+2] = cfg.twist * x * 0.28 + cfg.fold * noise(x * 0.22 * cfg.foldFreq + 11.0, t * 0.12, 8.6) * 3.2 + t * 0.15;
-  }
-  const half = cfg.sheetWidth / 2, curl = cfg.curl;
-  for (let i = 0; i < N; i++) {
-    const v = (i / (N - 1)) * 2 - 1;               // -1..1 a lo ancho
-    const edge = 1 - smooth(0.82, 1.0, Math.abs(v)) * 0.85;
-    const pts = [];
-    for (let j = 0; j < M; j++) {
-      const u = j / (M - 1), x = (u - 0.5) * cfg.sheetLength;
-      const th = axis[j*3+2];
-      // sección en arco: con curvatura, la lámina se enrolla sobre sí misma
-      let oy, oz;
-      if (Math.abs(curl) < 1e-3) { oy = Math.sin(th) * v * half; oz = Math.cos(th) * v * half; }
-      else {
-        const R = half / curl, a = v * curl;
-        oy = R * (Math.sin(th + a) - Math.sin(th));
-        oz = R * (Math.cos(th) - Math.cos(th + a));
-        // centrar el arco en el eje
-        oy += 0; oz += 0;
-      }
-      let px = x, py = axis[j*3] + oy, pz = axis[j*3+1] + oz;
-      // ondulación fina, normal aproximada a la sección
-      const wv = cfg.wave * noise(x * cfg.waveFreq * 0.6, v * cfg.waveFreq * 1.4 + 20, t * 0.4);
-      py += wv * Math.cos(th + v * curl); pz -= wv * Math.sin(th + v * curl);
-      // a la cámara
-      let cx = view[0]*px + view[4]*py + view[8]*pz + view[12];
-      let cy = view[1]*px + view[5]*py + view[9]*pz + view[13];
-      let cz = view[2]*px + view[6]*py + view[10]*pz + view[14];
-      if (cz > -0.15) { pts.push(0, 0, 0, 0, 0); continue; }   // detrás de la cámara: invisible, pero conserva su lugar
-      let nx = (f / aspect) * cx / -cz, ny = f * cy / -cz - cfg.offsetY * 2;
-      nx -= cfg.offsetX * 2;
-      // deformación del cursor: empuja hacia la cámara y hacia afuera
-      if (mForce) {
-        const dx = (nx - (mx * 2 - 1)) * aspect, dy = ny - (my * 2 - 1);
-        const k = mForce * Math.exp(-(dx * dx + dy * dy) / mr2);
-        if (k > 1e-3) {
-          const dd = Math.hypot(dx, dy) || 1;
-          cz += k * 0.7; nx += dx / dd / aspect * k * 0.02; ny += dy / dd * k * 0.02;
-        }
-      }
-      const depth = -cz;
-      const sx = (nx + 1) / 2 * W, sy = (1 - ny) / 2 * H;
-      const near = smooth(cfg.distance + 2.5, cfg.distance - 1.5, depth);
-      const persp = Math.pow(cfg.distance / depth, cfg.perspectiveSize);
-      const r = Math.max(0.25, cfg.size * 0.5 * persp * scalePx);
-      const ends = smooth(0, 0.08, u) * smooth(1, 0.92, u);
-      const a = cfg.intensity * ends * edge * (1 - cfg.depthFade * 0.8 * (1 - near));
-      pts.push(sx, sy, r, near, a);
-    }
-    lines.push(pts);
-  }
+  for (let i = 0; i < N; i++) lines.push(cuadro.subarray(i * M * 5, (i + 1) * M * 5));
   return lines;
 }
 
@@ -681,7 +585,7 @@ function presetById(id) { return id[0] === 'b' ? BUILTIN[+id.slice(1)] : userPre
 
 /* morf hacia un preset: los números viajan, los colores se mezclan */
 let presetMorph = null;
-function lerpHex(a, b, k) { const A = hexToRgb(a), B = hexToRgb(b); return '#' + A.map((x, i) => Math.min(255, Math.max(0, Math.round(x + (B[i] - x) * k))).toString(16).padStart(2, '0')).join(''); }
+const lerpHex = (a, b, k) => TRAMA.mezclarHex(a, b, k);
 function finishMorphNow() { if (!morph) return; Object.assign(config, morph.to.cfg); render = modeOf(morph.to, render); live.time = morph.to.time; morph = null; syncSliders(); syncRender(); }
 function applyPreset(id) {
   const pr = presetById(id); if (!pr) return;
@@ -974,7 +878,7 @@ try { snaps = JSON.parse(localStorage.getItem(SNAP_STORE) || '[]'); } catch (e) 
    Evolución con interpolación suave, la lámina hace un morf de
    su geometría: cada punto viaja de un estado al otro.
    ========================================================= */
-const TL_FPS = 24, TL_STORE = 'superficie-timeline-v1';
+const TL_FPS = TRAMA.CUADROS_POR_SEGUNDO_LINEA, TL_STORE = 'superficie-timeline-v1';
 const PARAMS = [];
 (function () {
   const P = (g, path, label, min, max, step, icon, extra = {}) => PARAMS.push({ g, path, label, min, max, step, icon, ...extra });
@@ -1014,9 +918,8 @@ const PARAMS = [];
 const PARAM = Object.fromEntries(PARAMS.map(p => [p.path, p]));
 const tl = { open: false, playing: false, head: 0, duration: 10, startTime: 6, cursor: { x: 0.5, y: 0.5, presence: 0 },
   tracks: {}, sel: null, collapsed: {}, onlyAnimated: false, applyPoints: [], view: { start: 0, end: 10 }, viewSet: false, wasPaused: false, scrubbing: null };
-const EASES = { linear: u => u, ease: u => u * u * (3 - 2 * u), in: u => u * u, out: u => 1 - (1 - u) * (1 - u), hold: () => 0 };
 const EASE_LABEL = { linear: 'Lineal', ease: 'Suave', in: 'Entrada suave', out: 'Salida suave', hold: 'Mantener' };
-const snapT = t => Math.round(t * TL_FPS) / TL_FPS;
+const snapT = TRAMA.ajustarAGrilla;
 const r5 = v => Math.round(v * 1e5) / 1e5;
 let previewState = null, undoDoc = null;
 
@@ -1033,13 +936,7 @@ function setStatic(path, v) {
   else config[path] = v;
 }
 function interp(keys, t, p) {
-  if (t <= keys[0].t) return keys[0].v;
-  const last = keys[keys.length - 1]; if (t >= last.t) return last.v;
-  let i = 0; while (i < keys.length - 2 && keys[i + 1].t <= t) i++;
-  const a = keys[i], b = keys[i + 1];
-  if (a.ease === 'hold' || p.hold) return a.v;
-  const u = easeOf(a)((t - a.t) / (b.t - a.t));
-  return p.color ? lerpHex(a.v, b.v, u) : a.v + (b.v - a.v) * u;
+  return TRAMA.interpolar(TRAMA.keyframesDeV7(keys), t, { entero: p.hold, color: p.color });
 }
 function valueAt(doc, path, t) {
   if (doc.override && path in doc.override) return doc.override[path];
@@ -1051,14 +948,8 @@ function valueAt(doc, path, t) {
 function evolutionAt(doc, t) {
   const keys = doc.tracks.time;
   if ((doc.override && 'time' in doc.override) || !keys || !keys.length) return { time: valueAt(doc, 'time', t) };
-  const first = keys[0], last = keys[keys.length - 1];
-  if (t <= first.t) return { time: first.v - (first.t - t) };
-  if (t >= last.t) return { time: last.ease === 'hold' ? last.v : last.v + (t - last.t) };
-  let i = 0; while (i < keys.length - 2 && keys[i + 1].t <= t) i++;
-  const a = keys[i], b = keys[i + 1], u = (t - a.t) / (b.t - a.t);
-  if (a.ease === 'hold') return { time: a.v };
-  if (a.ease === 'linear') return { time: a.v + (b.v - a.v) * u };
-  return { time: a.v + (t - a.t), timeB: b.v - (b.t - t), blend: easeOf(a)(u) };
+  const e = TRAMA.evolucionEn({ pistas: { evolucion: TRAMA.keyframesDeV7(keys) } }, t);
+  return e.mezcla == null ? { time: e.tiempo } : { time: e.tiempo, timeB: e.tiempoB, blend: e.mezcla };
 }
 const liveDoc = () => ({ config, tracks: tl.tracks, startTime: tl.startTime, cursor: tl.cursor, override: tlRec.on ? tlRec.override : null, render });
 const frozenDoc = () => { const d = JSON.parse(JSON.stringify(liveDoc())); d.override = null; return d; };
@@ -1369,7 +1260,7 @@ function snapValue(st, path) {
   if (path === 'cursor.presence') return st.presence;
   return st.cfg[path];
 }
-const sameVal = (a, b, p) => p.color ? String(a).toLowerCase() === String(b).toLowerCase() : Math.abs(+a - +b) < Math.max(p.step / 2, 1e-6);
+const sameVal = (a, b, p) => TRAMA.mismoValor(a, b, { color: p.color, paso: p.step });
 function applySnapshot(st, keepUndo) {
   previewState = null;
   const snap = snaps.find(x => x.st === st) || { num: '?', st };
@@ -1559,33 +1450,9 @@ if (document.fonts && document.fonts.load) {
    ========================================================= */
 
 /* ---------- curvas de tiempo (cubic-bezier, como en CSS) ---------- */
-const CURVES = {
-  lineal: { label: 'Lineal', c: [0, 0, 1, 1] },
-  suave: { label: 'Suave', c: [0.42, 0, 0.58, 1] },
-  entrada: { label: 'Acelera (entrada lenta)', c: [0.42, 0, 1, 1] },
-  salida: { label: 'Frena (salida lenta)', c: [0, 0, 0.58, 1] },
-  golpe: { label: 'Golpe (llega de inmediato)', c: [0.05, 0.9, 0.1, 1] },
-  respiro: { label: 'Respiro (lento · rápido · lento)', c: [0.75, 0, 0.25, 1] },
-  anticipa: { label: 'Anticipación (retrocede y parte)', c: [0.36, -0.45, 0.6, 1] },
-  rebote: { label: 'Se pasa y vuelve', c: [0.3, 1.45, 0.6, 1] }
-};
-function cubicBezier(x1, y1, x2, y2) {
-  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
-  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
-  const sx = t => ((ax * t + bx) * t + cx) * t, sy = t => ((ay * t + by) * t + cy) * t, dx = t => (3 * ax * t + 2 * bx) * t + cx;
-  return u => {
-    if (u <= 0) return 0; if (u >= 1) return 1;
-    let t = u;
-    for (let i = 0; i < 8; i++) { const e = sx(t) - u, d = dx(t); if (Math.abs(e) < 1e-6 || Math.abs(d) < 1e-6) break; t -= e / d; }
-    if (t < 0 || t > 1 || Math.abs(sx(t) - u) > 1e-4) { let lo = 0, hi = 1; t = u; for (let i = 0; i < 30; i++) { if (sx(t) < u) lo = t; else hi = t; t = (lo + hi) / 2; } }
-    return sy(t);
-  };
-}
-const curveCache = new Map();
-function easeOf(k) {
-  if (k.ease === 'curve' && k.curve) { const key = k.curve.join(','); let f = curveCache.get(key); if (!f) { f = cubicBezier(...k.curve); curveCache.set(key, f); } return f; }
-  return EASES[k.ease] || EASES.linear;
-}
+const CURVES = Object.fromEntries(Object.entries(TRAMA.CURVAS).map(([id, v]) => [id, { label: v.etiqueta, c: v.c.slice() }]));
+const cubicBezier = TRAMA.bezierCubica;
+function easeOf(k) { return TRAMA.suavizadoDe(TRAMA.keyframeDeV7(k)); }
 EASE_LABEL.curve = 'Curva';
 function curveName(c) { for (const [id, v] of Object.entries(CURVES)) if (v.c.every((x, i) => Math.abs(x - c[i]) < 1e-3)) return id; return 'custom'; }
 
@@ -1629,36 +1496,9 @@ let sceneSeq = tl.scenes.reduce((m, s) => Math.max(m, s.id), 0);
 const sceneDefaults = { type: 'morph', dur: 1.0, curve: CURVES.suave.c.slice() };
 function evoTimeAt(doc, t) { return evolutionAt(doc, t).time; }
 function regenerateScenes() {
-  for (const path in tl.tracks) { tl.tracks[path] = tl.tracks[path].filter(k => !k.scene); if (!tl.tracks[path].length) delete tl.tracks[path]; }
-  const list = tl.scenes.slice().sort((a, b) => a.t - b.t), fr = 1 / TL_FPS;
-  let prevT = -Infinity;
-  for (const sc of list) {
-    const doc = { config, tracks: tl.tracks, startTime: tl.startTime, cursor: tl.cursor, override: null, render };
-    const t = snapT(sc.t), cut = sc.type === 'cut';
-    const room = isFinite(prevT) ? Math.max(0, t - prevT - fr) : t;
-    const dur = cut ? 0 : Math.min(sc.dur, room);
-    const t0 = snapT(Math.max(0, t - Math.max(dur, fr)));
-    for (const p of PARAMS) {
-      if (p.path === 'time' && !sc.evo) continue;
-      const target = snapValue(sc.st, p.path); if (target === undefined || target === null) continue;
-      const before = p.path === 'time' ? evoTimeAt(doc, t0) : valueAt(doc, p.path, t0);
-      if (sameVal(before, target, p)) continue;
-      const keys = tl.tracks[p.path] || (tl.tracks[p.path] = []);
-      const put = k => { const i = keys.findIndex(x => Math.abs(x.t - k.t) < fr / 2); if (i >= 0) keys[i] = k; else keys.push(k); };
-      if (t < fr) { put({ t: 0, v: target, ease: 'linear', scene: sc.id }); continue; }       // escena en el inicio: rige desde 0
-      if (cut || p.hold || dur < fr) {
-        put({ t: snapT(t - fr), v: before, ease: 'hold', scene: sc.id });
-        put({ t, v: target, ease: 'linear', scene: sc.id });
-      } else {
-        put({ t: t0, v: before, ease: 'curve', curve: sc.curve.slice(), scene: sc.id });
-        put({ t, v: target, ease: 'linear', scene: sc.id });
-      }
-      keys.sort((a, b) => a.t - b.t);
-      if (p.g) tl.collapsed[p.g] = false;
-    }
-    prevT = t;
-  }
-  tl.applyPoints = list.map(s => snapT(s.t));
+  tl.tracks = TRAMA.regenerarPistasV7(tl, config);
+  for (const path in tl.tracks) if (PARAM[path] && PARAM[path].g && tl.tracks[path].some(k => k.scene)) tl.collapsed[PARAM[path].g] = false;
+  tl.applyPoints = tl.scenes.slice().sort((a, b) => a.t - b.t).map(s => snapT(s.t));
 }
 function addScene(snap, t = tl.head, opts = {}) {
   const sc = { id: ++sceneSeq, t: snapT(t), snap: snap.num, st: JSON.parse(JSON.stringify(snap.st)),
@@ -1828,6 +1668,114 @@ try { const d = JSON.parse(localStorage.getItem(TL_STORE) || 'null'); if (d && d
 renderStrip();
 layout();
 requestAnimationFrame(frame);
+</script>
+<script>
+/* =========================================================
+   [ContOpe] Puente con el escritorio
+   ---------------------------------------------------------
+   El escritorio muestra este generador en un iframe y le
+   habla con postMessage ({ fuente: 'contope-trama', tipo }).
+   Del escritorio llegan:
+     · iniciar: los colores del ADN (lejos, cerca, fondo, con
+       su origen) como valores de partida, los formatos de
+       hoja del ADN (se suman al menú de formato) y si se
+       pide quietud (prefers-reduced-motion: parte en pausa);
+     · colores: «Volver al ADN»;
+     · importar: una trama (el archivo, ya leído);
+     · pedir-trama: el escritorio quiere el estado actual
+       como archivo de trama (para la Célula Madre).
+   Al escritorio salen «listo» y «trama».
+   La traducción entre este estado y el archivo de trama
+   está en @contope/trama (formato/generador-v7.ts).
+   ========================================================= */
+(function () {
+  const padre = window.parent !== window ? window.parent : null;
+  if (!padre) return;
+  const FUENTE = 'contope-trama';
+  let coloresAdn = {}, formatosAdn = [];
+  const enviar = m => padre.postMessage({ fuente: FUENTE, ...m }, '*');
+  const formatSel = document.getElementById('format');
+
+  function ponerColores(colores) {
+    let alguno = false;
+    for (const k of ['lejos', 'cerca', 'fondo']) {
+      const c = colores && colores[k];
+      if (c && /^#[0-9a-fA-F]{6}$/.test(c.hex)) { config[TRAMA.COLOR_V7[k]] = c.hex.toLowerCase(); alguno = true; }
+    }
+    if (!alguno) return;
+    presetMorph = null; if (morph) finishMorphNow();
+    syncSliders(); markModified(); if (tl.open) renderLanes(); dirty = true;
+  }
+  function ponerFormatos(formatos) {
+    formatSel.querySelectorAll('option[data-adn]').forEach(o => o.remove());
+    for (const f of formatos) {
+      const o = document.createElement('option');
+      o.value = f.valor; o.textContent = f.etiqueta; o.dataset.adn = f.clave;
+      formatSel.appendChild(o);
+    }
+    formatSel.value = format;
+  }
+  function lienzoAdn() {
+    const o = formatSel.selectedOptions[0];
+    if (!o || !o.dataset.adn || o.value !== format) return undefined;
+    const f = formatosAdn.find(x => x.clave === o.dataset.adn);
+    return f ? f.lienzo : undefined;
+  }
+  function estadoV7() {
+    if (morph) finishMorphNow();
+    if (presetMorph) { Object.assign(config, presetMorph.to); presetMorph = null; syncSliders(); }
+    const pr = !modified && presetById(currentPreset);
+    return {
+      cfg: JSON.parse(JSON.stringify(config)), render, time: r5(live.time), format,
+      tl: { duration: tl.duration, startTime: tl.startTime, cursor: { ...tl.cursor }, tracks: tl.tracks, scenes: tl.scenes },
+      ...(pr ? { nombre: pr.name } : {}),
+    };
+  }
+  function importar(trama) {
+    const e = TRAMA.estadoV7DeTrama(trama);
+    presetMorph = null; morph = null; previewState = null;
+    if (tlRec.on) tlRecStop(); if (stRec.on) stRecStop(); tlPlay(false);
+    Object.assign(config, JSON.parse(JSON.stringify(DEFAULTS)), e.cfg);
+    render = e.render; live.time = e.time;
+    if (![...formatSel.options].some(o => o.value === e.format)) {
+      const o = document.createElement('option'); o.value = e.format; o.textContent = e.format.replace('x', ' × '); formatSel.appendChild(o);
+    }
+    format = e.format; formatSel.value = format; layout();
+    undoDoc = null; document.getElementById('tlUndo').hidden = true;
+    tl.sel = null; tl.selScene = null;
+    if (e.tl) {
+      Object.assign(tl, { duration: e.tl.duration, startTime: e.tl.startTime, cursor: e.tl.cursor, tracks: e.tl.tracks, scenes: e.tl.scenes });
+      sceneSeq = tl.scenes.reduce((m, x) => Math.max(m, x.id), 0);
+      regenerateScenes();
+    } else Object.assign(tl, { tracks: {}, scenes: [], applyPoints: [] });
+    modified = true; renderPresetSelect(); syncSliders(); syncRender(); saveTimeline();
+    if (e.tl && !tl.open) openTimeline(true);
+    else if (tl.open) { document.getElementById('tlDur').value = tl.duration; fitView(); renderRuler(); renderLanes(); renderNav(); renderScenes(); renderWave(); onHeadChange(); }
+    dirty = true;
+    toast('Trama importada' + (e.nombre ? ': ' + e.nombre : ''));
+  }
+
+  window.addEventListener('message', ev => {
+    const m = ev.data;
+    if (ev.source !== padre || !m || m.fuente !== FUENTE) return;
+    try {
+      if (m.tipo === 'iniciar') {
+        coloresAdn = m.colores || {}; formatosAdn = Array.isArray(m.formatos) ? m.formatos : [];
+        ponerFormatos(formatosAdn); ponerColores(coloresAdn);
+        if (m.quietud && !live.paused) setPaused(true);
+      } else if (m.tipo === 'colores') {
+        coloresAdn = m.colores || {}; ponerColores(coloresAdn);
+        toast('Colores del ADN');
+      } else if (m.tipo === 'importar') {
+        importar(m.trama);
+      } else if (m.tipo === 'pedir-trama') {
+        try { enviar({ tipo: 'trama', pedido: m.pedido, trama: TRAMA.tramaDeEstadoV7(estadoV7(), { colores: coloresAdn, lienzo: lienzoAdn() }) }); }
+        catch (e) { enviar({ tipo: 'trama', pedido: m.pedido, error: e.message || String(e) }); }
+      }
+    } catch (e) { toast('No se pudo: ' + (e.message || e)); }
+  });
+  enviar({ tipo: 'listo' });
+})();
 </script>
 </body>
 </html>
