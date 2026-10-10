@@ -1,22 +1,12 @@
 import { generadorTrama, leerMetadataDeLeeme } from '@contope/core';
-import { codificarTrama, cuadroEn, leerTrama, validarTrama, type Trama } from '@contope/trama';
+import { leerTrama, tramaDeEstadoV7, validarTrama, type EstadoV7, type Trama } from '@contope/trama';
 import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
+import { buildDim3EspacioDesignSet } from '../../../core/src/design-set/dim3-fixture.js';
 import { generarEnElTaller } from './celulas.js';
 import { reducir } from './reductor.js';
 import { nuevoSistema, type Sistema } from './sistema.js';
-import {
-  capturaDelEditor,
-  coloresDelEditor,
-  editorDesdeTrama,
-  editorNuevo,
-  errorDeLectura,
-  FORMATO_IMPORTADO,
-  reducirTrama,
-  tramaDelEditor,
-  type AccionDeTrama,
-  type EditorDeTrama,
-} from './trama.js';
+import { coloresParaElGenerador, errorDeLectura, esMensajeDelGenerador, formatosParaElGenerador, FUENTE_DEL_GENERADOR, parametrosDeCelula } from './trama.js';
 
 const AHORA = '2026-10-09T12:00:00.000Z';
 
@@ -37,126 +27,92 @@ function conColores(): Sistema {
 }
 
 const vacio = (): Sistema => nuevoSistema('marca', 'Sin nada', AHORA);
-const aplicar = (e: EditorDeTrama, ...acciones: AccionDeTrama[]): EditorDeTrama => acciones.reduce(reducirTrama, e);
 
-describe('La pantalla de la trama', () => {
-  it('con ADN, los colores parten del ADN por rol', () => {
-    const s = conColores();
-    const c = coloresDelEditor(editorNuevo(s.designSet), s.designSet);
+/** Lo que v7 entrega con sus colores del ADN sin tocar y una línea de tiempo con dos escenas. */
+function estadoDeV7(colores: Record<string, string>): EstadoV7 {
+  const cfg = { lineCount: 40, points: 120, colorDeep: colores['lejos'], colorAccent: colores['cerca'], colorBg: colores['fondo'], inkMode: 'auto' };
+  const st = (time: number, fold: number) => ({ time, mouse: [0.5, 0.5], presence: 0, cfg: { ...cfg, fold } });
+  return {
+    cfg, render: 'puntos', time: 12, format: '1920x1080', nombre: 'Cinta',
+    tl: {
+      duration: 8, startTime: 6, cursor: { x: 0.5, y: 0.5, presence: 0 },
+      tracks: { twist: [{ t: 1, v: 0.2, ease: 'ease' }, { t: 5, v: 1.4, ease: 'linear' }] },
+      scenes: [
+        { id: 1, t: 0, snap: 1, st: st(10, 1), type: 'morph', dur: 1, curve: [0.42, 0, 0.58, 1], evo: true },
+        { id: 2, t: 4, snap: 2, st: st(30, 2.2), type: 'cut', dur: 1, curve: [0.42, 0, 0.58, 1], evo: true },
+      ],
+    },
+  };
+}
+
+describe('La pantalla de la trama: el puente con el generador v7', () => {
+  it('con ADN, los colores de partida salen del ADN por rol, con su origen', () => {
+    const c = coloresParaElGenerador(conColores().designSet);
     expect(c.fondo).toMatchObject({ hex: '#0b0f14', origen: 'adn', rol: 'dim1.req02:background' });
     expect(c.cerca).toMatchObject({ hex: '#e0a040', origen: 'adn', rol: 'dim1.req02:accent' });
     expect(c.lejos).toMatchObject({ hex: '#1d3fb8', origen: 'adn', rol: 'dim1.req01:institucionales:Azul' });
   });
 
-  it('cambiar un color lo deja propio; «volver al ADN» lo devuelve', () => {
+  it('sin ADN no se manda ningún color (v7 conserva los suyos) ni formato', () => {
+    expect(coloresParaElGenerador(vacio().designSet)).toEqual({});
+    expect(formatosParaElGenerador(vacio().designSet)).toEqual([]);
+    expect(coloresParaElGenerador(null)).toEqual({});
+  });
+
+  it('los formatos de hoja del ADN llegan con el valor ANCHOxALTO que entiende v7 y su formatoAdn', () => {
+    const f = formatosParaElGenerador(buildDim3EspacioDesignSet());
+    expect(f.length).toBeGreaterThan(0);
+    for (const x of f) {
+      expect(x.valor).toMatch(/^\d+x\d+$/);
+      expect(x.clave).toMatch(/^adn:/);
+      expect(x.lienzo).toMatchObject({ tipo: 'medida', formatoAdn: { requisito: 'dim3.req08' } });
+      if (x.lienzo.tipo === 'medida') expect(x.valor).toBe(`${x.lienzo.ancho}x${x.lienzo.alto}`);
+    }
+  });
+
+  it('sólo se aceptan mensajes del generador con su forma', () => {
+    expect(esMensajeDelGenerador({ fuente: FUENTE_DEL_GENERADOR, tipo: 'listo' })).toBe(true);
+    expect(esMensajeDelGenerador({ fuente: FUENTE_DEL_GENERADOR, tipo: 'trama', pedido: 1, error: 'x' })).toBe(true);
+    expect(esMensajeDelGenerador({ fuente: FUENTE_DEL_GENERADOR, tipo: 'trama', pedido: 1 })).toBe(false);
+    expect(esMensajeDelGenerador({ fuente: 'otra', tipo: 'listo' })).toBe(false);
+    expect(esMensajeDelGenerador('listo')).toBe(false);
+  });
+
+  it('la trama de v7 baja como Célula Madre con su línea de tiempo entera, y vuelve igual', () => {
     const s = conColores();
-    const e = aplicar(editorNuevo(s.designSet), { tipo: 'color', clave: 'cerca', hex: '#FF0000' });
-    expect(tramaDelEditor(e, s.designSet).color.cerca).toEqual({ hex: '#ff0000', origen: 'manual' });
-    expect(aplicar(e, { tipo: 'color', clave: 'cerca', hex: 'rojo' })).toBe(e); // un hex inválido no entra
-    const devuelto = aplicar(e, { tipo: 'volver-al-adn' });
-    expect(tramaDelEditor(devuelto, s.designSet).color.cerca.origen).toBe('adn');
-  });
-
-  it('un sistema vacío arma una trama válida con los colores del look', () => {
-    const s = vacio();
-    const e = aplicar(editorNuevo(s.designSet), { tipo: 'look', look: 'papel' });
-    const t = tramaDelEditor(e, s.designSet);
-    expect(validarTrama(t)).toEqual([]);
-    expect(t.color.fondo).toEqual({ hex: '#f1ede4', origen: 'manual' });
-    expect(t.configuracion.lineas).toBe(70);
-  });
-
-  it('el look cambia la forma y el dibujo; los controles la ajustan', () => {
-    const s = vacio();
-    const e = aplicar(editorNuevo(s.designSet), { tipo: 'look', look: 'torsion-de-lineas' }, { tipo: 'parametro', parametro: 'lineas', valor: 30.6 });
-    expect(e.dibujo.modo).toBe('lineas');
-    expect(e.configuracion.lineas).toBe(31);
-    expect(e.configuracion.curvatura).toBe(-2);
-  });
-
-  it('capturar pasa a secuencia; las escenas se reparten, se ordenan y se quitan', () => {
-    const s = vacio();
-    let e = editorNuevo(s.designSet);
-    e = aplicar(e, { tipo: 'duracion', duracion: 9 }, { tipo: 'capturar', captura: capturaDelEditor(e, 6) });
-    expect(e.modo).toBe('secuencia');
-    e = aplicar(e, { tipo: 'parametro', parametro: 'pliegues', valor: 2.4 });
-    e = aplicar(e, { tipo: 'capturar', captura: capturaDelEditor(e, 20) }, { tipo: 'capturar', captura: capturaDelEditor(e, 33) });
-    const instantes = (x: EditorDeTrama) => {
-      const t = tramaDelEditor(x, s.designSet).tiempo;
-      return t.modo === 'secuencia' ? t.escenas.map((sc) => [sc.nombre, sc.t]) : [];
-    };
-    expect(instantes(e)).toEqual([['Escena 1', 0], ['Escena 2', 3], ['Escena 3', 6]]);
-    e = aplicar(e, { tipo: 'mover-escena', clave: 3, hacia: -1 }, { tipo: 'renombrar-escena', clave: 3, nombre: 'Ola' });
-    expect(instantes(e)).toEqual([['Escena 1', 0], ['Ola', 3], ['Escena 2', 6]]);
-    e = aplicar(e, { tipo: 'quitar-escena', clave: 1 });
-    expect(instantes(e)).toEqual([['Ola', 0], ['Escena 2', 4.5]]);
-    // Sin cerrar el ciclo, la última cae al final.
-    expect(instantes(aplicar(e, { tipo: 'cerrar-ciclo', cerrar: false }))).toEqual([['Ola', 0], ['Escena 2', 9]]);
-  });
-
-  it('con el ciclo cerrado, el último cuadro es el primero', () => {
-    const s = conColores();
-    let e = editorNuevo(s.designSet);
-    e = aplicar(e, { tipo: 'duracion', duracion: 4 }, { tipo: 'capturar', captura: capturaDelEditor(e, 6) });
-    e = aplicar(e, { tipo: 'parametro', parametro: 'anchoLamina', valor: 6 });
-    e = aplicar(e, { tipo: 'capturar', captura: capturaDelEditor(e, 25) });
-    const t = tramaDelEditor(e, s.designSet);
-    expect(Array.from(cuadroEn(t, 4, 120, 68, 0.3).cuadro)).toEqual(Array.from(cuadroEn(t, 0, 120, 68, 0.3).cuadro));
-    expect(Array.from(cuadroEn(t, 2, 120, 68, 0.3).cuadro)).not.toEqual(Array.from(cuadroEn(t, 0, 120, 68, 0.3).cuadro));
-  });
-
-  it('la captura no lleva velocidad, paralaje ni colores', () => {
-    const c = capturaDelEditor(editorNuevo(null), 12.34567);
-    expect(c.evolucion).toBe(12.346);
-    expect(c.configuracion).not.toHaveProperty('velocidad');
-    expect(c.configuracion).not.toHaveProperty('paralaje');
-    expect(c).not.toHaveProperty('color');
-  });
-
-  it('importar y volver a exportar da la misma trama (CT1 de ida y vuelta)', () => {
-    const s = conColores();
-    let e = editorNuevo(s.designSet);
-    e = aplicar(e, { tipo: 'color', clave: 'lejos', hex: '#336699' }, { tipo: 'duracion', duracion: 6 }, { tipo: 'capturar', captura: capturaDelEditor(e, 8) });
-    e = aplicar(e, { tipo: 'capturar', captura: capturaDelEditor(e, 18) }, { tipo: 'formato', formato: '1x1' });
-    const original = tramaDelEditor(e, s.designSet);
-    const leida = leerTrama(codificarTrama(original));
-    if (!leida.ok) throw new Error('no se leyó');
-    const otra = editorDesdeTrama(leida.trama, s.designSet);
-    expect(otra.formato).toBe('1x1');
-    expect(otra.colores.lejos).toEqual({ hex: '#336699', origen: 'manual' });
-    expect(tramaDelEditor(otra, s.designSet)).toEqual(original);
-  });
-
-  it('una trama con lienzo propio se importa como «importado» y conserva su lienzo', () => {
-    const t = { ...tramaDelEditor(editorNuevo(null), null), lienzo: { tipo: 'proporcion', proporcion: 2.5 } } as Trama;
-    const e = editorDesdeTrama(t, null);
-    expect(e.formato).toBe(FORMATO_IMPORTADO);
-    expect(tramaDelEditor(e, null).lienzo).toEqual({ tipo: 'proporcion', proporcion: 2.5 });
-  });
-
-  it('los errores de lectura se dicen en español, con su lugar', () => {
-    const r = leerTrama('{"kind":"contope/trama","version":1,"motor":{"id":"superficie-de-puntos","version":"1.0.0"},"tiempo":{"modo":"secuencia"}}');
-    expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(errorDeLectura(r.errores)).toMatch(/^No se pudo leer la trama: tiempo/);
-    const basura = leerTrama('hola');
-    expect(!basura.ok && errorDeLectura(basura.errores)).toContain('no se reconoce');
-  });
-
-  it('la Célula Madre del editor sale por el camino de siempre: zip con LEEME, ficha y los tres archivos', () => {
-    const s = conColores();
-    const e = aplicar(editorNuevo(s.designSet), { tipo: 'color', clave: 'cerca', hex: '#ff00aa' });
-    const t = tramaDelEditor(e, s.designSet);
-    const r = generarEnElTaller(s, generadorTrama, { receta: codificarTrama(t), formato: [e.formato] }, AHORA);
+    const adn = coloresParaElGenerador(s.designSet);
+    const trama = tramaDeEstadoV7(estadoDeV7({ lejos: adn.lejos!.hex, cerca: '#ff0000', fondo: adn.fondo!.hex }), { colores: adn });
+    expect(trama.color.lejos.origen).toBe('adn');
+    expect(trama.color.cerca).toEqual({ hex: '#ff0000', origen: 'manual' });
+    const r = generarEnElTaller(s, generadorTrama, parametrosDeCelula(trama), AHORA);
     if (!r.ok) throw new Error(r.falta);
-    const zip = unzipSync(r.zip.contenido);
-    expect(Object.keys(zip)).toEqual(['LEEME.md', 'nocturno.trama.json', 'nocturno.trama.txt', 'nocturno.trama.svg']);
-    const ficha = leerMetadataDeLeeme(strFromU8(zip['LEEME.md']!));
-    expect(ficha.ok && ficha.metadata.consulta).toEqual(['dim1.req01', 'dim1.req02']);
-    const archivo = JSON.parse(strFromU8(zip['nocturno.trama.json']!)) as Trama;
-    expect(validarTrama(archivo)).toEqual([]);
-    expect(archivo.color.cerca).toEqual({ hex: '#ff00aa', origen: 'manual' });
-    expect(archivo.color.fondo.origen).toBe('adn');
-    expect(archivo.configuracion).toEqual(t.configuracion);
+    const archivos = unzipSync(r.zip.contenido);
+    const nombre = (sufijo: string) => Object.keys(archivos).find((n) => n.endsWith(sufijo))!;
+    const json = JSON.parse(strFromU8(archivos[nombre('.trama.json')]!)) as Trama;
+    expect(validarTrama(json)).toEqual([]);
+    // la línea de tiempo llega entera: pistas, escenas y su regeneración
+    expect(json.tiempo).toEqual(trama.tiempo);
+    expect(json.color).toEqual(trama.color);
+    expect(json.configuracion).toEqual(trama.configuracion);
+    expect(json.nombre).toBe('Cinta');
+    // el código CT1 del zip es la misma trama
+    const ct1 = leerTrama(strFromU8(archivos[nombre('.txt')]!));
+    if (!ct1.ok) throw new Error('CT1 ilegible');
+    expect(ct1.trama.tiempo).toEqual(trama.tiempo);
+    // y la metadata de ancestro dice de qué definiciones salió
+    const meta = leerMetadataDeLeeme(strFromU8(archivos[nombre('LEEME.md')]!));
+    expect(meta.ok && meta.metadata.consulta).toEqual(['dim1.req01', 'dim1.req02']);
+  });
+
+  it('sin ADN también baja la Célula Madre', () => {
+    const trama = tramaDeEstadoV7(estadoDeV7({ lejos: '#2a52d6', cerca: '#3dd6c0', fondo: '#000000' }));
+    const r = generarEnElTaller(vacio(), generadorTrama, parametrosDeCelula(trama));
+    expect(r.ok).toBe(true);
+    expect(parametrosDeCelula(trama)).toMatchObject({ colores: 'look', modo: 'secuencia', ancho: 1920 });
+  });
+
+  it('los errores de lectura se dicen en español, los primeros tres', () => {
+    const e = errorDeLectura([{ ruta: 'a', mensaje: 'uno.' }, { ruta: '', mensaje: 'dos' }, { ruta: 'c', mensaje: 'tres' }, { ruta: 'd', mensaje: 'cuatro' }]);
+    expect(e).toBe('No se pudo leer la trama: a: uno; dos; c: tres (y 1 más).');
   });
 });
