@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Superficie de puntos — prototipo</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&display=block">
-<script src="mp4-muxer.js"></script>
-<script src="contope-trama.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js"></script>
 <style>
   :root {
     --room: #07090b; --panel: rgba(6, 14, 22, 0.88); --ink: #dff8ff; --muted: #7fa4b3;
@@ -294,6 +293,11 @@
 
 <div class="toast" id="toast" role="status"></div>
 
+<script>/* Formato de trama (contope/trama v1): traductor de @contope/trama, empaquetado. */
+var ContopeTramaFormato=(()=>{var K=Object.defineProperty;var Le=Object.getOwnPropertyDescriptor;var _e=Object.getOwnPropertyNames;var Se=Object.prototype.hasOwnProperty;var Ve=(e,o,r)=>o in e?K(e,o,{enumerable:!0,configurable:!0,writable:!0,value:r}):e[o]=r;var ze=(e,o)=>{for(var r in o)K(e,r,{get:o[r],enumerable:!0})},Ne=(e,o,r,n)=>{if(o&&typeof o=="object"||typeof o=="function")for(let i of _e(o))!Se.call(e,i)&&i!==r&&K(e,i,{get:()=>o[i],enumerable:!(n=Le(o,i))||n.enumerable});return e};var we=e=>Ne(K({},"__esModule",{value:!0}),e);var $=(e,o,r)=>Ve(e,typeof o!="symbol"?o+"":o,r);var po={};ze(po,{codificarTrama:()=>je,tramaDeEstadoV7:()=>Me,validarTrama:()=>F});var X=["puntos","lineas","mixto"];function ae(e){return typeof e=="string"&&X.includes(e)}function ce(e){return[parseInt(e.slice(1,3),16),parseInt(e.slice(3,5),16),parseInt(e.slice(5,7),16)]}function se(e,o,r){let n=ce(e),i=ce(o);return"#"+n.map((t,c)=>Math.min(255,Math.max(0,Math.round(t+(i[c]-t)*r))).toString(16).padStart(2,"0")).join("")}var ue=["luz","tinta","auto"];var b=(e,o,r,n,i,t,c={})=>({ruta:o,grupo:e,etiqueta:r,min:n,max:i,paso:t,...c}),E=Object.freeze([b("Tiempo","evolucion","Evoluci\xF3n",0,1e3,.01),b("L\xE1mina","anchoLamina","Ancho de la l\xE1mina",.3,6,.05),b("L\xE1mina","largoLamina","Largo",4,24,.5),b("L\xE1mina","serpenteo","Serpenteo del eje",0,2.5,.05),b("L\xE1mina","torsion","Torsi\xF3n",-2,2,.05),b("L\xE1mina","pliegues","Pliegues",0,2.5,.05),b("L\xE1mina","frecuenciaPliegues","Frecuencia de pliegues",.2,4,.05),b("L\xE1mina","curvatura","Curvatura (enrollar)",-3,3,.05),b("L\xE1mina","ondulacion","Ondulaci\xF3n fina",0,1,.01),b("L\xE1mina","frecuenciaOndulacion","Frecuencia de ondulaci\xF3n",.2,5,.05),b("Trazo","grosor","Tama\xF1o de punto / grosor",.3,6,.05),b("Trazo","crecimientoPorCercania","Crecimiento por cercan\xEDa",0,2,.05),b("Trazo","opacidadPunto","Opacidad de punto",0,1.5,.01),b("Trazo","grosorLinea","Grosor de l\xEDnea",.1,5,.05),b("Trazo","opacidadLinea","Opacidad de l\xEDnea",0,1.5,.01),b("Trazo","lineas","L\xEDneas",10,220,1,{entero:!0}),b("Trazo","puntosPorLinea","Puntos por l\xEDnea",30,600,1,{entero:!0}),b("C\xE1mara","inclinacion","Inclinaci\xF3n",-60,60,1),b("C\xE1mara","giro","Giro",-90,90,1),b("C\xE1mara","distancia","Distancia",2.5,12,.1),b("C\xE1mara","desplazamientoX","Desplazamiento H",-.5,.5,.01),b("C\xE1mara","desplazamientoY","Desplazamiento V",-.5,.5,.01),b("Cursor","cursor.x","Posici\xF3n X del cursor",0,1,.01),b("Cursor","cursor.y","Posici\xF3n Y del cursor",0,1,.01),b("Cursor","cursor.presencia","Presencia del cursor",0,1,.01),b("Cursor","deformacionCursor","Deformaci\xF3n del cursor",0,2,.05),b("Cursor","radioCursor","Radio del cursor",.05,.6,.01),b("Luz y color","brillo","Brillo",.1,2,.01),b("Luz y color","apagadoPorDistancia","Apagado por distancia",0,1,.01),b("Luz y color","color.lejos","Color lejos",0,0,0,{color:!0}),b("Luz y color","color.cerca","Color cerca",0,0,0,{color:!0}),b("Luz y color","color.fondo","Fondo",0,0,0,{color:!0})]),x=Object.freeze(Object.fromEntries(E.map(e=>[e.ruta,e])));function me(e){return Object.prototype.hasOwnProperty.call(x,e)}var J=24,L=e=>Math.round(e*J)/J;var G=Object.freeze({lineal:e=>e,suave:e=>e*e*(3-2*e),entrada:e=>e*e,salida:e=>1-(1-e)*(1-e),mantener:()=>0}),Oo=Object.freeze({lineal:{etiqueta:"Lineal",c:[0,0,1,1]},suave:{etiqueta:"Suave",c:[.42,0,.58,1]},entrada:{etiqueta:"Acelera (entrada lenta)",c:[.42,0,1,1]},salida:{etiqueta:"Frena (salida lenta)",c:[0,0,.58,1]},golpe:{etiqueta:"Golpe (llega de inmediato)",c:[.05,.9,.1,1]},respiro:{etiqueta:"Respiro (lento \xB7 r\xE1pido \xB7 lento)",c:[.75,0,.25,1]},anticipa:{etiqueta:"Anticipaci\xF3n (retrocede y parte)",c:[.36,-.45,.6,1]},rebote:{etiqueta:"Se pasa y vuelve",c:[.3,1.45,.6,1]}}),_=[.42,0,.58,1];function ke(e,o,r,n){let i=3*e,t=3*(r-e)-i,c=1-i-t,s=3*o,l=3*(n-o)-s,u=1-s-l,m=f=>((c*f+t)*f+i)*f,d=f=>((u*f+l)*f+s)*f,v=f=>(3*c*f+2*t)*f+i;return f=>{if(f<=0)return 0;if(f>=1)return 1;let y=f;for(let p=0;p<8;p++){let O=m(y)-f,M=v(y);if(Math.abs(O)<1e-6||Math.abs(M)<1e-6)break;y-=O/M}if(y<0||y>1||Math.abs(m(y)-f)>1e-4){let p=0,O=1;y=f;for(let M=0;M<30;M++)m(y)<f?p=y:O=y,y=(p+O)/2}return d(y)}}var le=new Map;function Y(e){if(e.ease==="curva"){if(!e.curva)return G.lineal;let o=e.curva.join(","),r=le.get(o);return r||(r=ke(...e.curva),le.set(o,r)),r}return G[e.ease]??G.lineal}var ho=Object.freeze({x:.5,y:.5,presencia:0});function Ie(e,o,r){return o==="evolucion"?e.inicio+r:o==="cursor.x"?e.cursor.x:o==="cursor.y"?e.cursor.y:o==="cursor.presencia"?e.cursor.presencia:o==="color.lejos"?e.colores.lejos:o==="color.cerca"?e.colores.cerca:o==="color.fondo"?e.colores.fondo:e.configuracion[o]}function Z(e,o,r){let n=e[0];if(o<=n.t)return n.v;let i=e[e.length-1];if(o>=i.t)return i.v;let t=0;for(;t<e.length-2&&e[t+1].t<=o;)t++;let c=e[t],s=e[t+1];if(c.ease==="mantener"||r?.entero)return c.v;let l=Y(c)((o-c.t)/(s.t-c.t));return r?.color?se(String(c.v),String(s.v),l):c.v+(s.v-c.v)*l}function q(e,o,r){let n=e.pistas[o];return n&&n.length?Z(n,r,x[o]):Ie(e,o,r)}function w(e,o){let r=e.pistas.evolucion;if(!r||!r.length)return{tiempo:q(e,"evolucion",o)};let n=r[0],i=r[r.length-1],t=m=>m.v;if(o<=n.t)return{tiempo:t(n)-(n.t-o)};if(o>=i.t)return{tiempo:i.ease==="mantener"?t(i):t(i)+(o-i.t)};let c=0;for(;c<r.length-2&&r[c+1].t<=o;)c++;let s=r[c],l=r[c+1],u=(o-s.t)/(l.t-s.t);return s.ease==="mantener"?{tiempo:t(s)}:s.ease==="lineal"?{tiempo:t(s)+(t(l)-t(s))*u}:{tiempo:t(s)+(o-s.t),tiempoB:t(l)-(l.t-o),mezcla:Y(s)(u)}}var Fe=0;function Be(e,o){return o==="evolucion"?e.evolucion:o==="cursor.x"?e.cursor?.x:o==="cursor.y"?e.cursor?.y:o==="cursor.presencia"?e.cursor?.presencia:o.startsWith("color.")?e.color?.[o.slice(6)]:e.configuracion?.[o]}function Ue(e,o,r){return r.color?String(e).toLowerCase()===String(o).toLowerCase():Math.abs(+e-+o)<Math.max(r.paso/2,1e-6)}function fe(e,o){let r={},n={},i={};for(let t of E){if(t.ruta==="evolucion")continue;let c=q(e,t.ruta,o);t.ruta.startsWith("cursor.")?i[t.ruta.slice(7)]=c:t.color?n[t.ruta.slice(6)]=c:r[t.ruta]=t.entero?Math.round(c):c}return{evolucion:w(e,o).tiempo,cursor:i,configuracion:r,color:n}}function W(e,o){let r=1/J,n={};for(let[u,m]of Object.entries(e.pistas)){let d=m.filter(v=>v.escena===void 0).map(v=>({...v}));d.length&&(n[u]=d)}let i={...o,pistas:n,inicio:e.inicio,cursor:e.cursor},t=e.escenas.slice().sort((u,m)=>u.t-m.t),c=L(e.duracion);e.cerrarCiclo&&(t=t.filter(u=>Math.abs(L(u.t)-c)>=r/2));let s=-1/0,l=u=>{let m=L(u.t),d=u.transicion==="corte",v=Number.isFinite(s)?Math.max(0,m-s-r):m,f=d?0:Math.min(u.duracion,v),y=L(Math.max(0,m-Math.max(f,r)));for(let p of E){if(p.ruta==="evolucion"&&!u.evolucion)continue;let O=Be(u.captura,p.ruta);if(O==null)continue;let M=p.ruta==="evolucion"?w(i,y).tiempo:q(i,p.ruta,y);if(Ue(M,O,p))continue;let B=n[p.ruta]??(n[p.ruta]=[]),z=N=>{let U=B.findIndex(Pe=>Math.abs(Pe.t-N.t)<r/2);U>=0?B[U]=N:B.push(N)};if(m<r){z({t:0,v:O,ease:"lineal",escena:u.id});continue}d||p.entero||f<r?(z({t:L(m-r),v:M,ease:"mantener",escena:u.id}),z({t:m,v:O,ease:"lineal",escena:u.id})):(z({t:y,v:M,ease:"curva",curva:[...u.curva],escena:u.id}),z({t:m,v:O,ease:"lineal",escena:u.id})),B.sort((N,U)=>N.t-U.t)}s=m};for(let u of t)l(u);return e.cerrarCiclo&&l({id:Fe,t:c,captura:fe(i,0),evolucion:!0,transicion:e.cierre.transicion,duracion:e.cierre.duracion,curva:e.cierre.curva}),n}var S=Object.freeze({lineas:64,puntosPorLinea:480,anchoLamina:4,largoLamina:13,serpenteo:1,torsion:.5,pliegues:1.8,frecuenciaPliegues:2,curvatura:1.8,ondulacion:.22,frecuenciaOndulacion:1.3,velocidad:.25,grosor:1.6,crecimientoPorCercania:1,inclinacion:18,giro:-6,distancia:5,desplazamientoX:0,desplazamientoY:0,brillo:1.1,apagadoPorDistancia:1,paralaje:1,deformacionCursor:.5,radioCursor:.22,opacidadPunto:1,grosorLinea:1.4,opacidadLinea:.4}),A=Object.keys(S);var j=Object.freeze({lineas:"lineCount",puntosPorLinea:"points",anchoLamina:"sheetWidth",largoLamina:"sheetLength",serpenteo:"meander",torsion:"twist",pliegues:"fold",frecuenciaPliegues:"foldFreq",curvatura:"curl",ondulacion:"wave",frecuenciaOndulacion:"waveFreq",velocidad:"speed",grosor:"size",crecimientoPorCercania:"perspectiveSize",inclinacion:"tilt",giro:"roll",distancia:"distance",desplazamientoX:"offsetX",desplazamientoY:"offsetY",brillo:"intensity",apagadoPorDistancia:"depthFade",paralaje:"parallax",deformacionCursor:"mouseForm",radioCursor:"mouseRadius",opacidadPunto:"dotAlpha",grosorLinea:"lineWeight",opacidadLinea:"lineAlpha"});function pe(){return{...S}}var Lo=(()=>{let e=new Uint8Array(256);for(let n=0;n<256;n++)e[n]=n;let o=795580957;for(let n=255;n>0;n--){o=Math.imul(o,1664525)+1013904223>>>0;let i=o%(n+1),t=e[n];e[n]=e[i],e[i]=t}let r=new Uint8Array(512);for(let n=0;n<512;n++)r[n]=e[n&255];return r})();var h="superficie-de-puntos",k="1.0.0";var R="contope/trama";var D=["lejos","cerca","fondo"],de=["lineal","suave","entrada","salida","mantener","curva"];var be="#2a52d6",ge="#3dd6c0",ve="#000000",Ke=6,P=Object.freeze({transicion:"morph",duracion:1,curva:_}),Q=Object.freeze({x:.5,y:.5,presencia:0}),ye=1;function I(){return{kind:R,version:1,motor:{id:h,version:k},lienzo:{tipo:"libre"},dibujo:{modo:"puntos",tinta:"auto"},color:{lejos:{hex:be,origen:"manual"},cerca:{hex:ge,origen:"manual"},fondo:{hex:ve,origen:"manual"}},configuracion:pe(),tiempo:{modo:"vivo",inicio:Ke},interaccion:{cursor:!0,paralaje:!1},cuadroQuieto:0}}var g=Object.freeze({textoMaximo:2e6,lineasMin:2,lineasMax:1e3,puntosMin:8,puntosMax:4e3,puntosPorCuadroMax:5e5,numeroMax:1e6,duracionMax:600,keyframesPorPistaMax:5e3,keyframesMax:5e4,escenasMax:1e3,textoCortoMax:200,procedenciaMax:65536,procedenciaProfundidadMax:32,proporcionMin:.05,proporcionMax:20,medidaMax:16384,duracionTransicionMin:.04,duracionTransicionMax:30});var Ce=/^#[0-9a-fA-F]{6}$/,$e=/^(\d+)\.(\d+)\.(\d+)$/,V=e=>typeof e=="object"&&e!==null&&!Array.isArray(e),a=(e,o)=>typeof o=="number"?`${e}[${o}]`:e?`${e}.${o}`:o,H=class{constructor(){$(this,"errores",[])}error(o,r){this.errores.push({ruta:o,mensaje:r})}objeto(o,r,n){if(!V(o))return this.error(r,"debe ser un objeto"),!1;for(let i of Object.keys(o))n.includes(i)||this.error(a(r,i),"campo desconocido");return!0}numero(o,r,n=-g.numeroMax,i=g.numeroMax,t=!1){return typeof o!="number"||!Number.isFinite(o)?(this.error(r,"debe ser un n\xFAmero finito"),!1):t&&!Number.isInteger(o)?(this.error(r,"debe ser un n\xFAmero entero"),!1):o<n||o>i?(this.error(r,`debe estar entre ${n} y ${i}`),!1):!0}booleano(o,r){return typeof o!="boolean"?(this.error(r,"debe ser verdadero o falso (true/false)"),!1):!0}texto(o,r,n=g.textoCortoMax){return typeof o!="string"?(this.error(r,"debe ser un texto"),!1):o.length>n?(this.error(r,`es demasiado largo (m\xE1ximo ${n} caracteres)`),!1):!0}opcion(o,r,n){return typeof o!="string"||!n.includes(o)?(this.error(r,`debe ser uno de: ${n.join(", ")}`),!1):!0}hex(o,r){return typeof o!="string"||!Ce.test(o)?(this.error(r,"debe ser un color #rrggbb (seis cifras hexadecimales)"),!1):!0}curva(o,r){if(!Array.isArray(o)||o.length!==4){this.error(r,"debe ser una curva [x1, y1, x2, y2]");return}o.forEach((n,i)=>this.numero(n,a(r,i),i%2===0?0:-10,i%2===0?1:10))}};function Je(e,o,r){if(!V(o)){e.error(r,"debe ser un objeto");return}let n=null,i=(t,c,s)=>{if(!n){if(s>g.procedenciaProfundidadMax){n=c;return}if(!(t===null||typeof t=="string"||typeof t=="boolean")){if(typeof t=="number"){Number.isFinite(t)||(n=c);return}if(Array.isArray(t)){t.forEach((l,u)=>i(l,a(c,u),s+1));return}if(V(t)){let l=Object.getPrototypeOf(t);if(l===Object.prototype||l===null){for(let[u,m]of Object.entries(t))i(m,a(c,u),s+1);return}}n=c}}};if(i(o,r,0),n){e.error(n,"s\xF3lo puede contener datos JSON (textos, n\xFAmeros, booleanos, listas, objetos), con a lo m\xE1s 32 niveles");return}JSON.stringify(o).length>g.procedenciaMax&&e.error(r,`es demasiado grande (m\xE1ximo ${g.procedenciaMax} bytes)`)}function Ae(e,o,r){if(!e.objeto(o,r,A))return;for(let[t,c]of Object.entries(o)){let s=t;A.includes(s)&&(s==="lineas"?e.numero(c,a(r,t),g.lineasMin,g.lineasMax,!0):s==="puntosPorLinea"?e.numero(c,a(r,t),g.puntosMin,g.puntosMax,!0):e.numero(c,a(r,t)))}let n=o.lineas,i=o.puntosPorLinea;typeof n=="number"&&typeof i=="number"&&n*i>g.puntosPorCuadroMax&&e.error(r,`l\xEDneas \xD7 puntos por l\xEDnea no puede pasar de ${g.puntosPorCuadroMax}`)}function qe(e,o,r){if(typeof o=="string"){e.hex(o,r);return}e.objeto(o,r,["hex","origen","rol","huella"])&&("hex"in o?e.hex(o.hex,a(r,"hex")):e.error(a(r,"hex"),"falta el color"),"origen"in o&&e.opcion(o.origen,a(r,"origen"),["adn","manual"]),"rol"in o&&e.texto(o.rol,a(r,"rol")),"huella"in o&&e.texto(o.huella,a(r,"huella")),o.origen!=="adn"&&("rol"in o||"huella"in o)&&e.error(r,"rol y huella s\xF3lo tienen sentido con origen \xABadn\xBB"))}function Qe(e,o,r){if(e.objeto(o,r,["id","requisito","nombre","huella"])){"id"in o||e.error(a(r,"id"),"falta el id del formato");for(let n of["id","requisito","nombre","huella"])n in o&&e.texto(o[n],a(r,n))}}function Xe(e,o,r){if(!V(o)){e.error(r,"debe ser un objeto");return}let n=o.tipo;if(!e.opcion(n,a(r,"tipo"),["libre","proporcion","medida"]))return;let i=n==="libre"?[]:n==="proporcion"?["proporcion"]:["ancho","alto"];if(e.objeto(o,r,["tipo","formatoAdn",...i]),n==="proporcion"&&("proporcion"in o?e.numero(o.proporcion,a(r,"proporcion"),g.proporcionMin,g.proporcionMax):e.error(a(r,"proporcion"),"falta la proporci\xF3n (ancho / alto)")),n==="medida")for(let t of["ancho","alto"])t in o?e.numero(o[t],a(r,t),1,g.medidaMax,!0):e.error(a(r,t),`falta el ${t} en px`);"formatoAdn"in o&&Qe(e,o.formatoAdn,a(r,"formatoAdn"))}function Ge(e,o,r){if(e.objeto(o,r,["evolucion","cursor","configuracion","color"])){if("evolucion"in o&&e.numero(o.evolucion,a(r,"evolucion")),"cursor"in o&&e.objeto(o.cursor,a(r,"cursor"),["x","y","presencia"]))for(let[n,i]of Object.entries(o.cursor))e.numero(i,a(a(r,"cursor"),n),-10,10);if("configuracion"in o&&Ae(e,o.configuracion,a(r,"configuracion")),"color"in o&&e.objeto(o.color,a(r,"color"),D))for(let[n,i]of Object.entries(o.color))e.hex(i,a(a(r,"color"),n))}}function Oe(e,o,r){"transicion"in o&&e.opcion(o.transicion,a(r,"transicion"),["morph","corte"]),"duracion"in o&&e.numero(o.duracion,a(r,"duracion"),g.duracionTransicionMin,g.duracionTransicionMax),"curva"in o&&e.curva(o.curva,a(r,"curva"))}function Ye(e,o,r,n){if(!V(o))return e.error(r,"debe ser un objeto"),null;let i=o.modo??"vivo";if(!e.opcion(i,a(r,"modo"),["vivo","secuencia"]))return null;if(i==="vivo")return e.objeto(o,r,["modo","inicio"]),"inicio"in o&&e.numero(o.inicio,a(r,"inicio")),null;e.objeto(o,r,["modo","inicio","duracion","pistas","escenas","cerrarCiclo","cierre","cursor","alTerminar"]),"inicio"in o&&e.numero(o.inicio,a(r,"inicio"));let t=null;"duracion"in o?e.numero(o.duracion,a(r,"duracion"),0,g.duracionMax)&&(o.duracion===0?e.error(a(r,"duracion"),"debe ser mayor que 0"):t=o.duracion):e.error(a(r,"duracion"),"una secuencia necesita duraci\xF3n (segundos)");let c=t??g.duracionMax;if("pistas"in o){let s=a(r,"pistas");if(!V(o.pistas))e.error(s,"debe ser un objeto: ruta \u2192 lista de keyframes");else for(let[l,u]of Object.entries(o.pistas)){let m=a(s,l);if(!me(l)){let f=Object.entries(j).find(([,y])=>y===l)?.[0];e.error(m,l==="velocidad"||l==="paralaje"?"no es animable":`no es una ruta animable${f?` (en este formato se llama \xAB${f}\xBB)`:""}`);continue}let d=x[l];if(!Array.isArray(u)||u.length===0){e.error(m,"debe ser una lista con al menos un keyframe");continue}if(u.length>g.keyframesPorPistaMax){e.error(m,`tiene demasiados keyframes (m\xE1ximo ${g.keyframesPorPistaMax})`);continue}n.keyframes+=u.length;let v=-1/0;u.forEach((f,y)=>{let p=a(m,y);e.objeto(f,p,["t","v","ease","curva","escena"])&&("t"in f?e.numero(f.t,a(p,"t"),0,c)&&(f.t<=v&&e.error(a(p,"t"),"los keyframes deben ir en orden de t, sin repetir instantes"),v=f.t):e.error(a(p,"t"),"falta el instante"),"v"in f?d.color?e.hex(f.v,a(p,"v")):d.ruta==="lineas"?e.numero(f.v,a(p,"v"),g.lineasMin,g.lineasMax):d.ruta==="puntosPorLinea"?e.numero(f.v,a(p,"v"),g.puntosMin,g.puntosMax):e.numero(f.v,a(p,"v")):e.error(a(p,"v"),"falta el valor"),"ease"in f&&e.opcion(f.ease,a(p,"ease"),de),f.ease==="curva"&&!("curva"in f)&&e.error(a(p,"curva"),"un keyframe con ease \xABcurva\xBB necesita su curva"),"curva"in f&&e.curva(f.curva,a(p,"curva")),"escena"in f&&e.numero(f.escena,a(p,"escena"),0,Number.MAX_SAFE_INTEGER,!0))})}}if("escenas"in o){let s=a(r,"escenas"),l=o.escenas;if(!Array.isArray(l))e.error(s,"debe ser una lista");else if(l.length>g.escenasMax)e.error(s,`tiene demasiadas escenas (m\xE1ximo ${g.escenasMax})`);else{let u=new Set;l.forEach((m,d)=>{let v=a(s,d);e.objeto(m,v,["id","t","captura","transicion","duracion","curva","evolucion","nombre"])&&("id"in m?e.numero(m.id,a(v,"id"),1,Number.MAX_SAFE_INTEGER,!0)&&(u.has(m.id)&&e.error(a(v,"id"),"id repetido"),u.add(m.id)):e.error(a(v,"id"),"falta el id"),"t"in m?e.numero(m.t,a(v,"t"),0,c):e.error(a(v,"t"),"falta el instante"),"captura"in m?Ge(e,m.captura,a(v,"captura")):e.error(a(v,"captura"),"falta la captura"),Oe(e,m,v),"evolucion"in m&&e.booleano(m.evolucion,a(v,"evolucion")),"nombre"in m&&e.texto(m.nombre,a(v,"nombre")))})}}if("cerrarCiclo"in o&&e.booleano(o.cerrarCiclo,a(r,"cerrarCiclo")),"cierre"in o&&e.objeto(o.cierre,a(r,"cierre"),["transicion","duracion","curva"])&&Oe(e,o.cierre,a(r,"cierre")),"cursor"in o&&e.objeto(o.cursor,a(r,"cursor"),["x","y","presencia"]))for(let[s,l]of Object.entries(o.cursor))e.numero(l,a(a(r,"cursor"),s),-10,10);return"alTerminar"in o&&e.opcion(o.alTerminar,a(r,"alTerminar"),["repetir","detener"]),t}function F(e){let o=new H;if(!o.objeto(e,"",["kind","version","motor","nombre","procedencia","lienzo","dibujo","color","configuracion","tiempo","interaccion","cuadroQuieto"]))return o.errores;if(e.kind!==R&&o.error("kind",`debe ser \xAB${R}\xBB`),e.version!==1&&o.error("version",typeof e.version=="number"?`versi\xF3n de formato ${e.version} no soportada: este lector entiende la ${1}`:`debe ser ${1}`),!("motor"in e))o.error("motor","falta el motor ({ id, version })");else if(o.objeto(e.motor,"motor",["id","version"])){let i=e.motor;i.id!==h&&o.error("motor.id",`motor desconocido: este lector s\xF3lo tiene \xAB${h}\xBB`);let t=typeof i.version=="string"?$e.exec(i.version):null;t?t[1]!=="1"&&o.error("motor.version",`motor ${String(i.version)} no soportado: este lector tiene la versi\xF3n 1.x`):o.error("motor.version","debe ser una versi\xF3n x.y.z")}if("nombre"in e&&o.texto(e.nombre,"nombre"),"procedencia"in e&&Je(o,e.procedencia,"procedencia"),"lienzo"in e&&Xe(o,e.lienzo,"lienzo"),"dibujo"in e&&o.objeto(e.dibujo,"dibujo",["modo","tinta"])){let i=e.dibujo;"modo"in i&&o.opcion(i.modo,"dibujo.modo",X),"tinta"in i&&o.opcion(i.tinta,"dibujo.tinta",ue)}if("color"in e&&o.objeto(e.color,"color",D))for(let[i,t]of Object.entries(e.color))qe(o,t,a("color",i));"configuracion"in e&&Ae(o,e.configuracion,"configuracion");let r={keyframes:0},n="tiempo"in e?Ye(o,e.tiempo,"tiempo",r):null;if(r.keyframes>g.keyframesMax&&o.error("tiempo.pistas",`demasiados keyframes en total (m\xE1ximo ${g.keyframesMax})`),"interaccion"in e&&o.objeto(e.interaccion,"interaccion",["cursor","paralaje"]))for(let[i,t]of Object.entries(e.interaccion))o.booleano(t,a("interaccion",i));return"cuadroQuieto"in e&&o.numero(e.cuadroQuieto,"cuadroQuieto",0,n??g.numeroMax),o.errores}function De(e){return e.map(o=>`${o.ruta||"(documento)"}: ${o.mensaje}`).join(`
+`)}var oe=class extends Error{constructor(r){super(`archivo de trama inv\xE1lido:
+`+De(r));$(this,"errores");this.name="ErrorDeTrama",this.errores=r}},C=e=>typeof e=="object"&&e!==null?e:{},re=e=>JSON.parse(JSON.stringify(e));function ee(e,o){if(e===void 0)return{...o};if(typeof e=="string")return{hex:e.toLowerCase(),origen:"manual"};let r=C(e),n={hex:String(r.hex).toLowerCase(),origen:r.origen==="adn"?"adn":"manual"};return typeof r.rol=="string"&&(n.rol=r.rol),typeof r.huella=="string"&&(n.huella=r.huella),n}function Ze(e){let o=re(C(e));if(o.color)for(let r of D)o.color[r]&&(o.color[r]=o.color[r].toLowerCase());return o}function We(e,o){let r=C(e),n=typeof r.inicio=="number"?r.inicio:I().tiempo.inicio;if((r.modo??"vivo")==="vivo")return{modo:"vivo",inicio:n};let i=C(r.cierre),t=C(r.cursor),c={};for(let[u,m]of Object.entries(C(r.pistas)))c[u]=m.map(d=>{let v={t:d.t,v:typeof d.v=="string"?d.v.toLowerCase():d.v,ease:d.ease??"lineal"};return d.curva&&(v.curva=[...d.curva]),typeof d.escena=="number"&&(v.escena=d.escena),v});let s=(Array.isArray(r.escenas)?r.escenas:[]).map(u=>{let m={id:u.id,t:u.t,captura:Ze(u.captura),transicion:u.transicion==="corte"?"corte":"morph",duracion:typeof u.duracion=="number"?u.duracion:ye,curva:u.curva?[...u.curva]:[..._],evolucion:u.evolucion!==!1};return typeof u.nombre=="string"&&(m.nombre=u.nombre),m}).sort((u,m)=>u.t-m.t),l={modo:"secuencia",inicio:n,duracion:r.duracion,pistas:c,escenas:s,cerrarCiclo:r.cerrarCiclo===!0,cierre:{transicion:i.transicion==="corte"?"corte":P.transicion,duracion:typeof i.duracion=="number"?i.duracion:P.duracion,curva:i.curva?[...i.curva]:[...P.curva]},cursor:{x:typeof t.x=="number"?t.x:Q.x,y:typeof t.y=="number"?t.y:Q.y,presencia:typeof t.presencia=="number"?t.presencia:Q.presencia},alTerminar:r.alTerminar==="detener"?"detener":"repetir"};return l.pistas=W(l,{configuracion:o.configuracion,colores:{lejos:o.color.lejos.hex,cerca:o.color.cerca.hex,fondo:o.color.fondo.hex}}),l}function ne(e){let o=F(e);if(o.length)throw new oe(o);let r=C(e),n=I(),i={...n,motor:{id:n.motor.id,version:String(C(r.motor).version)}};typeof r.nombre=="string"&&(i.nombre=r.nombre),r.procedencia!==void 0&&(i.procedencia=re(r.procedencia)),r.lienzo!==void 0&&(i.lienzo=re(r.lienzo));let t=C(r.dibujo);i.dibujo={modo:t.modo??n.dibujo.modo,tinta:t.tinta??n.dibujo.tinta};let c=C(r.color);i.color={lejos:ee(c.lejos,n.color.lejos),cerca:ee(c.cerca,n.color.cerca),fondo:ee(c.fondo,n.color.fondo)};let s=C(r.configuracion);for(let u of A)typeof s[u]=="number"&&(i.configuracion[u]=s[u]);i.tiempo=We(r.tiempo,i);let l=C(r.interaccion);return i.interaccion={cursor:typeof l.cursor=="boolean"?l.cursor:n.interaccion.cursor,paralaje:typeof l.paralaje=="boolean"?l.paralaje:n.interaccion.paralaje},typeof r.cuadroQuieto=="number"&&(i.cuadroQuieto=r.cuadroQuieto),i}var te=Object.freeze({lejos:"colorDeep",cerca:"colorAccent",fondo:"colorBg"}),He=Object.freeze(Object.fromEntries(E.map(e=>{let o=e.ruta;return o==="evolucion"?[o,"time"]:o==="cursor.presencia"?[o,"cursor.presence"]:o==="cursor.x"||o==="cursor.y"?[o,o]:o.startsWith("color.")?[o,te[o.slice(6)]]:[o,j[o]]}))),eo=Object.freeze(Object.fromEntries(Object.entries(He).map(([e,o])=>[o,e]))),oo=Object.freeze({linear:"lineal",ease:"suave",in:"entrada",out:"salida",hold:"mantener",curve:"curva"}),hr=Object.freeze({lineal:"linear",suave:"ease",entrada:"in",salida:"out",mantener:"hold",curva:"curve"});function ro(e){let o={...S};for(let r of A){let n=e[j[r]];typeof n=="number"&&Number.isFinite(n)&&(o[r]=n)}return o}var ie=(e,o,r)=>{let n=e[te[o]];return typeof n=="string"&&/^#[0-9a-fA-F]{6}$/.test(n)?n.toLowerCase():r};function no(e){return{lejos:ie(e,"lejos","#2a52d6"),cerca:ie(e,"cerca","#3dd6c0"),fondo:ie(e,"fondo","#000000")}}function io(e){let o=oo[e.ease]??"lineal";o==="curva"&&!e.curve&&(o="lineal");let r={t:e.t,v:e.v,ease:o};return o==="curva"&&e.curve&&(r.curva=[...e.curve]),typeof e.scene=="number"&&(r.escena=e.scene),r}function to(e,o=!1){let r={};for(let[n,i]of Object.entries(e)){let t=eo[n];if(!t||!Array.isArray(i))continue;let c=(o?i.filter(s=>!s.scene):i).map(io);c.length&&(r[t]=c)}return r}function ao(e){let o={};typeof e.time=="number"&&(o.evolucion=e.time);let r={};Array.isArray(e.mouse)&&(typeof e.mouse[0]=="number"&&(r.x=e.mouse[0]),typeof e.mouse[1]=="number"&&(r.y=e.mouse[1])),typeof e.presence=="number"&&(r.presencia=e.presence),Object.keys(r).length&&(o.cursor=r);let n=e.cfg??{},i={};for(let c of A){let s=n[j[c]];typeof s=="number"&&Number.isFinite(s)&&(i[c]=s)}Object.keys(i).length&&(o.configuracion=i);let t={};for(let c of D){let s=n[te[c]];typeof s=="string"&&/^#[0-9a-fA-F]{6}$/.test(s)&&(t[c]=s.toLowerCase())}return Object.keys(t).length&&(o.color=t),o}function co(e){let o={id:e.id,t:e.t,captura:ao(e.st),transicion:e.type==="cut"?"corte":"morph",duracion:e.dur,curva:Array.isArray(e.curve)&&e.curve.length===4?[...e.curve]:[..._],evolucion:!!e.evo};return e.snap!==void 0&&e.snap!=="?"&&(o.nombre=`Captura ${e.snap}`),o}function so(e,o){return{modo:"secuencia",inicio:e.startTime,duracion:e.duration,pistas:to(e.tracks,o),escenas:e.scenes.map(co),cerrarCiclo:!1,cierre:{...P,curva:[...P.curva]},cursor:{x:e.cursor.x,y:e.cursor.y,presencia:e.cursor.presence},alTerminar:"repetir"}}function uo(e){return!!e&&(Object.values(e.tracks).some(o=>o.length>0)||e.scenes.length>0)}function mo(e,o,r,n){if(!o.some(c=>c.t>r))return o;let i=o.filter(c=>c.t<r-1e-9),t=e==="evolucion"?w({...n,pistas:{evolucion:o}},r).tiempo:Z(o,r,x[e]);return i.push({t:r,v:t,ease:"lineal"}),i}function Me(e,o={}){let r=ro(e.cfg),n=no(e.cfg),i={lejos:{hex:n.lejos,origen:"manual"},cerca:{hex:n.cerca,origen:"manual"},fondo:{hex:n.fondo,origen:"manual"}};for(let m of D){let d=o.colores?.[m];d&&d.hex.toLowerCase()===n[m]&&(i[m]={...d,hex:n[m]})}let t=e.cfg.inkMode==="luz"||e.cfg.inkMode==="tinta"?e.cfg.inkMode:"auto",c=ae(e.render)?e.render:"puntos",s=/^(\d+)x(\d+)$/.exec(e.format),l=o.lienzo??(s?{tipo:"medida",ancho:Number(s[1]),alto:Number(s[2])}:{tipo:"libre"}),u={kind:R,version:1,motor:{id:h,version:k},lienzo:l,dibujo:{modo:c,tinta:t},color:i,configuracion:r,interaccion:{cursor:!0,paralaje:r.paralaje>0},cuadroQuieto:0};if(e.nombre&&e.nombre.trim()&&(u.nombre=e.nombre.trim().slice(0,200)),o.procedencia&&(u.procedencia=o.procedencia),!uo(e.tl))u.tiempo={modo:"vivo",inicio:e.time};else{let m=e.tl,d=m.duration,v=so(m,!0),f={configuracion:r,colores:n,pistas:{},inicio:m.startTime,cursor:v.cursor},y={};for(let[p,O]of Object.entries(v.pistas))y[p]=mo(p,O,d,f);u.tiempo={...v,pistas:y,escenas:v.escenas.filter(p=>p.t<=d)}}return ne(u)}var Re="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",Te="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",he={};for(let e=0;e<64;e++)he[Re[e]]=e,he[Te[e]]=e;function Ee(e){let o=[];for(let r of e){let n=r.codePointAt(0);n<128?o.push(n):n<2048?o.push(192|n>>6,128|n&63):n<65536?o.push(224|n>>12,128|n>>6&63,128|n&63):o.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|n&63)}return Uint8Array.from(o)}function xe(e,o=!1){let r=o?Te:Re,n="";for(let i=0;i<e.length;i+=3){let t=e[i]<<16|(e[i+1]??0)<<8|(e[i+2]??0);n+=r[t>>18&63]+r[t>>12&63],n+=i+1<e.length?r[t>>6&63]:o?"":"=",n+=i+2<e.length?r[t&63]:o?"":"="}return n}var lo="CT1.";function fo(e){let o=I(),r={kind:e.kind,version:e.version,motor:{...e.motor}};e.nombre!==void 0&&(r.nombre=e.nombre),e.procedencia!==void 0&&(r.procedencia=e.procedencia),(e.lienzo.tipo!=="libre"||e.lienzo.formatoAdn)&&(r.lienzo=e.lienzo);let n={};e.dibujo.modo!==o.dibujo.modo&&(n.modo=e.dibujo.modo),e.dibujo.tinta!==o.dibujo.tinta&&(n.tinta=e.dibujo.tinta),Object.keys(n).length&&(r.dibujo=n);let i={};for(let s of D){let l=e.color[s],u=l.origen==="manual"&&l.rol===void 0&&l.huella===void 0;u&&l.hex===o.color[s].hex||(i[s]=u?l.hex:l)}Object.keys(i).length&&(r.color=i);let t={};for(let s of A)e.configuracion[s]!==S[s]&&(t[s]=e.configuracion[s]);Object.keys(t).length&&(r.configuracion=t);let c=e.tiempo;if(c.modo==="vivo")c.inicio!==o.tiempo.inicio&&(r.tiempo={modo:"vivo",inicio:c.inicio});else{let s={};for(let[l,u]of Object.entries(c.pistas)){let m=u.filter(d=>d.escena===void 0);m.length&&(s[l]=m)}r.tiempo={...c,pistas:s}}return(e.interaccion.cursor!==o.interaccion.cursor||e.interaccion.paralaje!==o.interaccion.paralaje)&&(r.interaccion=e.interaccion),e.cuadroQuieto!==o.cuadroQuieto&&(r.cuadroQuieto=e.cuadroQuieto),r}function je(e){return lo+xe(Ee(JSON.stringify(fo(e))),!0)}return we(po);})();
+</script>
 <script>
 /* =========================================================
    Superficie de puntos — un solo generador
@@ -353,19 +357,116 @@ function modeOf(o, fallback = 'puntos') {
 }
 let render = 'puntos';
 
-/* ---------- motor: el de @contope/trama ----------
-   [ContOpe] El ruido, la cámara y el cálculo de la lámina existen una sola
-   vez, en el motor de @contope/trama (window.ContopeTrama), el mismo que usa
-   Publisher. computeSheet queda como envoltorio: sigue devolviendo, por
-   línea, [x, y, radio, cercanía, alfa]. */
-const TRAMA = window.ContopeTrama;
+/* ---------- Perlin mejorado, determinista ---------- */
+const PERM = (() => {
+  const p = new Uint8Array(256); for (let i = 0; i < 256; i++) p[i] = i;
+  let seed = 0x2f6b9a1d;
+  for (let i = 255; i > 0; i--) { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; const j = seed % (i + 1); const t = p[i]; p[i] = p[j]; p[j] = t; }
+  const out = new Uint8Array(512); for (let i = 0; i < 512; i++) out[i] = p[i & 255]; return out;
+})();
+function gd(h, x, y, z) {
+  switch (h & 15) {
+    case 0: return x + y; case 1: return -x + y; case 2: return x - y; case 3: return -x - y;
+    case 4: return x + z; case 5: return -x + z; case 6: return x - z; case 7: return -x - z;
+    case 8: return y + z; case 9: return -y + z; case 10: return y - z; case 11: return -y - z;
+    case 12: return x + y; case 13: return -y + z; case 14: return -x + y; default: return -y - z;
+  }
+}
+function noise(x, y, z) {
+  const fx = Math.floor(x), fy = Math.floor(y), fz = Math.floor(z);
+  const X = fx & 255, Y = fy & 255, Z = fz & 255;
+  x -= fx; y -= fy; z -= fz;
+  const u = x * x * x * (x * (x * 6 - 15) + 10), v = y * y * y * (y * (y * 6 - 15) + 10), w = z * z * z * (z * (z * 6 - 15) + 10);
+  const A = PERM[X] + Y, AA = PERM[A] + Z, AB = PERM[A + 1] + Z, B = PERM[X + 1] + Y, BA = PERM[B] + Z, BB = PERM[B + 1] + Z;
+  const a = gd(PERM[AA], x, y, z), b = gd(PERM[BA], x - 1, y, z), c = gd(PERM[AB], x, y - 1, z), d = gd(PERM[BB], x - 1, y - 1, z);
+  const e = gd(PERM[AA + 1], x, y, z - 1), f = gd(PERM[BA + 1], x - 1, y, z - 1), g = gd(PERM[AB + 1], x, y - 1, z - 1), h = gd(PERM[BB + 1], x - 1, y - 1, z - 1);
+  const ab = a + u * (b - a), cd = c + u * (d - c), ef = e + u * (f - e), gh = g + u * (h - g);
+  const l1 = ab + v * (cd - ab), l2 = ef + v * (gh - ef);
+  return (l1 + w * (l2 - l1)) * 0.7;
+}
+
+/* ---------- cámara ---------- */
+function mul(a, b) { const o = new Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) o[c*4+r] = a[r]*b[c*4] + a[4+r]*b[c*4+1] + a[8+r]*b[c*4+2] + a[12+r]*b[c*4+3]; return o; }
+const rotX = a => { const c = Math.cos(a), s = Math.sin(a); return [1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]; };
+const rotY = a => { const c = Math.cos(a), s = Math.sin(a); return [c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]; };
+const rotZ = a => { const c = Math.cos(a), s = Math.sin(a); return [c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1]; };
+const translate = (x, y, z) => [1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1];
 const hexToRgb = h => [0, 2, 4].map(i => parseInt(h.slice(1 + i, 3 + i), 16));
+const smooth = (a, b, x) => { const t = Math.min(Math.max((x - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); };
+
+/* ---------- motor: estado → puntos proyectados ----------
+   Devuelve, por línea, una lista de [x, y, radio, cercanía, alfa]. */
 function computeSheet(state, W, H, quality = 1) {
-  const configuracion = TRAMA.configuracionDeV7(state.cfg);
-  const { lineas: N, puntos: M } = TRAMA.dimensionesDeLamina(configuracion, quality);
-  const cuadro = TRAMA.escribirLamina({ tiempo: state.time, camara: state.cam, cursor: state.mouse, presencia: state.presence, configuracion }, W, H, quality, new Float64Array(N * M * 5));
+  const cfg = state.cfg, t = state.time * cfg.speed;
+  const N = Math.max(2, Math.round(cfg.lineCount * Math.min(1, quality * 1.2)));
+  const M = Math.max(8, Math.round(cfg.points * quality));
+  const aspect = W / H, d2r = Math.PI / 180;
+  const f = 1 / Math.tan((aspect < 1 ? 60 : 42) * d2r / 2);
+  let view = translate(0, 0, -cfg.distance * (aspect < 1 ? 1.25 : 1));
+  view = mul(view, rotZ(cfg.roll * d2r));
+  view = mul(view, rotX((cfg.tilt + state.cam[1] * 6 * cfg.parallax) * d2r));
+  view = mul(view, rotY(state.cam[0] * 10 * cfg.parallax * d2r));
+  const scalePx = H / 1080;
   const lines = [];
-  for (let i = 0; i < N; i++) lines.push(cuadro.subarray(i * M * 5, (i + 1) * M * 5));
+  const mx = state.mouse[0], my = state.mouse[1], mForce = cfg.mouseForm * state.presence, mr2 = cfg.mouseRadius * cfg.mouseRadius;
+
+  // eje central y orientación de la sección: dependen solo de x, se calculan una vez por punto a lo largo
+  const axis = new Float32Array(M * 3);   // cy, cz, theta
+  for (let j = 0; j < M; j++) {
+    const u = j / (M - 1), x = (u - 0.5) * cfg.sheetLength;
+    axis[j*3]   = cfg.meander * (Math.sin(x * 0.35 + t * 0.5) * 0.45 + noise(x * 0.16 + 3.1, t * 0.18, 1.7) * 1.3);
+    axis[j*3+1] = cfg.meander * noise(x * 0.14 + 7.3, t * 0.15, 4.2) * 1.4;
+    axis[j*3+2] = cfg.twist * x * 0.28 + cfg.fold * noise(x * 0.22 * cfg.foldFreq + 11.0, t * 0.12, 8.6) * 3.2 + t * 0.15;
+  }
+  const half = cfg.sheetWidth / 2, curl = cfg.curl;
+  for (let i = 0; i < N; i++) {
+    const v = (i / (N - 1)) * 2 - 1;               // -1..1 a lo ancho
+    const edge = 1 - smooth(0.82, 1.0, Math.abs(v)) * 0.85;
+    const pts = [];
+    for (let j = 0; j < M; j++) {
+      const u = j / (M - 1), x = (u - 0.5) * cfg.sheetLength;
+      const th = axis[j*3+2];
+      // sección en arco: con curvatura, la lámina se enrolla sobre sí misma
+      let oy, oz;
+      if (Math.abs(curl) < 1e-3) { oy = Math.sin(th) * v * half; oz = Math.cos(th) * v * half; }
+      else {
+        const R = half / curl, a = v * curl;
+        oy = R * (Math.sin(th + a) - Math.sin(th));
+        oz = R * (Math.cos(th) - Math.cos(th + a));
+        // centrar el arco en el eje
+        oy += 0; oz += 0;
+      }
+      let px = x, py = axis[j*3] + oy, pz = axis[j*3+1] + oz;
+      // ondulación fina, normal aproximada a la sección
+      const wv = cfg.wave * noise(x * cfg.waveFreq * 0.6, v * cfg.waveFreq * 1.4 + 20, t * 0.4);
+      py += wv * Math.cos(th + v * curl); pz -= wv * Math.sin(th + v * curl);
+      // a la cámara
+      let cx = view[0]*px + view[4]*py + view[8]*pz + view[12];
+      let cy = view[1]*px + view[5]*py + view[9]*pz + view[13];
+      let cz = view[2]*px + view[6]*py + view[10]*pz + view[14];
+      if (cz > -0.15) { pts.push(0, 0, 0, 0, 0); continue; }   // detrás de la cámara: invisible, pero conserva su lugar
+      let nx = (f / aspect) * cx / -cz, ny = f * cy / -cz - cfg.offsetY * 2;
+      nx -= cfg.offsetX * 2;
+      // deformación del cursor: empuja hacia la cámara y hacia afuera
+      if (mForce) {
+        const dx = (nx - (mx * 2 - 1)) * aspect, dy = ny - (my * 2 - 1);
+        const k = mForce * Math.exp(-(dx * dx + dy * dy) / mr2);
+        if (k > 1e-3) {
+          const dd = Math.hypot(dx, dy) || 1;
+          cz += k * 0.7; nx += dx / dd / aspect * k * 0.02; ny += dy / dd * k * 0.02;
+        }
+      }
+      const depth = -cz;
+      const sx = (nx + 1) / 2 * W, sy = (1 - ny) / 2 * H;
+      const near = smooth(cfg.distance + 2.5, cfg.distance - 1.5, depth);
+      const persp = Math.pow(cfg.distance / depth, cfg.perspectiveSize);
+      const r = Math.max(0.25, cfg.size * 0.5 * persp * scalePx);
+      const ends = smooth(0, 0.08, u) * smooth(1, 0.92, u);
+      const a = cfg.intensity * ends * edge * (1 - cfg.depthFade * 0.8 * (1 - near));
+      pts.push(sx, sy, r, near, a);
+    }
+    lines.push(pts);
+  }
   return lines;
 }
 
@@ -586,7 +687,7 @@ function presetById(id) { return id[0] === 'b' ? BUILTIN[+id.slice(1)] : userPre
 
 /* morf hacia un preset: los números viajan, los colores se mezclan */
 let presetMorph = null;
-const lerpHex = (a, b, k) => TRAMA.mezclarHex(a, b, k);
+function lerpHex(a, b, k) { const A = hexToRgb(a), B = hexToRgb(b); return '#' + A.map((x, i) => Math.min(255, Math.max(0, Math.round(x + (B[i] - x) * k))).toString(16).padStart(2, '0')).join(''); }
 function finishMorphNow() { if (!morph) return; Object.assign(config, morph.to.cfg); render = modeOf(morph.to, render); live.time = morph.to.time; morph = null; syncSliders(); syncRender(); }
 function applyPreset(id) {
   const pr = presetById(id); if (!pr) return;
@@ -879,7 +980,7 @@ try { snaps = JSON.parse(localStorage.getItem(SNAP_STORE) || '[]'); } catch (e) 
    Evolución con interpolación suave, la lámina hace un morf de
    su geometría: cada punto viaja de un estado al otro.
    ========================================================= */
-const TL_FPS = TRAMA.CUADROS_POR_SEGUNDO_LINEA, TL_STORE = 'superficie-timeline-v1';
+const TL_FPS = 24, TL_STORE = 'superficie-timeline-v1';
 const PARAMS = [];
 (function () {
   const P = (g, path, label, min, max, step, icon, extra = {}) => PARAMS.push({ g, path, label, min, max, step, icon, ...extra });
@@ -919,8 +1020,9 @@ const PARAMS = [];
 const PARAM = Object.fromEntries(PARAMS.map(p => [p.path, p]));
 const tl = { open: false, playing: false, head: 0, duration: 10, startTime: 6, cursor: { x: 0.5, y: 0.5, presence: 0 },
   tracks: {}, sel: null, collapsed: {}, onlyAnimated: false, applyPoints: [], view: { start: 0, end: 10 }, viewSet: false, wasPaused: false, scrubbing: null };
+const EASES = { linear: u => u, ease: u => u * u * (3 - 2 * u), in: u => u * u, out: u => 1 - (1 - u) * (1 - u), hold: () => 0 };
 const EASE_LABEL = { linear: 'Lineal', ease: 'Suave', in: 'Entrada suave', out: 'Salida suave', hold: 'Mantener' };
-const snapT = TRAMA.ajustarAGrilla;
+const snapT = t => Math.round(t * TL_FPS) / TL_FPS;
 const r5 = v => Math.round(v * 1e5) / 1e5;
 let previewState = null, undoDoc = null;
 
@@ -937,7 +1039,13 @@ function setStatic(path, v) {
   else config[path] = v;
 }
 function interp(keys, t, p) {
-  return TRAMA.interpolar(TRAMA.keyframesDeV7(keys), t, { entero: p.hold, color: p.color });
+  if (t <= keys[0].t) return keys[0].v;
+  const last = keys[keys.length - 1]; if (t >= last.t) return last.v;
+  let i = 0; while (i < keys.length - 2 && keys[i + 1].t <= t) i++;
+  const a = keys[i], b = keys[i + 1];
+  if (a.ease === 'hold' || p.hold) return a.v;
+  const u = easeOf(a)((t - a.t) / (b.t - a.t));
+  return p.color ? lerpHex(a.v, b.v, u) : a.v + (b.v - a.v) * u;
 }
 function valueAt(doc, path, t) {
   if (doc.override && path in doc.override) return doc.override[path];
@@ -949,8 +1057,14 @@ function valueAt(doc, path, t) {
 function evolutionAt(doc, t) {
   const keys = doc.tracks.time;
   if ((doc.override && 'time' in doc.override) || !keys || !keys.length) return { time: valueAt(doc, 'time', t) };
-  const e = TRAMA.evolucionEn({ pistas: { evolucion: TRAMA.keyframesDeV7(keys) } }, t);
-  return e.mezcla == null ? { time: e.tiempo } : { time: e.tiempo, timeB: e.tiempoB, blend: e.mezcla };
+  const first = keys[0], last = keys[keys.length - 1];
+  if (t <= first.t) return { time: first.v - (first.t - t) };
+  if (t >= last.t) return { time: last.ease === 'hold' ? last.v : last.v + (t - last.t) };
+  let i = 0; while (i < keys.length - 2 && keys[i + 1].t <= t) i++;
+  const a = keys[i], b = keys[i + 1], u = (t - a.t) / (b.t - a.t);
+  if (a.ease === 'hold') return { time: a.v };
+  if (a.ease === 'linear') return { time: a.v + (b.v - a.v) * u };
+  return { time: a.v + (t - a.t), timeB: b.v - (b.t - t), blend: easeOf(a)(u) };
 }
 const liveDoc = () => ({ config, tracks: tl.tracks, startTime: tl.startTime, cursor: tl.cursor, override: tlRec.on ? tlRec.override : null, render });
 const frozenDoc = () => { const d = JSON.parse(JSON.stringify(liveDoc())); d.override = null; return d; };
@@ -1261,7 +1375,7 @@ function snapValue(st, path) {
   if (path === 'cursor.presence') return st.presence;
   return st.cfg[path];
 }
-const sameVal = (a, b, p) => TRAMA.mismoValor(a, b, { color: p.color, paso: p.step });
+const sameVal = (a, b, p) => p.color ? String(a).toLowerCase() === String(b).toLowerCase() : Math.abs(+a - +b) < Math.max(p.step / 2, 1e-6);
 function applySnapshot(st, keepUndo) {
   previewState = null;
   const snap = snaps.find(x => x.st === st) || { num: '?', st };
@@ -1451,9 +1565,33 @@ if (document.fonts && document.fonts.load) {
    ========================================================= */
 
 /* ---------- curvas de tiempo (cubic-bezier, como en CSS) ---------- */
-const CURVES = Object.fromEntries(Object.entries(TRAMA.CURVAS).map(([id, v]) => [id, { label: v.etiqueta, c: v.c.slice() }]));
-const cubicBezier = TRAMA.bezierCubica;
-function easeOf(k) { return TRAMA.suavizadoDe(TRAMA.keyframeDeV7(k)); }
+const CURVES = {
+  lineal: { label: 'Lineal', c: [0, 0, 1, 1] },
+  suave: { label: 'Suave', c: [0.42, 0, 0.58, 1] },
+  entrada: { label: 'Acelera (entrada lenta)', c: [0.42, 0, 1, 1] },
+  salida: { label: 'Frena (salida lenta)', c: [0, 0, 0.58, 1] },
+  golpe: { label: 'Golpe (llega de inmediato)', c: [0.05, 0.9, 0.1, 1] },
+  respiro: { label: 'Respiro (lento · rápido · lento)', c: [0.75, 0, 0.25, 1] },
+  anticipa: { label: 'Anticipación (retrocede y parte)', c: [0.36, -0.45, 0.6, 1] },
+  rebote: { label: 'Se pasa y vuelve', c: [0.3, 1.45, 0.6, 1] }
+};
+function cubicBezier(x1, y1, x2, y2) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const sx = t => ((ax * t + bx) * t + cx) * t, sy = t => ((ay * t + by) * t + cy) * t, dx = t => (3 * ax * t + 2 * bx) * t + cx;
+  return u => {
+    if (u <= 0) return 0; if (u >= 1) return 1;
+    let t = u;
+    for (let i = 0; i < 8; i++) { const e = sx(t) - u, d = dx(t); if (Math.abs(e) < 1e-6 || Math.abs(d) < 1e-6) break; t -= e / d; }
+    if (t < 0 || t > 1 || Math.abs(sx(t) - u) > 1e-4) { let lo = 0, hi = 1; t = u; for (let i = 0; i < 30; i++) { if (sx(t) < u) lo = t; else hi = t; t = (lo + hi) / 2; } }
+    return sy(t);
+  };
+}
+const curveCache = new Map();
+function easeOf(k) {
+  if (k.ease === 'curve' && k.curve) { const key = k.curve.join(','); let f = curveCache.get(key); if (!f) { f = cubicBezier(...k.curve); curveCache.set(key, f); } return f; }
+  return EASES[k.ease] || EASES.linear;
+}
 EASE_LABEL.curve = 'Curva';
 function curveName(c) { for (const [id, v] of Object.entries(CURVES)) if (v.c.every((x, i) => Math.abs(x - c[i]) < 1e-3)) return id; return 'custom'; }
 
@@ -1497,9 +1635,36 @@ let sceneSeq = tl.scenes.reduce((m, s) => Math.max(m, s.id), 0);
 const sceneDefaults = { type: 'morph', dur: 1.0, curve: CURVES.suave.c.slice() };
 function evoTimeAt(doc, t) { return evolutionAt(doc, t).time; }
 function regenerateScenes() {
-  tl.tracks = TRAMA.regenerarPistasV7(tl, config);
-  for (const path in tl.tracks) if (PARAM[path] && PARAM[path].g && tl.tracks[path].some(k => k.scene)) tl.collapsed[PARAM[path].g] = false;
-  tl.applyPoints = tl.scenes.slice().sort((a, b) => a.t - b.t).map(s => snapT(s.t));
+  for (const path in tl.tracks) { tl.tracks[path] = tl.tracks[path].filter(k => !k.scene); if (!tl.tracks[path].length) delete tl.tracks[path]; }
+  const list = tl.scenes.slice().sort((a, b) => a.t - b.t), fr = 1 / TL_FPS;
+  let prevT = -Infinity;
+  for (const sc of list) {
+    const doc = { config, tracks: tl.tracks, startTime: tl.startTime, cursor: tl.cursor, override: null, render };
+    const t = snapT(sc.t), cut = sc.type === 'cut';
+    const room = isFinite(prevT) ? Math.max(0, t - prevT - fr) : t;
+    const dur = cut ? 0 : Math.min(sc.dur, room);
+    const t0 = snapT(Math.max(0, t - Math.max(dur, fr)));
+    for (const p of PARAMS) {
+      if (p.path === 'time' && !sc.evo) continue;
+      const target = snapValue(sc.st, p.path); if (target === undefined || target === null) continue;
+      const before = p.path === 'time' ? evoTimeAt(doc, t0) : valueAt(doc, p.path, t0);
+      if (sameVal(before, target, p)) continue;
+      const keys = tl.tracks[p.path] || (tl.tracks[p.path] = []);
+      const put = k => { const i = keys.findIndex(x => Math.abs(x.t - k.t) < fr / 2); if (i >= 0) keys[i] = k; else keys.push(k); };
+      if (t < fr) { put({ t: 0, v: target, ease: 'linear', scene: sc.id }); continue; }       // escena en el inicio: rige desde 0
+      if (cut || p.hold || dur < fr) {
+        put({ t: snapT(t - fr), v: before, ease: 'hold', scene: sc.id });
+        put({ t, v: target, ease: 'linear', scene: sc.id });
+      } else {
+        put({ t: t0, v: before, ease: 'curve', curve: sc.curve.slice(), scene: sc.id });
+        put({ t, v: target, ease: 'linear', scene: sc.id });
+      }
+      keys.sort((a, b) => a.t - b.t);
+      if (p.g) tl.collapsed[p.g] = false;
+    }
+    prevT = t;
+  }
+  tl.applyPoints = list.map(s => snapT(s.t));
 }
 function addScene(snap, t = tl.head, opts = {}) {
   const sc = { id: ++sceneSeq, t: snapT(t), snap: snap.num, st: JSON.parse(JSON.stringify(snap.st)),
@@ -1676,138 +1841,24 @@ try { const d = JSON.parse(localStorage.getItem(TL_STORE) || 'null'); if (d && d
    final, parte en la evolución en pantalla y sigue al cursor);
    con keyframes o escenas, es la secuencia tal como se ve en la
    línea de tiempo. Además se copia su código CT1.
-   [ContOpe] La traducción viene de ContopeTrama (el mismo dist
-   que trae el motor). La trama lleva su nombre: el del preset
-   elegido o el de la trama importada. puenteDeTrama lo completa
-   el puente con el escritorio, si lo hay (colores y formato del
-   ADN; la trama exportada también le llega al escritorio).
    ========================================================= */
-const puenteDeTrama = { nombre: null, opciones: () => ({}), exportada: () => {} };
-function estadoParaTrama() {
-  if (morph) finishMorphNow();
-  if (presetMorph) { Object.assign(config, presetMorph.to); presetMorph = null; syncSliders(); }
-  const pr = !modified && presetById(currentPreset), nombre = pr ? pr.name : puenteDeTrama.nombre;
-  return {
-    cfg: JSON.parse(JSON.stringify(config)), render, time: r5(live.time), format,
-    tl: { duration: tl.duration, startTime: tl.startTime, cursor: { ...tl.cursor }, tracks: JSON.parse(JSON.stringify(tl.tracks)), scenes: JSON.parse(JSON.stringify(tl.scenes || [])) },
-    ...(nombre ? { nombre } : {})
-  };
-}
 document.getElementById('tramaExport').addEventListener('click', async () => {
+  if (morph) finishMorphNow();
+  const estado = {
+    cfg: JSON.parse(JSON.stringify(config)), render, time: r5(live.time), format,
+    tl: { duration: tl.duration, startTime: tl.startTime, cursor: { ...tl.cursor }, tracks: JSON.parse(JSON.stringify(tl.tracks)), scenes: JSON.parse(JSON.stringify(tl.scenes || [])) }
+  };
   let trama;
-  try { trama = TRAMA.tramaDeEstadoV7(estadoParaTrama(), puenteDeTrama.opciones()); }
+  try { trama = ContopeTramaFormato.tramaDeEstadoV7(estado); }
   catch (e) { toast('No se pudo armar la trama: ' + (e.message || e)); return; }
   const secuencia = trama.tiempo.modo === 'secuencia';
   const nombre = 'superficie-' + (secuencia ? 'secuencia-' + String(trama.tiempo.duracion).replace('.', '_') + 's' : 'vivo') + '.trama.json';
   await save(nombre, JSON.stringify(trama, null, 2), 'application/json');
-  try { await navigator.clipboard.writeText(TRAMA.codificarTrama(trama)); toast((secuencia ? 'Trama de secuencia' : 'Trama en vivo') + ' guardada · código CT1 copiado'); } catch (e) {}
-  puenteDeTrama.exportada(trama);
+  try { await navigator.clipboard.writeText(ContopeTramaFormato.codificarTrama(trama)); toast((secuencia ? 'Trama de secuencia' : 'Trama en vivo') + ' guardada · código CT1 copiado'); } catch (e) {}
 });
 renderStrip();
 layout();
 requestAnimationFrame(frame);
-</script>
-<script>
-/* =========================================================
-   [ContOpe] Puente con el escritorio
-   ---------------------------------------------------------
-   El escritorio muestra este generador en un iframe y le
-   habla con postMessage ({ fuente: 'contope-trama', tipo }).
-   Del escritorio llegan:
-     · iniciar: los colores del ADN (lejos, cerca, fondo, con
-       su origen) como valores de partida, los formatos de
-       hoja del ADN (se suman al menú de formato) y si se
-       pide quietud (prefers-reduced-motion: parte en pausa);
-     · colores: «Volver al ADN»;
-     · importar: una trama (el archivo, ya leído);
-     · pedir-trama: el escritorio quiere el estado actual
-       como archivo de trama (para la Célula Madre).
-   Al escritorio salen «listo», «trama» (la pedida) y
-   «trama-exportada» (la de «Exportar trama»).
-   La traducción entre este estado y el archivo de trama
-   está en @contope/trama (formato/generador-v7.ts).
-   ========================================================= */
-(function () {
-  const padre = window.parent !== window ? window.parent : null;
-  if (!padre) return;
-  const FUENTE = 'contope-trama';
-  let coloresAdn = {}, formatosAdn = [];
-  const enviar = m => padre.postMessage({ fuente: FUENTE, ...m }, '*');
-  const formatSel = document.getElementById('format');
-  puenteDeTrama.opciones = () => ({ colores: coloresAdn, lienzo: lienzoAdn() });
-  puenteDeTrama.exportada = trama => enviar({ tipo: 'trama-exportada', trama });
-
-  function ponerColores(colores) {
-    let alguno = false;
-    for (const k of ['lejos', 'cerca', 'fondo']) {
-      const c = colores && colores[k];
-      if (c && /^#[0-9a-fA-F]{6}$/.test(c.hex)) { config[TRAMA.COLOR_V7[k]] = c.hex.toLowerCase(); alguno = true; }
-    }
-    if (!alguno) return;
-    presetMorph = null; if (morph) finishMorphNow();
-    syncSliders(); markModified(); if (tl.open) renderLanes(); dirty = true;
-  }
-  function ponerFormatos(formatos) {
-    formatSel.querySelectorAll('option[data-adn]').forEach(o => o.remove());
-    for (const f of formatos) {
-      const o = document.createElement('option');
-      o.value = f.valor; o.textContent = f.etiqueta; o.dataset.adn = f.clave;
-      formatSel.appendChild(o);
-    }
-    formatSel.value = format;
-  }
-  function lienzoAdn() {
-    const o = formatSel.selectedOptions[0];
-    if (!o || !o.dataset.adn || o.value !== format) return undefined;
-    const f = formatosAdn.find(x => x.clave === o.dataset.adn);
-    return f ? f.lienzo : undefined;
-  }
-  function importar(trama) {
-    const e = TRAMA.estadoV7DeTrama(trama);
-    presetMorph = null; morph = null; previewState = null;
-    if (tlRec.on) tlRecStop(); if (stRec.on) stRecStop(); tlPlay(false);
-    Object.assign(config, JSON.parse(JSON.stringify(DEFAULTS)), e.cfg);
-    render = e.render; live.time = e.time;
-    if (![...formatSel.options].some(o => o.value === e.format)) {
-      const o = document.createElement('option'); o.value = e.format; o.textContent = e.format.replace('x', ' × '); formatSel.appendChild(o);
-    }
-    format = e.format; formatSel.value = format; layout();
-    undoDoc = null; document.getElementById('tlUndo').hidden = true;
-    tl.sel = null; tl.selScene = null;
-    if (e.tl) {
-      Object.assign(tl, { duration: e.tl.duration, startTime: e.tl.startTime, cursor: e.tl.cursor, tracks: e.tl.tracks, scenes: e.tl.scenes });
-      sceneSeq = tl.scenes.reduce((m, x) => Math.max(m, x.id), 0);
-      regenerateScenes();
-    } else Object.assign(tl, { tracks: {}, scenes: [], applyPoints: [] });
-    puenteDeTrama.nombre = e.nombre || null;
-    modified = true; renderPresetSelect(); syncSliders(); syncRender(); saveTimeline();
-    if (e.tl && !tl.open) openTimeline(true);
-    else if (tl.open) { document.getElementById('tlDur').value = tl.duration; fitView(); renderRuler(); renderLanes(); renderNav(); renderScenes(); renderWave(); onHeadChange(); }
-    dirty = true;
-    toast('Trama importada' + (e.nombre ? ': ' + e.nombre : ''));
-  }
-
-  window.addEventListener('message', ev => {
-    const m = ev.data;
-    if (ev.source !== padre || !m || m.fuente !== FUENTE) return;
-    try {
-      if (m.tipo === 'iniciar') {
-        coloresAdn = m.colores || {}; formatosAdn = Array.isArray(m.formatos) ? m.formatos : [];
-        ponerFormatos(formatosAdn); ponerColores(coloresAdn);
-        if (m.quietud && !live.paused) setPaused(true);
-      } else if (m.tipo === 'colores') {
-        coloresAdn = m.colores || {}; ponerColores(coloresAdn);
-        toast('Colores del ADN');
-      } else if (m.tipo === 'importar') {
-        importar(m.trama);
-      } else if (m.tipo === 'pedir-trama') {
-        try { enviar({ tipo: 'trama', pedido: m.pedido, trama: TRAMA.tramaDeEstadoV7(estadoParaTrama(), puenteDeTrama.opciones()) }); }
-        catch (e) { enviar({ tipo: 'trama', pedido: m.pedido, error: e.message || String(e) }); }
-      }
-    } catch (e) { toast('No se pudo: ' + (e.message || e)); }
-  });
-  enviar({ tipo: 'listo' });
-})();
 </script>
 </body>
 </html>
