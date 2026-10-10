@@ -211,6 +211,7 @@
   body.tl-open .bar #perfAudio { display: none; }
   .bar #capSnap { display: none; }
   #tlStRec { display: none !important; }
+  .esp-only { display: none; } body.gen-espiral .esp-only { display: block; } body.gen-espiral .sup-only { display: none !important; }
 </style>
 </head>
 <body>
@@ -227,6 +228,7 @@
     <option value="816x1056">Carta vertical</option>
     <option value="1920x1080">16:9</option>
     <option value="1080x1080">Cuadrado</option>
+    <option value="1080x1920">Vertical 9:16</option>
   </select>
   <button id="pause" aria-pressed="false">Pausa</button>
   <button id="toggleGallery" aria-pressed="true">Galería <span class="count" id="count">0</span></button>
@@ -362,7 +364,10 @@ const config = {
   lineWeight: 1.4,      // grosor de la línea, en veces el radio del punto
   lineAlpha: 0.4,       // opacidad de la línea (una línea acumula más luz que sus puntos)
   colorBg: '#000000',   // fondo (sólido)
-  inkMode: 'auto'       // luz (los puntos suman luz) · tinta (los puntos oscurecen, como en papel) · auto según el fondo
+  inkMode: 'auto',      // luz (los puntos suman luz) · tinta (los puntos oscurecen, como en papel) · auto según el fondo
+  generator: 'superficie', // superficie · espiral (Espiral de Fibonacci con hilos)
+  espPuntos: 550, espGiro: 0, espEscalaPuntos: 1, espExpPuntos: 1.7, espEscalaEspiral: 1, espExpEspiral: 2.2, espLargo: 1, espEnrollado: 1, espOjo: 0.015,
+  espHilos: 1, espTamPunto: 4.5, espGrosorCurva: 4, espGrosorHilo: 1.2, espOpPunto: 1, espOpCurva: 0.95, espOpHilo: 0.3
 };
 /* Modo de dibujo: puntos, líneas o ambos superpuestos. Las capturas,
    presets y documentos anteriores guardaban «dotted» (sí/no): se leen igual. */
@@ -1522,7 +1527,8 @@ let sceneSeq = tl.scenes.reduce((m, s) => Math.max(m, s.id), 0);
 const sceneDefaults = { type: 'morph', dur: 1.0, curve: CURVES.suave.c.slice() };
 function evoTimeAt(doc, t) { return evolutionAt(doc, t).time; }
 function regenerateScenes() {
-  tl.tracks = TRAMA.regenerarPistasV7(tl, config);
+  const extras = PARAMS.filter(p => !TRAMA.RUTA_DE_V7[p.path]).map(p => ({ path: p.path, paso: p.step, entero: !!p.hold, color: !!p.color }));
+  tl.tracks = TRAMA.regenerarPistasV7(tl, config, extras);
   for (const path in tl.tracks) if (PARAM[path] && PARAM[path].g && tl.tracks[path].some(k => k.scene)) tl.collapsed[PARAM[path].g] = false;
   tl.applyPoints = tl.scenes.slice().sort((a, b) => a.t - b.t).map(s => snapT(s.t));
 }
@@ -1879,6 +1885,127 @@ document.getElementById('pfActions').addEventListener('click', async e => {
 });
 document.getElementById('perfAudio').addEventListener('click', () => document.getElementById('tlAudioFile').click());
 renderPerfs();
+
+/* =========================================================
+   Espiral de Fibonacci con hilos (un estilo más)
+   ---------------------------------------------------------
+   Puntos en filotaxis de Vogel (ángulo áureo), una curva guía
+   que nace recta desde el centro y se enrolla hasta la espiral
+   áurea (r crece φ veces por cuarto de vuelta), e hilos de cada
+   punto a su lugar en la curva: el punto n va a la fracción
+   n/N del largo de la curva. Es 2D. La secuencia del video de
+   referencia está en el propio tiempo (un ciclo de 25,4 s a
+   velocidad 1): nacimiento, línea, enrollado, expansión y
+   reposo; snapshots, performances y línea de tiempo la usan
+   igual que la evolución de la superficie.
+   ========================================================= */
+/* [ContOpe] constantes y cálculo: los del motor de @contope/trama (motor/espiral.ts) */
+const PHI = TRAMA.PHI, ANG_AUREO = TRAMA.ANGULO_AUREO, B_AUREA = TRAMA.B_AUREA;
+const ESP_CICLO = TRAMA.CICLO_ESPIRAL;
+const esEspiral = cfg => !!cfg && cfg.generator === 'espiral';
+function computeEspiral(state, W, H, quality = 1) {
+  // [ContOpe] el cálculo de la espiral existe una sola vez, en el motor de @contope/trama
+  const g = TRAMA.calcularEspiral({ tiempo: state.time, configuracion: TRAMA.configuracionEspiralDeV7(state.cfg) }, W, H, quality);
+  return { espiral: true, pts: g.puntos, curva: g.curva, hilos: g.hilos, L: g.largo, px: g.px };
+}
+function espiralCols(cfg) { return { hilo: hexToRgb(cfg.colorDeep), traz: hexToRgb(cfg.colorAccent) }; }
+function drawEspiral(ctx, g, cfg, W, H) {
+  ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = cfg.colorBg || '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = inkModeOf(cfg) === 'tinta' ? 'multiply' : 'lighter';
+  const col = espiralCols(cfg), P = g.pts, C = g.curva;
+  // hilos: cada uno con su trazo, para que los cruces sumen
+  if (cfg.espOpHilo > 0.002 && g.hilos.length) {
+    ctx.lineWidth = Math.max(0.2, cfg.espGrosorHilo * g.px); ctx.lineCap = 'round';
+    for (let i = 0; i < g.hilos.length; i += 2) {
+      const n = g.hilos[i], j = g.hilos[i + 1], al = P[n * 4 + 3] * cfg.espOpHilo; if (al < 0.004) continue;
+      ctx.strokeStyle = `rgba(${col.hilo},${al})`; ctx.beginPath(); ctx.moveTo(P[n * 4], P[n * 4 + 1]); ctx.lineTo(C[j * 2], C[j * 2 + 1]); ctx.stroke();
+    }
+  }
+  if (g.L > 0 && cfg.espOpCurva > 0.002) {
+    ctx.strokeStyle = `rgba(${col.traz},${cfg.espOpCurva})`; ctx.lineWidth = Math.max(0.3, cfg.espGrosorCurva * g.px); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(C[0], C[1]); for (let j = 2; j < C.length; j += 2) ctx.lineTo(C[j], C[j + 1]); ctx.stroke();
+  }
+  if (cfg.espOpPunto > 0.002) {
+    const lv = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
+    for (let n = 0; n < P.length / 4; n++) {
+      const al = P[n * 4 + 3]; if (al < 0.02) continue;
+      const p = lv[Math.min(3, Math.floor(al * 4))], r = P[n * 4 + 2];
+      if (r < 0.9) p.rect(P[n * 4] - r, P[n * 4 + 1] - r, r * 2, r * 2); else { p.moveTo(P[n * 4] + r, P[n * 4 + 1]); p.arc(P[n * 4], P[n * 4 + 1], r, 0, Math.PI * 2); }
+    }
+    lv.forEach((p, i) => { ctx.fillStyle = `rgba(${col.traz},${cfg.espOpPunto * (i + 0.5) / 4})`; ctx.fill(p); });
+  }
+}
+function espiralSVG(g, cfg, W, H) {
+  const col = espiralCols(cfg), P = g.pts, C = g.curva, f = v => v.toFixed(1);
+  let hs = '';
+  for (let i = 0; i < g.hilos.length; i += 2) { const n = g.hilos[i], j = g.hilos[i + 1], al = P[n * 4 + 3] * cfg.espOpHilo; if (al >= 0.004) hs += `<line x1="${f(P[n * 4])}" y1="${f(P[n * 4 + 1])}" x2="${f(C[j * 2])}" y2="${f(C[j * 2 + 1])}" stroke-opacity="${Math.min(1, al).toFixed(3)}"/>`; }
+  let d = ''; if (g.L > 0) { d = 'M' + f(C[0]) + ' ' + f(C[1]); for (let j = 2; j < C.length; j += 2) d += 'L' + f(C[j]) + ' ' + f(C[j + 1]); }
+  let ps = ''; for (let n = 0; n < P.length / 4; n++) { const al = P[n * 4 + 3]; if (al >= 0.02) ps += `<circle cx="${f(P[n * 4])}" cy="${f(P[n * 4 + 1])}" r="${P[n * 4 + 2].toFixed(2)}" fill-opacity="${(cfg.espOpPunto * al).toFixed(3)}"/>`; }
+  const blend = inkModeOf(cfg) === 'tinta' ? 'multiply' : 'screen';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><style>line,path,circle{mix-blend-mode:${blend}}</style><rect width="${W}" height="${H}" fill="${cfg.colorBg || '#000000'}"/>`
+    + `<g id="hilos" stroke="rgb(${col.hilo})" stroke-width="${(cfg.espGrosorHilo * g.px).toFixed(2)}" stroke-linecap="round">${hs}</g>`
+    + (d ? `<g id="curva"><path d="${d}" fill="none" stroke="rgb(${col.traz})" stroke-opacity="${cfg.espOpCurva}" stroke-width="${(cfg.espGrosorCurva * g.px).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/></g>` : '')
+    + `<g id="puntos" fill="rgb(${col.traz})">${ps}</g></svg>`;
+}
+/* el dibujo y el cálculo existentes atienden también a la espiral */
+{
+  const cs0 = computeSheet, cst0 = computeState, dr0 = drawSheet, sv0 = toSVG;
+  computeSheet = function (state, W, H, q = 1) { return esEspiral(state.cfg) ? computeEspiral(state, W, H, q) : cs0(state, W, H, q); };
+  computeState = function (st, W, H, q) {
+    const b = st.blend, bE = b && esEspiral(b.state.cfg);
+    if (!esEspiral(st.cfg) && !bE) return cst0(st, W, H, q);
+    if (!b) return computeEspiral(st, W, H, q);
+    if (esEspiral(st.cfg) && bE) {
+      const cfg = { ...st.cfg };
+      for (const k in b.state.cfg) if (typeof b.state.cfg[k] === 'number' && typeof cfg[k] === 'number') cfg[k] = cfg[k] + (b.state.cfg[k] - cfg[k]) * b.e;
+      return computeEspiral({ time: st.time + (b.state.time - st.time) * b.e, cfg }, W, H, q);
+    }
+    return b.e < 0.5 ? computeSheet(st, W, H, q) : computeSheet(b.state, W, H, q);
+  };
+  drawSheet = function (ctx, lines, cfg, W, H, mode) { if (lines && lines.espiral) return drawEspiral(ctx, lines, esEspiral(cfg) ? cfg : { ...config, ...cfg }, W, H); return dr0(ctx, lines, cfg, W, H, mode); };
+  toSVG = function (lines, cfg, W, H, mode) { return lines && lines.espiral ? espiralSVG(lines, cfg, W, H) : sv0(lines, cfg, W, H, mode); };
+}
+/* el estilo en la lista de presets: la secuencia empieza desde el nacimiento */
+BUILTIN.push({ name: 'Espiral de Fibonacci con hilos', render: 'puntos', cfg: { generator: 'espiral', colorBg: '#121212', colorDeep: '#ffffff', colorAccent: '#ffffff', inkMode: 'luz', speed: 1 } });
+renderPresetSelect();
+{ const ap0 = applyPreset; applyPreset = function (id) { const pr = presetById(id); ap0(id); if (pr && pr.cfg && pr.cfg.generator === 'espiral' && !esEspiral(config)) live.time = 0; }; }
+/* controles propios en el panel; los de la superficie se ocultan mientras la espiral está activa */
+const ESP_CTRL = [['espPuntos','Puntos',100,1200,1],['speed','Velocidad (1 = la del video)',0,3,0.01],['espGiro','Giro del disco (°)',-180,180,1],['espEscalaPuntos','Separación de los puntos',0.3,2.5,0.01],['espExpPuntos','Expansión de los puntos (×)',1,4,0.05],
+  ['espEscalaEspiral','Tamaño de la espiral',0.3,2.5,0.01],['espExpEspiral','Expansión de la espiral (×)',1,5,0.05],['espLargo','Largo de la curva',0.2,2.5,0.01],['espEnrollado','Enrollado (0 recta · 1 áurea)',0,1.5,0.01],['espOjo','Ojo del centro',0.002,0.08,0.001],
+  ['espHilos','Hilos visibles',0,1,0.01],['espTamPunto','Tamaño de punto (px a 1080)',0.5,6,0.05],['espGrosorCurva','Grosor de la curva',0.5,8,0.05],['espGrosorHilo','Grosor del hilo',0.2,3,0.05],
+  ['espOpPunto','Opacidad de punto',0,1,0.01],['espOpCurva','Opacidad de la curva',0,1,0.01],['espOpHilo','Opacidad del hilo',0,1,0.01]];
+{
+  const panel = document.getElementById('panel'), h = document.createElement('h2'), box = document.createElement('div');
+  h.textContent = 'Espiral'; h.className = 'esp-only'; box.id = 'g-espiral'; box.className = 'esp-only';
+  panel.insertBefore(box, panel.querySelector('h2:nth-of-type(2)')); panel.insertBefore(h, box);
+  for (const [key, label, min, max, step] of ESP_CTRL) {
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `<label for="e-${key}">${label}</label><output></output><input type="range" id="e-${key}" min="${min}" max="${max}" step="${step}">`;
+    const input = row.querySelector('input'), out = row.querySelector('output');
+    input.value = config[key]; out.textContent = config[key];
+    input.addEventListener('input', e => { presetMorph = null; if (morph) finishMorphNow(); config[key] = parseFloat(e.target.value); out.textContent = config[key]; dirty = true; markModified(); if (key === 'speed') { const s = document.getElementById('s-speed'); if (s) { s.value = config.speed; s.parentNode.querySelector('output').textContent = config.speed; } } });
+    box.appendChild(row);
+  }
+  for (const h2 of panel.querySelectorAll('h2')) if (['Lámina', 'Trazo', 'Cámara'].includes(h2.textContent)) h2.classList.add('sup-only');
+  ['g-sheet', 'renderSeg', 'g-stroke', 'g-cam', 'g-light'].forEach(id => document.getElementById(id).classList.add('sup-only'));
+  const ss0 = syncSliders;
+  syncSliders = function () { ss0(); for (const [key] of ESP_CTRL) { const el = document.getElementById('e-' + key); if (el) { el.value = config[key]; el.parentNode.querySelector('output').textContent = Math.round(config[key] * 1000) / 1000; } } };
+  const marcar = () => document.body.classList.toggle('gen-espiral', esEspiral(config));
+  setInterval(marcar, 250); marcar();
+}
+/* sus parámetros, animables en la línea de tiempo */
+[['espPuntos','Puntos',100,1200,1,'scatter_plot',{ hold: true }],['espGiro','Giro del disco',-180,180,1,'rotate_right'],['espEscalaPuntos','Separación de los puntos',0.3,2.5,0.01,'blur_on'],['espExpPuntos','Expansión de los puntos',1,4,0.05,'open_with'],
+ ['espEscalaEspiral','Tamaño de la espiral',0.3,2.5,0.01,'cyclone'],['espExpEspiral','Expansión de la espiral',1,5,0.05,'zoom_out_map'],['espLargo','Largo de la curva',0.2,2.5,0.01,'straighten'],['espEnrollado','Enrollado',0,1.5,0.01,'autorenew'],
+ ['espHilos','Hilos visibles',0,1,0.01,'share'],['espTamPunto','Tamaño de punto',0.5,6,0.05,'fiber_manual_record'],['espGrosorCurva','Grosor de la curva',0.5,8,0.05,'line_weight'],['espGrosorHilo','Grosor del hilo',0.2,3,0.05,'linear_scale'],
+ ['espOpPunto','Opacidad de punto',0,1,0.01,'grain'],['espOpCurva','Opacidad de la curva',0,1,0.01,'opacity'],['espOpHilo','Opacidad del hilo',0,1,0.01,'texture']]
+  .forEach(([path, label, min, max, step, icon, extra]) => { const p = { g: 'Espiral', path, label, min, max, step, icon, ...(extra || {}) }; PARAMS.push(p); PARAM[path] = p; });
+/* el archivo de trama de la espiral necesita la próxima versión del formato */
+{ const ex0 = exportTrama; exportTrama = function (nombre) { if (esEspiral(config) || (tl.scenes || []).some(s => esEspiral(s.st && s.st.cfg))) { toast('La trama de la espiral llega con la próxima versión del formato; por ahora sale como video, PNG o SVG'); return; } return ex0(nombre); }; }
+
+
+renderStrip();
+layout();
+requestAnimationFrame(frame);
 
 renderStrip();
 layout();
