@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Superficie de puntos — prototipo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&display=block">
+<script src="mp4-muxer.js"></script>
+<script src="contope-trama.js"></script>
+<style>
+  :root {
+    --room: #07090b; --panel: rgba(6, 14, 22, 0.88); --ink: #dff8ff; --muted: #7fa4b3;
+    --line: rgba(160, 230, 255, 0.16); --accent: #3dd6c0;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--room); color: var(--ink); font: 14px/1.45 "Helvetica Neue", Helvetica, Arial, sans-serif; overflow: hidden; }
+  button, select, input { font: inherit; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  body { --fsh: 140px; }
+  #room { position: fixed; inset: 0 0 calc(var(--fsh) + 80px) 0; display: grid; place-items: center; }
+  body.strip-hidden #room { bottom: 70px; }
+  body.strip-hidden #filmstrip { display: none; }
+  #filmstrip { position: fixed; left: 12px; right: 12px; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); height: var(--fsh);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; backdrop-filter: blur(10px); display: flex; flex-direction: column; overflow: hidden; }
+  .fs-head { display: flex; align-items: center; gap: 8px; padding: 5px 10px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); white-space: nowrap; overflow-x: auto; min-height: 34px; }
+  .fs-head > b { color: var(--ink); font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; font-size: 10.5px; }
+  .muted { color: var(--muted); } #fsSelInfo b { color: var(--ink); }
+  #fsActions { display: inline-flex; gap: 5px; }
+  #fsActions button { background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 12px; }
+  #fsItems { flex: 1; display: flex; gap: 8px; padding: 8px 10px; overflow-x: auto; overflow-y: hidden; align-items: stretch; }
+  .fs-add { flex: 0 0 92px; border: 1px dashed var(--line); background: transparent; color: var(--muted); border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; }
+  .fs-add span { font-size: 22px; color: var(--accent); line-height: 1; }
+  .fs-item { flex: 0 0 auto; margin: 0; position: relative; height: 100%; border-radius: 7px; overflow: hidden; border: 1px solid var(--line); background: #000; cursor: pointer; }
+  .fs-item img { height: 100%; display: block; pointer-events: none; }
+  .fs-item.sel { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(61,214,192,.35); }
+  .fs-item figcaption { position: absolute; left: 0; right: 0; top: 0; padding: 3px 6px; font-size: 10.5px; background: linear-gradient(rgba(0,0,0,.75), transparent); }
+  .fs-empty { align-self: center; color: var(--muted); margin: 0 6px; font-size: 12px; }
+  /* ---- línea de tiempo (panel vertical a la izquierda) ---- */
+  .ms { font-family: 'Material Symbols Outlined'; font-weight: normal; font-style: normal; font-size: 17px; line-height: 1; letter-spacing: normal; text-transform: none; white-space: nowrap; direction: ltr; font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased; }
+  body.tl-open { --tlw: min(470px, 36vw); }
+  body.tl-open #room { left: calc(var(--tlw) + 24px); }
+  body.tl-open #filmstrip { left: calc(var(--tlw) + 24px); }
+  body.tl-open #panel, body.tl-open .bar #pause, body.tl-open .bar #toggle { display: none; }
+  body.tl-open .hint, body.tl-open .perf { left: calc(var(--tlw) + 30px); }
+  body.tl-recording #stage, body.st-recording #stage { box-shadow: 0 0 0 2px rgba(255,77,94,.75); }
+  body.st-recording .fs-item[data-n]::after { content: attr(data-n); position: absolute; right: 5px; top: 4px; min-width: 18px; height: 18px; border-radius: 9px; background: #ff4d5e; color: #fff; font: 700 11px/18px ui-monospace, Menlo, monospace; text-align: center; }
+  #timeline { position: fixed; left: 12px; top: 12px; bottom: 70px; width: var(--tlw, 470px); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; backdrop-filter: blur(10px); overflow: hidden; --h: 0; --pc: 132px; z-index: 5; }
+  #timeline[hidden] { display: none; }
+  .tl-top { display: flex; align-items: center; gap: 5px; padding: 6px 8px; border-bottom: 1px solid var(--line); flex-wrap: wrap; font-size: 12px; }
+  .tl-top button, .tl-top select { background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: 4px; }
+  .tl-top button:disabled { opacity: .35; cursor: not-allowed; }
+  .tl-top button .ms { font-size: 16px; }
+  .tl-top button[aria-pressed="true"] { background: rgba(160,230,255,.14); }
+  .tl-top input[type=number] { width: 52px; background: rgba(0,0,0,.35); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px; font: inherit; }
+  .tl-top label { color: var(--muted); display: inline-flex; gap: 4px; align-items: center; }
+  .tl-top .spacer { flex: 1; } .tl-top [hidden] { display: none; }
+  .tl-top .tlrec::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #ff4d5e; }
+  .tl-top .tlrec.on { background: rgba(255,77,94,.2); border-color: rgba(255,77,94,.6); }
+  .tc { font: 12.5px ui-monospace, Menlo, monospace; color: var(--accent); }
+  #tlInspector { width: 100%; display: flex; gap: 6px; align-items: center; min-height: 22px; }
+  #tlInspector select { background: #0b1418; }
+  #tlRender select { background: #0b1418; }
+  #tlRender .go { background: var(--accent); color: #031a14; border-color: var(--accent); font-weight: 700; }
+  #tlRender .progress { display: inline-flex; gap: 6px; align-items: center; } #tlRender [hidden] { display: none !important; }
+  #tlRender .track { width: 90px; height: 6px; background: rgba(160,230,255,.12); border-radius: 3px; overflow: hidden; display: inline-block; }
+  #tlRender .fill { display: block; height: 100%; width: 0; background: var(--accent); }
+  #tlRender .ptext { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .tl-head, .lane { display: grid; grid-template-columns: var(--pc) 1fr; }
+  .tl-head { border-bottom: 1px solid var(--line); font-size: 11px; color: var(--muted); } .tl-head > span { padding: 3px 8px; }
+  #tlRuler { position: relative; height: 18px; cursor: ew-resize; margin: 0 10px 0 6px; }
+  #tlRuler .tick { position: absolute; top: 2px; transform: translateX(-50%); font: 10px ui-monospace, Menlo, monospace; color: var(--muted); white-space: nowrap; }
+  #tlRuler .tick:first-child { transform: none; } #tlRuler .tick.last { transform: translateX(-100%); }
+  #tlRuler .ph { position: absolute; top: 0; bottom: 0; left: calc(var(--h) * 100%); width: 2px; margin-left: -1px; background: var(--accent); }
+  #tlRuler .ap { position: absolute; top: 0; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #7cc8ff; transform: translateX(-50%); }
+  #timeline.ph-out .ktrack::after, #timeline.ph-out #tlRuler .ph { display: none; }
+  #tlLanes { flex: 1; overflow-y: auto; }
+  .grp { padding: 2px 8px; font-size: 10.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); cursor: pointer; background: rgba(160,230,255,.05); border-bottom: 1px solid rgba(160,230,255,.06); user-select: none; line-height: 17px; }
+  .grp .tw { display: inline-block; width: 13px; transition: transform .15s; } .grp.closed .tw { transform: rotate(-90deg); } .grp i { color: var(--accent); font-style: normal; }
+  .lane { border-bottom: 1px solid rgba(160,230,255,.05); min-height: 21px; }
+  .lhead { display: flex; align-items: center; gap: 4px; padding: 0 4px 0 6px; min-width: 0; }
+  .lhead .sw { background: none; border: 0; color: var(--muted); padding: 0; cursor: pointer; display: grid; place-items: center; }
+  .lhead .sw .ms { font-size: 15px; } .lane.animated .sw { color: var(--accent); }
+  .lname { flex: 1; min-width: 0; display: flex; align-items: center; cursor: help; overflow: hidden; }
+  .lname .ms { opacity: .85; } .lname .abbr { display: none; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.no-icons .lname .ms { display: none; } body.no-icons .lname .abbr { display: inline; } body.no-icons #timeline { --pc: 178px; }
+  .scrub { min-width: 40px; text-align: right; font: 12px ui-monospace, Menlo, monospace; color: #7cc8ff; border-bottom: 1px dashed rgba(124,200,255,.5); cursor: ew-resize; user-select: none; }
+  .lane.animated .scrub { color: var(--accent); }
+  .scrub-edit { width: 56px; background: rgba(0,0,0,.5); color: var(--ink); border: 1px solid var(--accent); border-radius: 4px; padding: 0 3px; font: 12px ui-monospace, Menlo, monospace; text-align: right; }
+  .lhead input[type=color] { width: 36px; height: 16px; border: 1px solid var(--line); border-radius: 3px; background: none; padding: 0; }
+  .knav { display: inline-flex; width: 34px; justify-content: flex-end; }
+  .knav button { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 2px; font-size: 13px; line-height: 1; } .knav .kadd { color: var(--ink); font-size: 10px; }
+  .ktrack { position: relative; cursor: ew-resize; margin: 0 10px 0 6px; }
+  .lane.animated .ktrack { background: linear-gradient(transparent calc(50% - .5px), rgba(160,230,255,.1) calc(50% - .5px), rgba(160,230,255,.1) calc(50% + .5px), transparent calc(50% + .5px)); }
+  .ktrack::after { content: ""; position: absolute; top: 0; bottom: 0; left: calc(var(--h) * 100%); width: 1px; background: var(--accent); opacity: .7; pointer-events: none; }
+  .kf { position: absolute; top: 50%; width: 8px; height: 8px; background: var(--ink); transform: translate(-50%, -50%) rotate(45deg); cursor: grab; z-index: 1; }
+  .kf.smooth { border-radius: 50%; transform: translate(-50%, -50%); } .kf.hold { background: none; border: 2px solid var(--ink); }
+  .kf.sel { background: var(--accent); box-shadow: 0 0 0 2px rgba(61,214,192,.35); } .kf.hold.sel { background: none; border-color: var(--accent); }
+  .tl-navrow { align-items: center; border-top: 1px solid var(--line); border-bottom: 0; padding: 4px 0; }
+  .tl-zoom { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; }
+  .tl-scroll { display: flex; align-items: center; gap: 4px; margin: 0 6px 0 2px; }
+  .tl-scroll button, .tl-zoom button { background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 0 2px; cursor: pointer; display: grid; place-items: center; height: 22px; min-width: 22px; }
+  .tl-scroll button .ms, .tl-zoom button .ms { font-size: 16px; }
+  #tlZoomLabel { min-width: 30px; text-align: center; font: 10.5px ui-monospace, Menlo, monospace; color: var(--muted); }
+  #tlNav { flex: 1; position: relative; height: 14px; background: rgba(160,230,255,.07); border-radius: 6px; cursor: pointer; }
+  #tlNavThumb { position: absolute; top: 0; bottom: 0; background: rgba(124,200,255,.35); border: 1px solid rgba(124,200,255,.7); border-radius: 6px; cursor: grab; min-width: 14px; }
+  #tlNavThumb i { position: absolute; top: 0; bottom: 0; width: 6px; cursor: ew-resize; } #tlNavThumb i.l { left: -2px; } #tlNavThumb i.r { right: -2px; }
+  body.no-icons .tl-top button .ms, body.no-icons .tl-scroll .ms, body.no-icons .tl-zoom .ms { font-family: inherit; font-size: 0; }
+  body.no-icons #tlPlay::after { content: "▶"; } body.no-icons #tlStart::after { content: "⏮"; } body.no-icons #tlZoomOut::after { content: "−"; } body.no-icons #tlZoomIn::after { content: "+"; } body.no-icons #tlZoomFit::after { content: "Todo"; font-size: 11px; } body.no-icons #tlPrev::after { content: "‹"; } body.no-icons #tlNext::after { content: "›"; }
+  .tl-scenes-row, .tl-wave-row { align-items: center; }
+  #tlScenes { position: relative; height: 24px; margin: 0 10px 0 6px; cursor: ew-resize; }
+  #tlScenes .scn { position: absolute; top: 3px; transform: translateX(-50%); background: #7cc8ff; color: #001018; font: 700 10.5px/18px ui-monospace, Menlo, monospace; padding: 0 5px; border-radius: 4px; cursor: grab; z-index: 2; white-space: nowrap; }
+  #tlScenes .scn.cut { background: #ffb86b; }
+  #tlScenes .scn.sel { outline: 2px solid var(--accent); }
+  #tlScenes .scn-tr { position: absolute; top: 9px; height: 6px; background: linear-gradient(90deg, rgba(124,200,255,0), rgba(124,200,255,.55)); border-radius: 3px; pointer-events: none; }
+  #tlScenes .scn-empty { font-size: 10.5px; color: var(--muted); line-height: 24px; }
+  #tlScenes::after, #tlWave + * { content: ""; }
+  #tlWave { width: calc(100% - 16px); height: 26px; margin: 0 10px 0 6px; display: block; }
+  .audio-only { display: none !important; }
+  body.has-audio .audio-only { display: inline-flex !important; }
+  body.has-audio .tl-wave-row.audio-only { display: grid !important; }
+  .audio-btn { border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; cursor: pointer; color: var(--ink) !important; }
+  .audio-btn .ms { font-size: 16px; }
+  #tlTrans { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+  #tlTrans select, #tlInspector select, #tlInspector input { background: #0b1418; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px; font: inherit; font-size: 12px; }
+  #tlTrans input, #tlInspector input[type=number] { width: 54px; }
+  #tlInspector { flex-wrap: wrap; } #tlInspector [hidden] { display: none; }
+  #tlInspector button { background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; cursor: pointer; }
+  #previewTag { position: absolute; left: 10px; bottom: 10px; background: rgba(6,14,22,.85); border: 1px solid #7cc8ff; border-radius: 6px; padding: 4px 10px; font-size: 12px; pointer-events: none; }
+  #previewTag[hidden] { display: none; }
+  body:not(.tl-open) .tl-only { display: none; }
+  .bar .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+  #stage { position: relative; background: var(--stage-bg, #000); overflow: hidden; }
+  #stage.framed { box-shadow: 0 0 0 1px rgba(160,230,255,.18), 0 20px 60px rgba(0,0,0,.6); }
+  #stage canvas { display: block; width: 100%; height: 100%; }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  #flash.on { animation: flash .45s ease-out; }
+  @keyframes flash { from { opacity: .5; } to { opacity: 0; } }
+
+  .bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    display: flex; gap: 6px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 6px; backdrop-filter: blur(10px); width: max-content; max-width: calc(100vw - 20px); overflow-x: auto; }
+  .bar > * { flex: 0 0 auto; }
+  .bar button, .bar select { background: transparent; color: var(--ink); border: 1px solid transparent; border-radius: 999px; padding: 7px 13px; cursor: pointer; }
+  .bar select { appearance: none; border-color: var(--line); padding-right: 26px;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%; background-size: 5px 5px; background-repeat: no-repeat; }
+  .bar select option { background: #0b1418; }
+  .bar button:hover { border-color: var(--line); }
+  .bar button[aria-pressed="true"] { background: rgba(160,230,255,.14); border-color: var(--line); }
+  .bar .capture { background: var(--accent); color: #031a14; font-weight: 700; }
+
+  .panel { position: fixed; right: 12px; top: 12px; bottom: calc(var(--fsh) + 82px); width: min(300px, calc(100vw - 24px)); overflow-y: auto;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; backdrop-filter: blur(10px); }
+  .panel[hidden] { display: none; }
+  .panel h2 { font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); margin: 10px 0 10px; font-weight: 600; }
+  .panel h2:first-child { margin-top: 2px; }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 1px 8px; margin-bottom: 8px; }
+  .row label { color: var(--muted); font-size: 13px; }
+  .row output { font-variant-numeric: tabular-nums; font-size: 13px; }
+  .row input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+  .check { display: flex; gap: 8px; align-items: center; color: var(--ink); margin: 2px 0 10px; font-size: 13px; }
+  .check input { accent-color: var(--accent); }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 2px 0 12px; }
+  .seg button { background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 7px; padding: 6px 4px; cursor: pointer; font-size: 12.5px; }
+  .seg button[aria-pressed="true"] { color: var(--ink); background: rgba(61,214,192,.16); border-color: var(--accent); }
+  .row[hidden] { display: none; }
+  .colors { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; color: var(--muted); font-size: 13px; }
+  .colors input { width: 100%; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: none; padding: 2px; }
+  .psave { display: flex; gap: 6px; }
+  .psave input { flex: 1; min-width: 0; background: rgba(0,0,0,.35); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; }
+  .psave button { background: var(--accent); color: #031a14; border: 0; border-radius: 8px; padding: 7px 12px; font-weight: 700; cursor: pointer; }
+  .btn[hidden] { display: none; }
+  .bar select#preset { max-width: 210px; }
+  .bar select optgroup { background: #0b1418; color: var(--muted); }
+  .btn { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; margin-top: 10px; }
+
+  .toast { position: fixed; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(-50%);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; backdrop-filter: blur(10px);
+    opacity: 0; transition: opacity .25s; pointer-events: none; }
+  .toast.on { opacity: 1; }
+  .hint { position: fixed; left: 14px; top: calc(12px + env(safe-area-inset-top, 0px)); color: var(--muted); font-size: 12px; margin: 0; background: var(--panel); padding: 3px 8px; border-radius: 6px; }
+  .hint b { color: var(--accent); font-weight: 600; }
+  .hint kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font: 11px ui-monospace, Menlo, monospace; color: var(--ink); }
+  body.strip-hidden .panel { bottom: 76px; }
+  .perf { position: fixed; left: 14px; top: 36px; background: var(--panel); padding: 2px 8px; border-radius: 6px; color: var(--muted); font: 11px ui-monospace, Menlo, monospace; margin: 0; }
+  @media (max-width: 640px) { .hint { display: none; } }
+  /* ---- capas: menús arriba, snapshots, performances ---- */
+  body { --fsh: 252px; }
+  #filmstrip { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  #fsItems, #pfItems { flex: 0 0 auto; height: calc((var(--fsh) - 72px) / 2); }
+  #pfItems { display: flex; gap: 8px; padding: 8px 10px; overflow-x: auto; overflow-y: hidden; align-items: stretch; }
+  .pf-head { border-top: 1px solid var(--line); }
+  #pfActions { display: inline-flex; gap: 5px; }
+  #pfActions button { background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 12px; }
+  .pf-item .pf-meta { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 6px; font-size: 10.5px; color: var(--ink); background: linear-gradient(transparent, rgba(0,0,0,.8)); font-variant-numeric: tabular-nums; }
+  .pf-item .pf-blank { height: 100%; aspect-ratio: 16 / 9; background: #000; }
+  .fs-add.rec { color: #ff4d5e; border-color: rgba(255,77,94,.6); background: rgba(255,77,94,.12); border-style: solid; }
+  .fs-add.rec span { color: #ff4d5e; font-size: 18px; }
+  .fs-empty.rec-hint { color: #ff9aa4; }
+  .bar { bottom: calc(var(--fsh) + 22px + env(safe-area-inset-bottom, 0px)); }
+  body.strip-hidden .bar { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  #room { bottom: calc(var(--fsh) + 84px); }
+  .panel { bottom: calc(var(--fsh) + 84px); }
+  #timeline { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  body.tl-open .bar { left: calc(50% + (var(--tlw) + 12px) / 2); max-width: calc(100vw - var(--tlw) - 48px); }
+  body.tl-open .bar #perfAudio { display: none; }
+  .bar #capSnap { display: none; }
+  #tlStRec { display: none !important; }
+  .esp-only { display: none; } body.gen-espiral .esp-only { display: block; } body.gen-espiral .sup-only { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="room"><div id="stage"><canvas id="cv"></canvas><div id="flash"></div><div id="previewTag" hidden></div></div></div>
+<p class="hint"><b>prototipo v7</b> · <kbd>1–9</kbd> presets · <kbd>C</kbd> captura · <kbd>Espacio</kbd> pausa</p>
+<p class="perf" id="perf"></p>
+
+<div class="bar ui" role="toolbar" aria-label="Controles">
+  <select id="preset" aria-label="Preset"></select>
+  <select id="format" aria-label="Formato">
+    <option value="free">Pantalla</option>
+    <option value="1632x1056">Doble carta 17×11</option>
+    <option value="816x1056">Carta vertical</option>
+    <option value="1920x1080">16:9</option>
+    <option value="1080x1080">Cuadrado</option>
+    <option value="1080x1920">Vertical 9:16</option>
+  </select>
+  <button id="pause" aria-pressed="false">Pausa</button>
+  <button id="toggleGallery" aria-pressed="true">Galería <span class="count" id="count">0</span></button>
+  <button class="capture" id="capSnap">Capturar</button>
+  <button id="toggleTl" aria-pressed="false" aria-controls="timeline">Línea de tiempo</button>
+  <button id="perfAudio" title="Cargar la pista de audio para la próxima performance: la línea de tiempo corre con ella y el video sale con sonido">Audio</button>
+  <button id="toggle" aria-pressed="true" aria-controls="panel">Ajustar</button>
+  <button id="tramaExport" title="Guardar el archivo de trama (.trama.json) para el reproductor de Publisher: configuración, modo de dibujo, colores y, si hay, la línea de tiempo con sus escenas. También copia su código CT1.">Exportar trama</button>
+</div>
+
+<div class="panel ui" id="panel">
+  <h2>Presets</h2>
+  <div class="psave">
+    <input id="presetName" type="text" placeholder="Nombre del preset" aria-label="Nombre del preset" maxlength="40">
+    <button id="presetSave">Guardar</button>
+  </div>
+  <button class="btn" id="presetDel" hidden>Eliminar este preset</button>
+  <h2>Lámina</h2>
+  <div id="g-sheet"></div>
+  <h2>Trazo</h2>
+  <div class="seg" id="renderSeg" role="group" aria-label="Dibujo"><button data-m="puntos" aria-pressed="true">Puntos</button><button data-m="lineas" aria-pressed="false">Líneas</button><button data-m="mixto" aria-pressed="false">Puntos + líneas</button></div>
+  <div id="g-stroke"></div>
+  <h2>Cámara</h2>
+  <div id="g-cam"></div>
+  <h2>Color y luz</h2>
+  <div id="g-light"></div>
+  <div class="colors">
+    <label for="colorDeep">Lejos</label><label for="colorAccent">Cerca</label>
+    <input type="color" id="colorDeep"><input type="color" id="colorAccent">
+  </div>
+  <div class="colors" style="margin-top:8px">
+    <label for="colorBg">Fondo</label><label for="inkMode">Modo</label>
+    <input type="color" id="colorBg">
+    <select id="inkMode" style="width:100%;height:30px;background:#0b1418;color:var(--ink);border:1px solid var(--line);border-radius:6px">
+      <option value="auto">Automático</option><option value="luz">Luz (suma)</option><option value="tinta">Tinta (oscurece)</option>
+    </select>
+  </div>
+  <button class="btn" id="copy">Copiar configuración</button>
+</div>
+
+<div id="filmstrip" class="ui">
+  <div class="fs-head"><b>Snapshots</b><span id="fsSelInfo" class="muted"></span><span id="fsActions"></span><span style="flex:1"></span><label class="tl-only" title="Al aplicar una captura, llevar también su momento de evolución"><input type="checkbox" id="fsTime" checked> Incluir evolución</label></div>
+  <div id="fsItems"></div>
+  <div class="fs-head pf-head"><b>Performances</b><span id="pfSelInfo" class="muted"></span><span id="pfActions" class="fs-acts"></span></div>
+  <div id="pfItems"></div>
+</div>
+
+<div id="timeline" class="ui" hidden>
+  <div class="tl-top">
+    <button id="tlRec" class="tlrec" aria-pressed="false" title="Reproduce y registra lo que hagas con los valores (R)">Grabar pasada</button>
+    <label title="Registrar también el cursor sobre la imagen"><input type="checkbox" id="tlRecCursor" checked> Cursor</label>
+    <button id="tlStRec" class="tlrec" aria-pressed="false" title="Pincha capturas mientras corre: cada una queda como keyframe global">Grabar estados</button>
+    <button id="tlUndo" hidden>Deshacer</button>
+  </div>
+  <div class="tl-top"><span id="tlTrans"></span></div>
+  <div class="tl-top">
+    <label class="audio-btn" title="Cargar una pista de audio: la línea de tiempo correrá con ella y el video saldrá con sonido"><span class="ms">music_note</span>Audio<input id="tlAudioFile" type="file" accept="audio/*" hidden></label>
+    <span id="tlAudioName" class="muted"></span>
+    <button id="tlAudioMute" class="audio-only" title="Silenciar"><span class="ms">volume_up</span></button>
+    <button id="tlAudioDel" class="audio-only" title="Quitar audio"><span class="ms">close</span></button>
+  </div>
+  <div class="tl-top">
+    <button id="tlStart" title="Al inicio (Inicio)"><span class="ms">skip_previous</span></button>
+    <button id="tlPlay" aria-pressed="false" title="Reproducir (Espacio)"><span class="ms">play_arrow</span></button>
+    <span class="tc" id="tlTime">00:00:00</span>
+    <span class="spacer"></span>
+    <label>Duración <input id="tlDur" type="number" min="1" max="600" step="0.5"> s</label>
+  </div>
+  <div class="tl-top">
+    <label><input type="checkbox" id="tlOnly"> Solo animados</label>
+    <span class="spacer"></span>
+    <span id="tlRender">
+      <select data-o="h" aria-label="Resolución"><option value="720">720p</option><option value="1080" selected>1080p</option><option value="2160">4K</option></select>
+      <select data-o="fps" aria-label="Cuadros por segundo"><option>24</option><option selected>30</option><option>60</option></select>
+      <button class="go" data-a="go"><span class="ms">movie</span>Video</button>
+      <span class="progress" hidden><span class="track"><span class="fill"></span></span><span class="ptext"></span><button data-a="cancel">Cancelar</button></span>
+    </span>
+    <button id="tlClear" title="Quitar todos los keyframes"><span class="ms">delete_sweep</span></button>
+  </div>
+  <div class="tl-top"><span id="tlInspector"></span></div>
+  <div class="tl-head"><span>Parámetro</span><div id="tlRuler"></div></div>
+  <div class="tl-head tl-scenes-row"><span title="Cada captura puesta en el tiempo, con su transición de llegada">Escenas</span><div id="tlScenes"></div></div>
+  <div class="tl-head tl-wave-row audio-only"><span>Audio</span><canvas id="tlWave"></canvas></div>
+  <div id="tlLanes"></div>
+  <div class="tl-head tl-navrow">
+    <span class="tl-zoom"><button id="tlZoomOut" title="Alejar (−)"><span class="ms">zoom_out</span></button><span id="tlZoomLabel">todo</span><button id="tlZoomIn" title="Acercar (+)"><span class="ms">zoom_in</span></button><button id="tlZoomFit" title="Ver toda la duración"><span class="ms">fit_screen</span></button></span>
+    <div class="tl-scroll"><button id="tlPrev" title="Retroceder la vista"><span class="ms">chevron_left</span></button><div id="tlNav"><div id="tlNavThumb"><i class="l"></i><i class="r"></i></div></div><button id="tlNext" title="Avanzar la vista"><span class="ms">chevron_right</span></button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* =========================================================
+   Superficie de puntos — un solo generador
+   ---------------------------------------------------------
+   Una lámina de N líneas paralelas, cada una muestreada en M
+   puntos. La lámina tiene un eje central que ondula en el
+   espacio; su sección gira (torsión), se curva en arco
+   (curvatura) y se pliega con ruido. Encima, una ondulación
+   fina. Todo se ve con cámara en perspectiva: los puntos
+   lejanos se juntan y achican, los cercanos crecen, y donde
+   la lámina queda de canto se acumulan y brillan.
+   Motor único en JavaScript: lo que se ve es lo que se exporta.
+   ========================================================= */
+
+const config = {
+  lineCount: 64,        // líneas de la lámina
+  points: 480,          // puntos por línea
+  sheetWidth: 4,      // ancho de la lámina
+  sheetLength: 13,      // largo
+  meander: 1.0,         // cuánto serpentea el eje central
+  twist: 0.5,           // torsión a lo largo
+  fold: 1.8,            // pliegues (giro con ruido)
+  foldFreq: 2.0,        // qué tan seguidos son los pliegues
+  curl: 1.8,            // curvatura de la sección (la lámina se enrolla)
+  wave: 0.22,           // ondulación fina de la superficie
+  waveFreq: 1.3,
+  speed: 0.25,
+  size: 1.6,            // tamaño del punto o grosor de la línea (px a 1080 de alto)
+  perspectiveSize: 1.0, // cuánto crecen los puntos cercanos
+  tilt: 18,             // inclinación de cámara
+  roll: -6,             // giro de la composición
+  distance: 5.0,        // distancia de cámara
+  offsetX: 0, offsetY: 0,
+  intensity: 1.1,
+  depthFade: 1.0,       // cuánto se apagan los puntos lejanos
+  parallax: 1.0,
+  mouseForm: 0.5, mouseRadius: 0.22,
+  colorDeep: '#2a52d6',
+  colorAccent: '#3dd6c0',
+  dotAlpha: 1.0,        // opacidad de los puntos
+  lineWeight: 1.4,      // grosor de la línea, en veces el radio del punto
+  lineAlpha: 0.4,       // opacidad de la línea (una línea acumula más luz que sus puntos)
+  colorBg: '#000000',   // fondo (sólido)
+  inkMode: 'auto',      // luz (los puntos suman luz) · tinta (los puntos oscurecen, como en papel) · auto según el fondo
+  generator: 'superficie', // superficie · espiral (Espiral de Fibonacci con hilos)
+  espPuntos: 550, espGiro: 0, espEscalaPuntos: 1, espExpPuntos: 1.7, espEscalaEspiral: 1, espExpEspiral: 2.2, espLargo: 1, espEnrollado: 1, espOjo: 0.015,
+  espHilos: 1, espTamPunto: 4.5, espGrosorCurva: 4, espGrosorHilo: 1.2, espOpPunto: 1, espOpCurva: 0.95, espOpHilo: 0.3
+};
+/* Modo de dibujo: puntos, líneas o ambos superpuestos. Las capturas,
+   presets y documentos anteriores guardaban «dotted» (sí/no): se leen igual. */
+const MODES = ['puntos', 'lineas', 'mixto'];
+function modeOf(o, fallback = 'puntos') {
+  if (o == null) return fallback;
+  if (typeof o === 'string') return MODES.includes(o) ? o : fallback;
+  if (typeof o === 'boolean') return o ? 'puntos' : 'lineas';
+  if (MODES.includes(o.render)) return o.render;
+  if (o.dotted === false) return 'lineas';
+  if (o.dotted === true) return 'puntos';
+  return fallback;
+}
+let render = 'puntos';
+
+/* ---------- motor: el de @contope/trama ----------
+   [ContOpe] El ruido, la cámara y el cálculo de la lámina existen una sola
+   vez, en el motor de @contope/trama (window.ContopeTrama), el mismo que usa
+   Publisher. computeSheet queda como envoltorio: sigue devolviendo, por
+   línea, [x, y, radio, cercanía, alfa]. */
+const TRAMA = window.ContopeTrama;
+const hexToRgb = h => [0, 2, 4].map(i => parseInt(h.slice(1 + i, 3 + i), 16));
+function computeSheet(state, W, H, quality = 1) {
+  const configuracion = TRAMA.configuracionDeV7(state.cfg);
+  const { lineas: N, puntos: M } = TRAMA.dimensionesDeLamina(configuracion, quality);
+  const cuadro = TRAMA.escribirLamina({ tiempo: state.time, camara: state.cam, cursor: state.mouse, presencia: state.presence, configuracion }, W, H, quality, new Float64Array(N * M * 5));
+  const lines = [];
+  for (let i = 0; i < N; i++) lines.push(cuadro.subarray(i * M * 5, (i + 1) * M * 5));
+  return lines;
+}
+
+/* ---------- color por profundidad, en baldes para dibujar rápido ---------- */
+const BUCKETS = 12;
+function bucketColor(cfg, b) {
+  const D = hexToRgb(cfg.colorDeep), A = hexToRgb(cfg.colorAccent), k = b / (BUCKETS - 1);
+  return D.map((d, i) => Math.round(d + (A[i] - d) * k));
+}
+
+/* ---------- dibujo en canvas ---------- */
+/* Luz o tinta. Sobre fondo oscuro los puntos SUMAN luz y brillan donde se
+   acumulan. Sobre fondo claro eso no se vería: ahí funcionan como TINTA y
+   oscurecen y saturan donde se acumulan, como en papel. */
+function luminance(hex) { const [r, g, b] = hexToRgb(hex).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; }
+function inkModeOf(cfg) {
+  if (cfg.inkMode === 'luz' || cfg.inkMode === 'tinta') return cfg.inkMode;
+  return luminance(cfg.colorBg || '#000000') > 0.4 ? 'tinta' : 'luz';
+}
+function drawSheet(ctx, lines, cfg, W, H, mode = render) {
+  const m = modeOf(mode, render);
+  ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = cfg.colorBg || '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = inkModeOf(cfg) === 'tinta' ? 'multiply' : 'lighter';
+  const cols = Array.from({ length: BUCKETS }, (_, b) => bucketColor(cfg, b));
+  if (m !== 'puntos') drawLines(ctx, lines, cfg, cols);   // en mixto, las líneas van debajo
+  if (m !== 'lineas') drawDots(ctx, lines, cfg, cols);
+}
+/* puntos: agrupados por color y por alfa (4 niveles) para pocas llamadas de dibujo */
+function drawDots(ctx, lines, cfg, cols) {
+  const da = cfg.dotAlpha ?? 1;
+  if (da <= 0.005) return;
+  const paths = Array.from({ length: BUCKETS * 4 }, () => new Path2D());
+  for (const pts of lines) for (let k = 0; k < pts.length; k += 5) {
+    const a = pts[k + 4] * da; if (a < 0.02) continue;
+    const b = Math.min(BUCKETS - 1, Math.round(pts[k + 3] * (BUCKETS - 1)));
+    const ai = Math.min(3, Math.floor(a * 4));
+    const p = paths[b * 4 + ai], r = pts[k + 2];
+    if (r < 0.9) p.rect(pts[k] - r, pts[k + 1] - r, r * 2, r * 2);
+    else { p.moveTo(pts[k] + r, pts[k + 1]); p.arc(pts[k], pts[k + 1], r, 0, Math.PI * 2); }
+  }
+  for (let b = 0; b < BUCKETS; b++) for (let ai = 0; ai < 4; ai++) {
+    ctx.fillStyle = `rgba(${cols[b]},${(ai + 0.5) / 4})`; ctx.fill(paths[b * 4 + ai]);
+  }
+}
+/* líneas: cada línea de la lámina en tramos de 6 puntos, con el color y el alfa de su centro */
+function lineTramos(lines, cfg, fn) {
+  const la = cfg.lineAlpha ?? 0.4, lw = cfg.lineWeight ?? 1.4;
+  if (la <= 0.002) return;
+  for (const pts of lines) for (let k = 0; k + 5 < pts.length; k += 5 * 6) {
+    const end = Math.min(pts.length - 5, k + 5 * 6), mid = k + Math.floor((end - k) / 10) * 5;
+    const a = pts[mid + 4] * la; if (a < 0.008) continue;
+    const b = Math.min(BUCKETS - 1, Math.round(pts[mid + 3] * (BUCKETS - 1)));
+    fn(pts, k, end, b, a, Math.max(0.2, pts[mid + 2] * lw));
+  }
+}
+function drawLines(ctx, lines, cfg, cols) {
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  lineTramos(lines, cfg, (pts, k, end, b, a, w) => {
+    ctx.strokeStyle = `rgba(${cols[b]},${a})`; ctx.lineWidth = w;
+    ctx.beginPath(); let pen = false;
+    for (let q = k; q <= end; q += 5) { if (pts[q + 2] === 0) { pen = false; continue; } pen ? ctx.lineTo(pts[q], pts[q + 1]) : ctx.moveTo(pts[q], pts[q + 1]); pen = true; }
+    ctx.stroke();
+  });
+}
+
+/* ---------- SVG con los mismos puntos ---------- */
+function toSVG(lines, cfg, W, H, mode = render) {
+  const m = modeOf(mode, render);
+  const cols = Array.from({ length: BUCKETS }, (_, b) => bucketColor(cfg, b));
+  let body = '';
+  if (m !== 'puntos') {                    // capa de líneas (debajo)
+    let ls = '';
+    lineTramos(lines, cfg, (pts, k, end, b, a, w) => {
+      let d = '', pen = false;
+      for (let q = k; q <= end; q += 5) { if (pts[q + 2] === 0) { pen = false; continue; } d += (pen ? 'L' : 'M') + pts[q].toFixed(1) + ' ' + pts[q + 1].toFixed(1); pen = true; }
+      if (d) ls += `<path d="${d}" stroke="rgb(${cols[b]})" stroke-opacity="${Math.min(1, a).toFixed(3)}" stroke-width="${w.toFixed(2)}"/>`;
+    });
+    if (ls) body += `<g id="lineas" fill="none" stroke-linecap="round" stroke-linejoin="round">${ls}</g>`;
+  }
+  if (m !== 'lineas' && (cfg.dotAlpha ?? 1) > 0.005) {   // capa de puntos (encima)
+    const da = cfg.dotAlpha ?? 1, groups = Array.from({ length: BUCKETS * 4 }, () => []);
+    for (const pts of lines) for (let k = 0; k < pts.length; k += 5) {
+      const a = pts[k + 4] * da; if (a < 0.02) continue;
+      const b = Math.min(BUCKETS - 1, Math.round(pts[k + 3] * (BUCKETS - 1)));
+      groups[b * 4 + Math.min(3, Math.floor(a * 4))].push(`<circle cx="${pts[k].toFixed(1)}" cy="${pts[k + 1].toFixed(1)}" r="${pts[k + 2].toFixed(2)}"/>`);
+    }
+    let ds = '';
+    groups.forEach((g, gi) => { if (g.length) ds += `<g fill="rgb(${cols[Math.floor(gi / 4)]})" fill-opacity="${((gi % 4) + 0.5) / 4}">${g.join('')}</g>`; });
+    if (ds) body += `<g id="puntos">${ds}</g>`;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><style>circle,path{mix-blend-mode:${inkModeOf(cfg) === 'tinta' ? 'multiply' : 'screen'}}</style><rect width="${W}" height="${H}" fill="${cfg.colorBg || '#000000'}"/>${body}</svg>`;
+}
+
+/* ---------- vista en vivo ---------- */
+const stage = document.getElementById('stage'), cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const live = { time: 6, paused: false, cam: [0, 0], camT: [0, 0], mouse: [0.5, 0.5], mouseT: [0.5, 0.5], presence: 0, presenceT: 0 };
+let format = 'free', viewW = 1, viewH = 1, dpr = 1, quality = 1, dirty = true;
+
+function layout() {
+  const room = document.getElementById('room');
+  let w = room.clientWidth, h = room.clientHeight;
+  if (format !== 'free') { const [fw, fh] = format.split('x').map(Number); const s = Math.min((w - 48) / fw, (h - 32) / fh); w = Math.round(fw * s); h = Math.round(fh * s); }
+  stage.style.width = w + 'px'; stage.style.height = h + 'px';
+  stage.classList.toggle('framed', format !== 'free');
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  viewW = w; viewH = h; dirty = true;
+}
+new ResizeObserver(layout).observe(document.getElementById('room'));
+
+window.addEventListener('pointermove', e => {
+  if (tl.open) {
+    if (tlRec.on && document.getElementById('tlRecCursor').checked && !e.target.closest('.ui')) {
+      const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = 1 - (e.clientY - r.top) / r.height;
+      tlRec.cursorTarget = { x: Math.min(Math.max(x, 0), 1), y: Math.min(Math.max(y, 0), 1), presence: x >= 0 && x <= 1 && y >= 0 && y <= 1 ? 1 : 0 };
+    }
+    return;
+  }
+  if (live.paused || e.target.closest('.ui')) return;
+  const r = cv.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width, y = 1 - (e.clientY - r.top) / r.height;
+  live.camT = [(e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1];
+  if (x >= 0 && x <= 1 && y >= 0 && y <= 1) { live.mouseT = [x, y]; live.presenceT = 1; }
+});
+document.addEventListener('mouseout', e => { if (!e.relatedTarget && !live.paused) { live.presenceT = 0; live.camT = [0, 0]; } });
+
+const state = () => ({ time: live.time, cam: live.cam, mouse: live.mouse, presence: live.presence, cfg: config, render });
+let last = 0, lastDraw = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (document.hidden) { last = 0; return; }
+  if (now - lastDraw < 1000 / 24) return;
+  const dt = last ? Math.min((now - last) / 1000, 0.1) : 0; last = now;
+  if (presetMorph) stepPresetMorph(now);
+  if (morph) { finishMorphIfDone(now); dirty = true; }
+  if (tl.open) tlTick(dt);
+  if (!live.paused && !tl.open) {
+    live.time += dt;
+    const s = (a, b, k) => a + (b - a) * k;
+    live.cam = [s(live.cam[0], live.camT[0], 0.05), s(live.cam[1], live.camT[1], 0.05)];
+    live.mouse = [s(live.mouse[0], live.mouseT[0], 0.08), s(live.mouse[1], live.mouseT[1], 0.08)];
+    live.presence = s(live.presence, live.presenceT, 0.06);
+    dirty = true;
+  }
+  if (!dirty) { document.getElementById('perf').textContent = 'en reposo · sin cálculo'; return; }
+  dirty = false; lastDraw = now;
+  const t0 = performance.now();
+  const cur = previewState || (tl.open ? evalState(tl.head) : (morph ? morphState(now) : state()));
+  document.getElementById('previewTag').hidden = !previewState;
+  const lines = computeState(cur, viewW, viewH, quality);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawSheet(ctx, lines, cur.blend && cur.blend.e > 0.5 ? cur.blend.state.cfg : (cur.cfg || config), viewW, viewH, modeOf(cur, render));
+  const ms = performance.now() - t0;
+  // calidad en vivo adaptable: la exportación siempre usa la completa
+  if (ms > 36 && quality > 0.35) quality *= 0.9; else if (ms < 20 && quality < 1) quality = Math.min(1, quality * 1.05);
+  document.getElementById('perf').textContent = `${ms.toFixed(0)} ms · calidad en vivo ${Math.round(quality * 100)} %`;
+}
+
+/* ---------- exportar ---------- */
+function exportSize() { if (format !== 'free') return format.split('x').map(Number); return [Math.round(1080 * viewW / viewH), 1080]; }
+let dl = null;
+const getDl = () => dl || (dl = window.claude && window.claude.use ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null));
+async function save(name, data, type) {
+  const d = await getDl();
+  if (d) { try { await d.save({ filename: name, data }); toast('Guardado: ' + name); } catch (e) { if (!e || e.code !== 'declined') toast('No se pudo guardar aquí'); } return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], { type })); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function flash() { const f = document.getElementById('flash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
+async function capture(png) {
+  flash();
+  const [W, H] = exportSize();
+  toast('Generando ' + (png ? 'PNG' : 'SVG') + '…');
+  await new Promise(r => setTimeout(r, 30));
+  const st = JSON.parse(JSON.stringify(state()));
+  const lines = computeSheet(st, W, H, 1);
+  const base = 'superficie-' + st.time.toFixed(2).replace('.', '_');
+  if (!png) { await save(base + '.svg', toSVG(lines, config, W, H), 'image/svg+xml'); return; }
+  const scale = format === 'free' ? 2 : 300 / 96;
+  const c = document.createElement('canvas'); c.width = Math.round(W * scale); c.height = Math.round(H * scale);
+  const g = c.getContext('2d'); g.setTransform(scale, 0, 0, scale, 0, 0);
+  drawSheet(g, lines, config, W, H);
+  c.toBlob(b => b ? save(base + '.png', b, 'image/png') : toast('No se pudo generar el PNG'), 'image/png');
+}
+
+/* ---------- presets ----------
+   Los del sistema vienen escritos aquí; los tuyos se guardan en el
+   navegador. Al elegir uno, la lámina viaja hasta él con un morf. */
+const BUILTIN = [
+  { name: 'Lámina plegada', render: 'puntos', cfg: {} },
+  { name: 'Velo lejano', render: 'puntos', cfg: { lineCount: 80, points: 600, distance: 7, size: 1.1, intensity: 0.9, depthFade: 1, sheetWidth: 5, fold: 1.4, foldFreq: 1.4, curl: 1.2, twist: 0.3, tilt: 10, colorDeep: '#1d3fb8', colorAccent: '#3bb8a8' } },
+  { name: 'Ola amplia', render: 'puntos', cfg: { sheetWidth: 6, twist: 0.2, fold: 2.4, foldFreq: 1.2, curl: 3, distance: 5.4, tilt: 8, meander: 0.8 } },
+  { name: 'Cinta', render: 'puntos', cfg: { lineCount: 40, points: 520, sheetWidth: 1.3, twist: 1.4, fold: 1.0, foldFreq: 1.6, curl: 0, distance: 4.6, tilt: 16, size: 1.8 } },
+  { name: 'Papel', render: 'puntos', cfg: { colorBg: '#f1ede4', colorDeep: '#9fb4e8', colorAccent: '#0e6b62', intensity: 1.2, size: 1.7, depthFade: 0.7, lineCount: 70, points: 520, fold: 1.6, curl: 1.6, distance: 5.4 } },
+  { name: 'Torsión de líneas', render: 'lineas', cfg: { lineCount: 72, points: 520, sheetWidth: 4.2, twist: 1.0, fold: 1.6, foldFreq: 2.6, curl: -2.0, distance: 4.6, tilt: 24, roll: -12 } },
+  { name: 'Puntos e hilos', render: 'mixto', cfg: { lineCount: 44, points: 300, size: 2.0, dotAlpha: 1, lineWeight: 0.45, lineAlpha: 0.32, sheetWidth: 4.4, fold: 1.5, curl: 1.6, distance: 5.2 } }
+];
+const DEFAULTS = JSON.parse(JSON.stringify(config));
+const PSTORE = 'superficie-presets-v1';
+let userPresets = [];
+try { userPresets = JSON.parse(localStorage.getItem(PSTORE) || '[]'); } catch (e) {}
+const persistPresets = () => { try { localStorage.setItem(PSTORE, JSON.stringify(userPresets)); } catch (e) { toast('No se pudo guardar en este navegador'); } };
+const fullCfg = pr => Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), pr.cfg);
+let currentPreset = 'b0', modified = false;
+
+function renderPresetSelect() {
+  const sel = document.getElementById('preset');
+  let h = '<optgroup label="Del sistema">' + BUILTIN.map((p, i) => `<option value="b${i}">${p.name}</option>`).join('') + '</optgroup>';
+  if (userPresets.length) h += '<optgroup label="Tuyos">' + userPresets.map((p, i) => `<option value="u${i}"></option>`).join('') + '</optgroup>';
+  h += '<option value="custom" disabled>— personalizado —</option>';
+  sel.innerHTML = h;
+  // nombres propios como texto (no como HTML)
+  userPresets.forEach((p, i) => { sel.querySelector(`option[value="u${i}"]`).textContent = p.name; });
+  sel.value = modified ? 'custom' : currentPreset;
+  document.getElementById('presetDel').hidden = !(currentPreset[0] === 'u' && !modified);
+}
+function presetById(id) { return id[0] === 'b' ? BUILTIN[+id.slice(1)] : userPresets[+id.slice(1)]; }
+
+/* morf hacia un preset: los números viajan, los colores se mezclan */
+let presetMorph = null;
+const lerpHex = (a, b, k) => TRAMA.mezclarHex(a, b, k);
+function finishMorphNow() { if (!morph) return; Object.assign(config, morph.to.cfg); render = modeOf(morph.to, render); live.time = morph.to.time; morph = null; syncSliders(); syncRender(); }
+function applyPreset(id) {
+  const pr = presetById(id); if (!pr) return;
+  finishMorphNow();
+  currentPreset = id; modified = false;
+  presetMorph = { from: JSON.parse(JSON.stringify(config)), to: fullCfg(pr), t0: performance.now(), dur: 1200 };
+  render = modeOf(pr); syncRender();
+  renderPresetSelect(); dirty = true;
+}
+function stepPresetMorph(now) {
+  const k = Math.min((now - presetMorph.t0) / presetMorph.dur, 1), e = k * k * (3 - 2 * k);
+  const { from, to } = presetMorph;
+  for (const key in to) {
+    if (typeof to[key] === 'number') config[key] = key === 'lineCount' || key === 'points' ? Math.round(from[key] + (to[key] - from[key]) * e) : from[key] + (to[key] - from[key]) * e;
+    else if (typeof to[key] === 'string' && to[key][0] === '#') config[key] = lerpHex(from[key], to[key], e);
+  }
+  if (k >= 1) { Object.assign(config, to); presetMorph = null; syncSliders(); }
+  dirty = true;
+}
+function markModified() { if (!modified) { modified = true; renderPresetSelect(); } }
+
+document.getElementById('preset').addEventListener('change', e => applyPreset(e.target.value));
+document.getElementById('presetSave').addEventListener('click', () => {
+  const input = document.getElementById('presetName');
+  const name = input.value.trim();
+  if (!name) { input.focus(); toast('Escribe un nombre para el preset'); return; }
+  const entry = { name, render, cfg: JSON.parse(JSON.stringify(config)) };
+  const i = userPresets.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+  if (i >= 0) userPresets[i] = entry; else userPresets.push(entry);
+  persistPresets();
+  currentPreset = 'u' + (i >= 0 ? i : userPresets.length - 1); modified = false;
+  input.value = ''; renderPresetSelect();
+  toast(i >= 0 ? `Preset "${name}" actualizado` : `Preset "${name}" guardado`);
+});
+document.getElementById('presetName').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('presetSave').click(); e.stopPropagation(); });
+document.getElementById('presetDel').addEventListener('click', () => {
+  const i = +currentPreset.slice(1), name = userPresets[i].name;
+  if (!confirm(`¿Eliminar el preset "${name}"?`)) return;
+  userPresets.splice(i, 1); persistPresets();
+  currentPreset = 'b0'; modified = true; renderPresetSelect();
+  toast(`Preset "${name}" eliminado`);
+});
+
+/* ---------- interfaz ---------- */
+function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2000); }
+const groups = {
+  'g-sheet': [['lineCount','Líneas',10,220,1],['points','Puntos por línea',30,600,1],['sheetWidth','Ancho de la lámina',0.3,6,0.05],['sheetLength','Largo',4,24,0.5],
+              ['meander','Serpenteo del eje',0,2.5,0.05],['twist','Torsión',-2,2,0.05],['fold','Pliegues',0,2.5,0.05],['foldFreq','Frecuencia de pliegues',0.2,4,0.05],['curl','Curvatura (enrollar)',-3,3,0.05],
+              ['wave','Ondulación fina',0,1,0.01],['waveFreq','Frecuencia de ondulación',0.2,5,0.05],['speed','Velocidad',0,1.5,0.01]],
+  'g-stroke': [['size','Tamaño de punto / grosor',0.3,6,0.05],['perspectiveSize','Crecimiento por cercanía',0,2,0.05],
+               ['dotAlpha','Opacidad de punto',0,1.5,0.01],['lineWeight','Grosor de línea (× punto)',0.1,5,0.05],['lineAlpha','Opacidad de línea',0,1.5,0.01]],
+  'g-cam': [['tilt','Inclinación',-60,60,1],['roll','Giro',-90,90,1],['distance','Distancia',2.5,12,0.1],['offsetX','Desplazamiento H',-0.5,0.5,0.01],['offsetY','Desplazamiento V',-0.5,0.5,0.01],
+            ['parallax','Paralaje del mouse',0,3,0.05],['mouseForm','Deformación del mouse',0,2,0.05],['mouseRadius','Radio del mouse',0.05,0.6,0.01]],
+  'g-light': [['intensity','Brillo',0.1,2,0.01],['depthFade','Apagado por distancia',0,1,0.01]]
+};
+for (const [host, list] of Object.entries(groups)) {
+  const el = document.getElementById(host);
+  for (const [key, label, min, max, step] of list) {
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `<label for="s-${key}">${label}</label><output></output><input type="range" id="s-${key}" min="${min}" max="${max}" step="${step}">`;
+    const input = row.querySelector('input'), out = row.querySelector('output');
+    input.value = config[key]; out.textContent = config[key];
+    input.addEventListener('input', e => { presetMorph = null; if (morph) finishMorphNow(); config[key] = parseFloat(e.target.value); out.textContent = config[key]; dirty = true; markModified(); });
+    el.appendChild(row);
+  }
+}
+function syncRender() {
+  document.querySelectorAll('#renderSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === render)));
+  const show = (k, on) => { const el = document.getElementById('s-' + k); if (el) el.parentNode.hidden = !on; };
+  show('dotAlpha', render !== 'lineas'); show('lineWeight', render !== 'puntos'); show('lineAlpha', render !== 'puntos');
+}
+document.getElementById('renderSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-m]'); if (!b || b.dataset.m === render) return;
+  render = b.dataset.m; syncRender(); dirty = true; markModified();
+});
+syncRender();
+document.getElementById('inkMode').value = config.inkMode;
+document.getElementById('inkMode').addEventListener('change', e => { config.inkMode = e.target.value; dirty = true; markModified(); });
+for (const k of ['colorDeep', 'colorAccent', 'colorBg']) { const el = document.getElementById(k); el.value = config[k]; el.addEventListener('input', e => { presetMorph = null; config[k] = e.target.value; dirty = true; markModified(); }); }
+function syncSliders() {
+  for (const list of Object.values(groups)) for (const [key] of list) {
+    const input = document.getElementById('s-' + key); if (!input) continue;
+    input.value = config[key]; input.parentNode.querySelector('output').textContent = Math.round(config[key] * 100) / 100;
+  }
+  for (const k of ['colorDeep', 'colorAccent', 'colorBg']) document.getElementById(k).value = config[k] || '#000000';
+  document.getElementById('inkMode').value = config.inkMode || 'auto';
+}
+/* recordar dónde quedaste: configuración y preset elegido */
+const CSTORE = 'superficie-actual-v1';
+try {
+  const c = JSON.parse(localStorage.getItem(CSTORE) || 'null');
+  if (c && c.cfg) {
+    Object.assign(config, c.cfg); render = modeOf(c); currentPreset = c.preset || 'b0'; modified = !!c.modified;
+    if (currentPreset[0] === 'u' && !userPresets[+currentPreset.slice(1)]) { currentPreset = 'b0'; modified = true; }
+    syncSliders(); syncRender();
+  }
+} catch (e) {}
+setInterval(() => { try { localStorage.setItem(CSTORE, JSON.stringify({ cfg: config, render, preset: currentPreset, modified })); } catch (e) {} }, 1500);
+renderPresetSelect();
+function setPaused(p) { live.paused = p; const b = document.getElementById('pause'); b.setAttribute('aria-pressed', String(p)); b.textContent = p ? 'Continuar' : 'Pausa'; dirty = true; }
+document.getElementById('pause').addEventListener('click', () => setPaused(!live.paused));
+document.getElementById('capSnap').addEventListener('click', () => captureSnap());
+document.getElementById('format').addEventListener('change', e => { format = e.target.value; layout(); });
+document.getElementById('toggle').addEventListener('click', e => { const p = document.getElementById('panel'); p.hidden = !p.hidden; e.currentTarget.setAttribute('aria-pressed', String(!p.hidden)); });
+document.getElementById('copy').addEventListener('click', async () => {
+  const txt = JSON.stringify({ ...config, render }, null, 2);
+  try { await navigator.clipboard.writeText(txt); toast('Configuración copiada'); } catch { console.log(txt); toast('Revisa la consola'); }
+});
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && previewState) { previewState = null; dirty = true; return; }
+  if (e.target.closest('input, select')) return;
+  if (tl.open) {
+    if (stRec.on && /^[1-9]$/.test(e.key)) { const sh = snaps[+e.key - 1]; if (sh) { e.preventDefault(); stRecPlace(sh.st); } return; }
+    if (e.key === ' ') { e.preventDefault(); tlPlay(); return; }
+    if (e.key === 'r' || e.key === 'R') { e.preventDefault(); tlRec.on ? tlRecStop() : tlRecStart(); return; }
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelected(); return; }
+    if (e.key === 'Home') { e.preventDefault(); tlPlay(false); setHead(0); return; }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); tlPlay(false); setHead(snapT(tl.head + (e.key === 'ArrowLeft' ? -1 : 1) / TL_FPS)); return; }
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomAt(0.5); return; }
+    if (e.key === '-') { e.preventDefault(); zoomAt(2); return; }
+    if (e.key === 'c' || e.key === 'C') { e.preventDefault(); captureSnap(); return; }
+    return;
+  }
+  if (/^[1-9]$/.test(e.key)) {           // 1–9: presets en orden de la lista
+    const ids = [...BUILTIN.map((_, i) => 'b' + i), ...userPresets.map((_, i) => 'u' + i)];
+    const id = ids[+e.key - 1]; if (id) { e.preventDefault(); applyPreset(id); }
+  }
+  if (e.key === ' ') { e.preventDefault(); setPaused(!live.paused); }
+  if (e.key === 'c' || e.key === 'C') { e.preventDefault(); captureSnap(); }
+});
+/* =========================================================
+   Galería de capturas (snapshots)
+   ---------------------------------------------------------
+   Capturar guarda el estado, no un archivo. Pinchar una
+   captura: en pausa, se ve exacta; con la animación
+   corriendo, la lámina se transforma hacia ella (morf de la
+   geometría punto a punto) y sigue viva desde ahí. Los
+   archivos SVG y PNG se exportan desde la captura elegida.
+   ========================================================= */
+const SNAP_STORE = 'superficie-capturas-v1';
+const MORPH_MS = 1200;
+let snaps = [], snapSel = null, morph = null;
+
+function snapNow() {
+  if (tl.open) { const st = previewState || evalState(tl.head); return JSON.parse(JSON.stringify({ ...st, time: r5(st.time) })); }
+  const r = v => Math.round(v * 1e5) / 1e5;
+  const base = { time: r(live.time), cam: live.cam.map(r), mouse: live.mouse.map(r), presence: r(live.presence), cfg: JSON.parse(JSON.stringify(config)), render };
+  if (morph) {   // a mitad de un morf: se guarda también hacia dónde iba, para reproducir lo que se ve
+    const m = morphState(performance.now());
+    return { ...m, format, aspect: r(viewW / viewH) };
+  }
+  return { ...base, format, aspect: r(viewW / viewH) };
+}
+/* geometría de un estado, con morf si lo trae */
+function computeState(st, W, H, q) {
+  if (!st.blend) return computeSheet(st, W, H, q);
+  const A = computeSheet(st, W, H, q);
+  const bcfg = { ...st.blend.state.cfg, lineCount: st.cfg.lineCount, points: st.cfg.points };   // misma malla para poder mezclar
+  const B = computeSheet({ ...st.blend.state, cfg: bcfg }, W, H, q);
+  const e = st.blend.e, out = [];
+  for (let i = 0; i < A.length; i++) {
+    const a = A[i], b = B[i] || a, o = new Float32Array(a.length);
+    for (let k = 0; k < a.length; k++) o[k] = a[k] + ((b[k] ?? a[k]) - a[k]) * e;
+    out.push(o);
+  }
+  return out;
+}
+function morphState(now) {
+  const el = (now - morph.t0) / 1000, d = MORPH_MS / 1000, k = Math.min(el / d, 1), e = k * k * (3 - 2 * k);
+  return {
+    time: morph.fromTime + el, cam: live.cam, mouse: live.mouse, presence: live.presence, cfg: morph.from, render: e < 0.5 ? morph.fromRender : modeOf(morph.to, morph.fromRender),
+    blend: { e, state: { time: morph.to.time - (d - el), cam: live.cam, mouse: live.mouse, presence: live.presence, cfg: morph.to.cfg } }
+  };
+}
+function applySnap(st) {
+  presetMorph = null;
+  if (live.paused) {                       // quieto: el momento exacto
+    morph = null;
+    Object.assign(config, JSON.parse(JSON.stringify(st.cfg))); render = modeOf(st);
+    live.time = st.time; live.cam = [...st.cam]; live.camT = [...st.cam]; live.mouse = [...st.mouse]; live.mouseT = [...st.mouse];
+    live.presence = live.presenceT = st.presence;
+    if (st.format && st.format !== format) { format = st.format; document.getElementById('format').value = format; layout(); }
+    syncRender(); syncSliders(); dirty = true;
+  } else {                                 // corriendo: morf de la geometría
+    morph = { from: JSON.parse(JSON.stringify(config)), fromTime: live.time, fromRender: render, to: JSON.parse(JSON.stringify(st)), t0: performance.now() };
+    live.mouseT = [...st.mouse]; live.presenceT = st.presence;
+  }
+  modified = true; renderPresetSelect();
+}
+function finishMorphIfDone(now) {
+  if (!morph || now - morph.t0 < MORPH_MS) return;
+  Object.assign(config, morph.to.cfg); render = modeOf(morph.to, render);
+  live.time = morph.to.time; syncRender();
+  morph = null; syncSliders();
+}
+
+function captureSnap() {
+  flash();
+  const st = snapNow();
+  const [W, H] = exportSize();
+  const tw = 300, th = Math.round(300 * H / W);
+  const c = document.createElement('canvas'); c.width = tw; c.height = th;
+  drawSheet(c.getContext('2d'), computeState(st, tw, th, 0.6), st.blend && st.blend.e > 0.5 ? st.blend.state.cfg : st.cfg, tw, th, modeOf(st));
+  const num = snaps.reduce((m, x) => Math.max(m, x.num), 0) + 1;
+  snaps.unshift({ st, num, thumb: c.toDataURL('image/png'), W, H });
+  snapSel = snaps[0];
+  persistSnaps(); renderStrip();
+  toast('Captura ' + num);
+}
+function persistSnaps() {
+  try { localStorage.setItem(SNAP_STORE, JSON.stringify(snaps)); }
+  catch (e) { toast('El navegador no tiene espacio para más capturas'); }
+}
+function renderStrip() {
+  document.getElementById('count').textContent = snaps.length;
+  const host = document.getElementById('fsItems'), keep = host.scrollLeft;
+  let h = `<button class="fs-add" id="fsCapture" title="Capturar este momento (C)"><span>+</span>Snapshot</button>`;
+  snaps.forEach((s, i) => {
+    h += `<figure class="fs-item${s === snapSel ? ' sel' : ''}" data-i="${i}"${i < 9 ? ` data-n="${i + 1}"` : ''} tabindex="0" title="${tl.open ? 'Clic: vista previa · doble clic o botón: aplicar en el cabezal' : 'Clic: ir a esta captura'}"><img alt="" src="${s.thumb}"><figcaption>Captura ${s.num}</figcaption></figure>`;
+  });
+  if (!snaps.length) h += `<p class="fs-empty">Cuando veas un momento que te guste, captúralo con C o con el botón.</p>`;
+  host.innerHTML = h; host.scrollLeft = keep;
+  const info = document.getElementById('fsSelInfo'), acts = document.getElementById('fsActions');
+  if (snapSel && snaps.includes(snapSel)) {
+    info.innerHTML = `<b>Captura ${snapSel.num}</b>`;
+    acts.innerHTML = (tl.open ? `<button data-a="apply" style="background:var(--accent);color:#031a14;border-color:var(--accent);font-weight:700">Aplicar en el cabezal</button>` : '') + `<button data-a="svg">SVG vectorial</button><button data-a="png">PNG 300 dpi</button><button data-a="code">Copiar código</button><button data-a="del">Quitar</button>`;
+  } else { snapSel = null; info.textContent = 'Selecciona una captura'; acts.innerHTML = ''; }
+}
+async function exportSnap(s, png) {
+  const { st, W, H } = s;
+  toast('Generando ' + (png ? 'PNG' : 'SVG') + '…');
+  await new Promise(r => setTimeout(r, 30));
+  const lines = computeState(st, W, H, 1);
+  const cfg = st.blend && st.blend.e > 0.5 ? st.blend.state.cfg : st.cfg, dot = modeOf(st);
+  const base = 'superficie-captura-' + s.num;
+  if (!png) { await save(base + '.svg', toSVG(lines, cfg, W, H, dot), 'image/svg+xml'); return; }
+  const scale = st.format === 'free' ? 2 : 300 / 96;
+  const c = document.createElement('canvas'); c.width = Math.round(W * scale); c.height = Math.round(H * scale);
+  const g = c.getContext('2d'); g.setTransform(scale, 0, 0, scale, 0, 0);
+  drawSheet(g, lines, cfg, W, H, dot);
+  c.toBlob(b => b ? save(base + '.png', b, 'image/png') : toast('No se pudo generar el PNG'), 'image/png');
+}
+document.getElementById('fsItems').addEventListener('click', e => {
+  if (e.target.closest('#fsCapture')) { captureSnap(); return; }
+  const f = e.target.closest('.fs-item'); if (!f) return;
+  snapSel = snaps[+f.dataset.i]; renderStrip();
+  if (tl.open) {
+    if (stRec.on) { stRecPlace(snapSel.st); return; }
+    if (tlRec.on) { tlRecApply(snapSel.st); toast(`Captura ${snapSel.num} aplicada en la pasada`); return; }
+    if (tl.playing) { if (applySnapshot(snapSel.st)) toast(`Captura ${snapSel.num} aplicada en ${tl.head.toFixed(2)} s`); return; }
+    previewState = snapSel.st; document.getElementById('previewTag').textContent = `Vista previa · Captura ${snapSel.num} · Esc para cerrar`; dirty = true;
+    return;
+  }
+  applySnap(snapSel.st);
+  toast(`Captura ${snapSel.num}` + (live.paused ? '' : ' · transformándose'));
+});
+document.getElementById('fsItems').addEventListener('dblclick', e => {
+  const f = e.target.closest('.fs-item'); if (!f || !tl.open || stRec.on || tlRec.on) return;
+  if (applySnapshot(snaps[+f.dataset.i].st)) toast(`Captura ${snaps[+f.dataset.i].num} aplicada en ${tl.head.toFixed(2)} s`);
+});
+document.getElementById('fsItems').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.closest('.fs-item')) e.target.click(); });
+document.getElementById('fsItems').addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.currentTarget.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+document.getElementById('fsActions').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-a]'); if (!b || !snapSel) return;
+  const a = b.dataset.a;
+  if (a === 'apply') { if (applySnapshot(snapSel.st)) toast(`Captura ${snapSel.num} aplicada en ${tl.head.toFixed(2)} s`); return; }
+  if (a === 'svg') exportSnap(snapSel, false);
+  if (a === 'png') exportSnap(snapSel, true);
+  if (a === 'code') {
+    const code = 'SP1.' + btoa(unescape(encodeURIComponent(JSON.stringify(snapSel.st))));
+    try { await navigator.clipboard.writeText(code); toast('Código copiado'); } catch { console.log(code); toast('Revisa la consola'); }
+  }
+  if (a === 'del') { snaps.splice(snaps.indexOf(snapSel), 1); snapSel = null; persistSnaps(); renderStrip(); }
+});
+document.getElementById('toggleGallery').addEventListener('click', e => {
+  const hidden = document.body.classList.toggle('strip-hidden');
+  e.currentTarget.setAttribute('aria-pressed', String(!hidden)); layout();
+});
+try { snaps = JSON.parse(localStorage.getItem(SNAP_STORE) || '[]'); } catch (e) { snaps = []; }
+
+/* =========================================================
+   Línea de tiempo y video (traídos de la aurora)
+   ---------------------------------------------------------
+   Panel vertical a la izquierda, como los Controles de efecto
+   de Premiere: un carril por parámetro, con cronómetro,
+   keyframes e interpolación por keyframe. Se arma a mano, con
+   pasadas grabadas (los valores se registran mientras corre) o
+   grabando estados (cada captura queda como keyframe global en
+   el momento en que la pinchas). Entre dos momentos de la
+   Evolución con interpolación suave, la lámina hace un morf de
+   su geometría: cada punto viaja de un estado al otro.
+   ========================================================= */
+const TL_FPS = TRAMA.CUADROS_POR_SEGUNDO_LINEA, TL_STORE = 'superficie-timeline-v1';
+const PARAMS = [];
+(function () {
+  const P = (g, path, label, min, max, step, icon, extra = {}) => PARAMS.push({ g, path, label, min, max, step, icon, ...extra });
+  P('Tiempo', 'time', 'Evolución', 0, 1000, 0.01, 'timelapse');
+  P('Lámina', 'sheetWidth', 'Ancho de la lámina', 0.3, 6, 0.05, 'width');
+  P('Lámina', 'sheetLength', 'Largo', 4, 24, 0.5, 'straighten');
+  P('Lámina', 'meander', 'Serpenteo del eje', 0, 2.5, 0.05, 'gesture');
+  P('Lámina', 'twist', 'Torsión', -2, 2, 0.05, 'rotate_right');
+  P('Lámina', 'fold', 'Pliegues', 0, 2.5, 0.05, 'unfold_less');
+  P('Lámina', 'foldFreq', 'Frecuencia de pliegues', 0.2, 4, 0.05, 'graphic_eq');
+  P('Lámina', 'curl', 'Curvatura (enrollar)', -3, 3, 0.05, 'autorenew');
+  P('Lámina', 'wave', 'Ondulación fina', 0, 1, 0.01, 'waves');
+  P('Lámina', 'waveFreq', 'Frecuencia de ondulación', 0.2, 5, 0.05, 'ssid_chart');
+  P('Trazo', 'size', 'Tamaño de punto / grosor', 0.3, 6, 0.05, 'fiber_manual_record');
+  P('Trazo', 'perspectiveSize', 'Crecimiento por cercanía', 0, 2, 0.05, 'open_in_full');
+  P('Trazo', 'dotAlpha', 'Opacidad de punto', 0, 1.5, 0.01, 'grain');
+  P('Trazo', 'lineWeight', 'Grosor de línea', 0.1, 5, 0.05, 'line_weight');
+  P('Trazo', 'lineAlpha', 'Opacidad de línea', 0, 1.5, 0.01, 'opacity');
+  P('Trazo', 'lineCount', 'Líneas', 10, 220, 1, 'reorder', { hold: true });
+  P('Trazo', 'points', 'Puntos por línea', 30, 600, 1, 'more_horiz', { hold: true });
+  P('Cámara', 'tilt', 'Inclinación', -60, 60, 1, 'flip');
+  P('Cámara', 'roll', 'Giro', -90, 90, 1, 'rotate_left');
+  P('Cámara', 'distance', 'Distancia', 2.5, 12, 0.1, 'zoom_out_map');
+  P('Cámara', 'offsetX', 'Desplazamiento H', -0.5, 0.5, 0.01, 'swap_horiz');
+  P('Cámara', 'offsetY', 'Desplazamiento V', -0.5, 0.5, 0.01, 'swap_vert');
+  P('Cursor', 'cursor.x', 'Posición X del cursor', 0, 1, 0.01, 'arrow_range');
+  P('Cursor', 'cursor.y', 'Posición Y del cursor', 0, 1, 0.01, 'height');
+  P('Cursor', 'cursor.presence', 'Presencia del cursor', 0, 1, 0.01, 'visibility');
+  P('Cursor', 'mouseForm', 'Deformación del cursor', 0, 2, 0.05, 'bubble_chart');
+  P('Cursor', 'mouseRadius', 'Radio del cursor', 0.05, 0.6, 0.01, 'adjust');
+  P('Luz y color', 'intensity', 'Brillo', 0.1, 2, 0.01, 'brightness_6');
+  P('Luz y color', 'depthFade', 'Apagado por distancia', 0, 1, 0.01, 'blur_linear');
+  P('Luz y color', 'colorDeep', 'Color lejos', 0, 0, 0, 'format_color_fill', { color: true });
+  P('Luz y color', 'colorAccent', 'Color cerca', 0, 0, 0, 'colorize', { color: true });
+  P('Luz y color', 'colorBg', 'Fondo', 0, 0, 0, 'wallpaper', { color: true });
+})();
+const PARAM = Object.fromEntries(PARAMS.map(p => [p.path, p]));
+const tl = { open: false, playing: false, head: 0, duration: 10, startTime: 6, cursor: { x: 0.5, y: 0.5, presence: 0 },
+  tracks: {}, sel: null, collapsed: {}, onlyAnimated: false, applyPoints: [], view: { start: 0, end: 10 }, viewSet: false, wasPaused: false, scrubbing: null };
+const EASE_LABEL = { linear: 'Lineal', ease: 'Suave', in: 'Entrada suave', out: 'Salida suave', hold: 'Mantener' };
+const snapT = TRAMA.ajustarAGrilla;
+const r5 = v => Math.round(v * 1e5) / 1e5;
+let previewState = null, undoDoc = null;
+
+/* ---------- valores y evaluación ---------- */
+function staticValue(doc, path, t) {
+  if (path === 'time') return doc.startTime + t;
+  if (path.startsWith('cursor.')) return doc.cursor[path.slice(7)];
+  const v = doc.config[path];
+  return v === undefined ? DEFAULTS[path] : v;
+}
+function setStatic(path, v) {
+  if (path === 'time') tl.startTime = v - tl.head;
+  else if (path.startsWith('cursor.')) tl.cursor[path.slice(7)] = v;
+  else config[path] = v;
+}
+function interp(keys, t, p) {
+  return TRAMA.interpolar(TRAMA.keyframesDeV7(keys), t, { entero: p.hold, color: p.color });
+}
+function valueAt(doc, path, t) {
+  if (doc.override && path in doc.override) return doc.override[path];
+  const k = doc.tracks[path];
+  return k && k.length ? interp(k, t, PARAM[path]) : staticValue(doc, path, t);
+}
+/* Evolución: suave = morf de geometría entre dos momentos (ambos vivos);
+   lineal = recorre el tiempo; mantener = congela. Fuera de los keyframes, corre. */
+function evolutionAt(doc, t) {
+  const keys = doc.tracks.time;
+  if ((doc.override && 'time' in doc.override) || !keys || !keys.length) return { time: valueAt(doc, 'time', t) };
+  const e = TRAMA.evolucionEn({ pistas: { evolucion: TRAMA.keyframesDeV7(keys) } }, t);
+  return e.mezcla == null ? { time: e.tiempo } : { time: e.tiempo, timeB: e.tiempoB, blend: e.mezcla };
+}
+const liveDoc = () => ({ config, tracks: tl.tracks, startTime: tl.startTime, cursor: tl.cursor, override: tlRec.on ? tlRec.override : null, render });
+const frozenDoc = () => { const d = JSON.parse(JSON.stringify(liveDoc())); d.override = null; return d; };
+function evalState(t, doc = liveDoc()) {
+  const cfg = JSON.parse(JSON.stringify(doc.config));
+  for (const p of PARAMS) {
+    if (p.path === 'time' || p.path.startsWith('cursor.')) continue;
+    const ov = doc.override && p.path in doc.override;
+    if (!ov && !(doc.tracks[p.path] && doc.tracks[p.path].length)) continue;
+    const v = ov ? doc.override[p.path] : interp(doc.tracks[p.path], t, p);
+    cfg[p.path] = p.hold ? Math.round(v) : v;
+  }
+  const evo = evolutionAt(doc, t);
+  const mouse = [valueAt(doc, 'cursor.x', t), valueAt(doc, 'cursor.y', t)], presence = valueAt(doc, 'cursor.presence', t);
+  const st = { time: evo.time, cam: [0, 0], mouse, presence, cfg, render: modeOf(doc, render), format, aspect: r5(viewW / viewH) };
+  if (evo.blend != null && evo.blend !== 0 && evo.blend !== 1) st.blend = { e: evo.blend, state: { time: evo.timeB, cam: [0, 0], mouse, presence, cfg } };
+  return st;
+}
+
+/* ---------- edición ---------- */
+function setParam(path, v) {
+  previewState = null;
+  if (tlRec.on) { tlRecTouch(path, v); return; }
+  const keys = tl.tracks[path];
+  if (keys && keys.length) {
+    const t = snapT(tl.head), k = keys.find(k => Math.abs(k.t - t) < 0.5 / TL_FPS);
+    if (k) { k.v = v; delete k.scene; } else { keys.push({ t, v, ease: 'linear' }); keys.sort((a, b) => a.t - b.t); }
+    tl.sel = { path, t }; renderLanes();
+  } else setStatic(path, v);
+  tlChanged();
+}
+function toggleAnimate(path) {
+  if (tl.tracks[path] && tl.tracks[path].length) { setStatic(path, valueAt(liveDoc(), path, tl.head)); delete tl.tracks[path]; if (tl.sel && tl.sel.path === path) tl.sel = null; }
+  else { const t = snapT(tl.head); tl.tracks[path] = [{ t, v: valueAt(liveDoc(), path, tl.head), ease: 'linear' }]; tl.sel = { path, t }; }
+  renderLanes(); tlChanged();
+}
+function toggleKeyAtHead(path) {
+  const keys = tl.tracks[path]; if (!keys) return;
+  const t = snapT(tl.head), i = keys.findIndex(k => Math.abs(k.t - t) < 0.5 / TL_FPS);
+  if (i >= 0) { if (keys.length === 1) { setStatic(path, keys[0].v); delete tl.tracks[path]; } else keys.splice(i, 1); tl.sel = null; }
+  else { keys.push({ t, v: valueAt(liveDoc(), path, tl.head), ease: 'linear' }); keys.sort((a, b) => a.t - b.t); tl.sel = { path, t }; }
+  renderLanes(); tlChanged();
+}
+function jumpKey(path, dir) {
+  const keys = tl.tracks[path]; if (!keys) return;
+  const e = 0.5 / TL_FPS, k = dir < 0 ? [...keys].reverse().find(k => k.t < tl.head - e) : keys.find(k => k.t > tl.head + e);
+  if (k) { setHead(k.t); tl.sel = { path, t: k.t }; renderLanes(); }
+}
+function deleteSelected() {
+  if (!tl.sel) return; const keys = tl.tracks[tl.sel.path]; if (!keys) return;
+  const i = keys.findIndex(k => k.t === tl.sel.t); if (i < 0) return;
+  if (keys.length === 1) { setStatic(tl.sel.path, keys[0].v); delete tl.tracks[tl.sel.path]; } else keys.splice(i, 1);
+  tl.sel = null; renderLanes(); tlChanged();
+}
+
+/* ---------- cabezal, reproducción, vista ---------- */
+const MIN_SPAN = 12 / TL_FPS;
+const vspan = () => tl.view.end - tl.view.start;
+const tpos = t => ((t - tl.view.start) / vspan() * 100).toFixed(3) + '%';
+function fitView() { tl.view = { start: 0, end: tl.duration }; }
+function setView(start, span) {
+  span = Math.min(Math.max(span, MIN_SPAN), tl.duration); start = Math.min(Math.max(start, 0), tl.duration - span);
+  tl.view = { start, end: start + span }; renderRuler(); renderLanes(); placeHead(); renderNav(); renderScenes(); renderWave();
+}
+function zoomAt(f, c = tl.head) { const s = vspan(), ns = Math.min(Math.max(s * f, MIN_SPAN), tl.duration); setView(c - (c - tl.view.start) / s * ns, ns); }
+function placeHead() {
+  const root = document.getElementById('timeline'), h = (tl.head - tl.view.start) / vspan();
+  root.style.setProperty('--h', h.toFixed(5)); root.classList.toggle('ph-out', h < -1e-6 || h > 1 + 1e-6);
+}
+function fmtTC(t) { const s = Math.floor(t), f = Math.round((t - s) * TL_FPS) % TL_FPS; return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0') + ':' + String(f).padStart(2, '0'); }
+function setHead(t) { tl.head = Math.min(Math.max(t, 0), tl.duration); onHeadChange(); }
+function onHeadChange() { previewState = null; placeHead(); document.getElementById('tlTime').textContent = fmtTC(tl.head) + ' / ' + fmtTC(tl.duration); updateLaneValues(); dirty = true; }
+function tlPlay(on = !tl.playing) {
+  if (!on && tlRec.on && tl.playing) { tl.playing = false; tlRecStop(); return; }
+  if (!on && stRec.on) { stRecStop(); return; }
+  if (on) previewState = null;
+  tl.playing = on;
+  if (on && tl.head >= tl.duration - 1e-3) tl.head = 0;
+  if (on) audioStart(); else audioStop();
+  const b = document.getElementById('tlPlay'); b.innerHTML = `<span class="ms">${on ? 'pause' : 'play_arrow'}</span>`; b.setAttribute('aria-pressed', String(on));
+  document.body.classList.toggle('tl-recording', on && (tlRec.on || stRec.on));
+  dirty = true;
+}
+function tlTick(dt) {
+  if (!tl.playing) return;
+  const ah = audioHead(); tl.head = ah != null ? ah : tl.head + dt;
+  if ((tlRec.on || stRec.on) && tl.head >= tl.duration - 1e-3 && tl.duration < 600) {   // grabando, la duración crece sola
+    const fit = tl.view.start <= 0 && tl.view.end >= tl.duration - 1e-6;
+    tl.duration = Math.min(600, tl.duration + 5); document.getElementById('tlDur').value = tl.duration;
+    if (fit) fitView(); renderRuler(); renderNav(); renderLanes();
+  }
+  if (tl.head > tl.view.end && tl.view.end < tl.duration) setView(tl.head - vspan() * 0.1, vspan());
+  if (tl.head >= tl.duration) { tl.head = tl.duration; if (tlRec.on) tlRecSample(); tlPlay(false); if (tlRec.on) tlRecStop(); if (stRec.on) stRecStop(); }
+  else if (tlRec.on) tlRecSample();
+  onHeadChange();
+}
+function openTimeline(open) {
+  tl.open = open; previewState = null;
+  document.getElementById('timeline').hidden = !open;
+  document.body.classList.toggle('tl-open', open);
+  document.getElementById('toggleTl').setAttribute('aria-pressed', String(open));
+  if (open) {
+    if (morph) finishMorphNow();
+    tl.wasPaused = live.paused; setPaused(true);
+    if (!Object.keys(tl.tracks).length) tl.startTime = live.time;
+    document.getElementById('tlDur').value = tl.duration;
+    if (!tl.viewSet || tl.view.end > tl.duration) { fitView(); tl.viewSet = true; }
+    layout(); renderRuler(); renderLanes(); renderNav(); renderScenes(); renderWave(); renderSceneDefaults(); onHeadChange();
+  } else {
+    if (tlRec.on) tlRecStop(); if (stRec.on) stRecStop();
+    tlPlay(false); setPaused(tl.wasPaused); syncSliders(); layout();
+  }
+  renderStrip();
+}
+
+/* ---------- dibujo del panel ---------- */
+const SW = '<span class="ms">timer</span>';
+function fmtVal(p, v) { return p.color ? v : (+v).toFixed(p.step >= 1 ? 0 : 2); }
+function renderRuler() {
+  const r = document.getElementById('tlRuler'), w = r.clientWidth || 200, span = vspan();
+  const steps = [1 / TL_FPS, 2 / TL_FPS, 6 / TL_FPS, 12 / TL_FPS, 1, 2, 5, 10, 20, 30, 60];
+  const step = steps.find(s => w * s / span >= 40) || 60;
+  const lab = x => { const s = Math.floor(x + 1e-6), f = Math.round((x - s) * TL_FPS); return f === 0 || f === TL_FPS ? Math.round(x) + 's' : f + 'f'; };
+  let h = '';
+  for (let x = Math.ceil(tl.view.start / step - 1e-6) * step; x <= tl.view.end + 1e-6; x += step)
+    h += `<span class="tick${tl.view.end - x < step * 0.5 && x > tl.view.start ? ' last' : ''}" style="left:${tpos(x)}">${lab(x)}</span>`;
+  for (const x of tl.applyPoints) if (x >= tl.view.start && x <= tl.view.end) h += `<span class="ap" style="left:${tpos(x)}" title="Captura aplicada en ${x.toFixed(2)} s"></span>`;
+  r.innerHTML = h + '<span class="ph"></span>';
+}
+function renderNav() {
+  const th = document.getElementById('tlNavThumb'); if (!th) return;
+  th.style.left = (tl.view.start / tl.duration * 100) + '%'; th.style.width = (vspan() / tl.duration * 100) + '%';
+  const z = tl.duration / vspan(); document.getElementById('tlZoomLabel').textContent = z < 1.05 ? 'todo' : '×' + (z < 10 ? z.toFixed(1) : Math.round(z));
+}
+function renderLanes() {
+  if (tl.scrubbing) return;
+  const host = document.getElementById('tlLanes'), keep = host.scrollTop, eps = 0.5 / TL_FPS;
+  let html = '', lastG = '';
+  for (const p of PARAMS) {
+    const animated = !!(tl.tracks[p.path] && tl.tracks[p.path].length);
+    if (tl.onlyAnimated && !animated) continue;
+    if (p.g !== lastG) {
+      lastG = p.g;
+      const ga = PARAMS.some(q => q.g === p.g && tl.tracks[q.path] && tl.tracks[q.path].length);
+      html += `<div class="grp${tl.collapsed[p.g] ? ' closed' : ''}" data-g="${p.g}"><span class="tw">▾</span>${p.g}${ga ? ' <i>●</i>' : ''}</div>`;
+    }
+    if (tl.collapsed[p.g]) continue;
+    const keys = animated ? tl.tracks[p.path] : [];
+    const dia = keys.filter(k => k.t >= tl.view.start - eps && k.t <= tl.view.end + eps).map(k =>
+      `<span class="kf${tl.sel && tl.sel.path === p.path && tl.sel.t === k.t ? ' sel' : ''}${k.ease === 'hold' ? ' hold' : k.ease !== 'linear' ? ' smooth' : ''}" data-t="${k.t}" style="left:${tpos(k.t)}" title="${k.t.toFixed(2)} s · ${EASE_LABEL[k.ease]}"></span>`).join('');
+    const val = valueAt(liveDoc(), p.path, tl.head);
+    const valueEl = p.color ? `<input class="lcolor" type="color" value="${val}" aria-label="${p.label}">`
+      : `<span class="scrub" tabindex="0" role="spinbutton" aria-label="${p.label}">${fmtVal(p, val)}</span>`;
+    html += `<div class="lane${animated ? ' animated' : ''}" data-path="${p.path}">
+      <div class="lhead"><button class="sw" title="${animated ? 'Dejar de animar' : 'Animar'}: ${p.label}" aria-pressed="${animated}">${SW}</button>
+        <span class="lname" title="${p.g} · ${p.label}"><span class="ms" aria-hidden="true">${p.icon}</span><span class="abbr">${p.label}</span></span>${valueEl}
+        <span class="knav">${animated ? '<button class="kprev" title="Keyframe anterior">‹</button><button class="kadd" title="Agregar o quitar keyframe">◆</button><button class="knext" title="Keyframe siguiente">›</button>' : ''}</span></div>
+      <div class="ktrack">${dia}</div></div>`;
+  }
+  host.innerHTML = html || '<p class="tl-empty">No hay parámetros animados.</p>';
+  host.scrollTop = keep;
+  renderInspector();
+}
+function updateLaneValues() {
+  const doc = liveDoc();
+  document.querySelectorAll('#tlLanes .lane').forEach(row => {
+    const path = row.dataset.path, p = PARAM[path], el = row.querySelector('.scrub, .lcolor');
+    if (el && document.activeElement !== el && tl.scrubbing !== path) { const v = valueAt(doc, path, tl.head); if (p.color) el.value = v; else el.textContent = fmtVal(p, v); }
+  });
+}
+function renderInspector() {
+  const el = document.getElementById('tlInspector');
+  const scn = tl.selScene && sceneById(tl.selScene);
+  if (scn) { renderSceneInspector(el, scn); return; }
+  const keys = tl.sel && tl.tracks[tl.sel.path], k = keys && keys.find(k => k.t === tl.sel.t);
+  if (!k) { el.innerHTML = '<span class="muted">Selecciona un keyframe para elegir su interpolación</span>'; return; }
+  const p = PARAM[tl.sel.path], isLast = keys[keys.length - 1] === k;
+  el.innerHTML = `<b>${p.label}</b> <span class="muted">${k.t.toFixed(2)} s</span>
+    <select id="tlEase"${isLast ? ' disabled' : ''}>${Object.entries(EASE_LABEL).map(([v, l]) => `<option value="${v}"${k.ease === v ? ' selected' : ''}>${l}</option>`).join('')}</select>
+    <button id="tlDel" title="Eliminar keyframe (Supr)"><span class="ms">delete</span></button>`;
+  document.getElementById('tlEase').onchange = e => { k.ease = e.target.value; delete k.scene; if (k.ease === 'curve' && !k.curve) k.curve = CURVES.suave.c.slice(); renderLanes(); tlChanged(); };
+  if (k.ease === 'curve' && !isLast) { const box = document.createElement('div'); el.appendChild(box); curveEditor(box, k.curve, (c, final) => { k.curve = c.slice(); delete k.scene; dirty = true; if (final) tlChanged(); }); }
+  document.getElementById('tlDel').onclick = deleteSelected;
+}
+
+/* ---------- interacción con el panel ---------- */
+function frac(el, x) { const r = el.getBoundingClientRect(); return Math.min(Math.max((x - r.left) / r.width, 0), 1); }
+function startScrub(e, track) {
+  if (tlRec.on || stRec.on) return;
+  tlPlay(false);
+  const move = ev => setHead(snapT(tl.view.start + frac(track, ev.clientX) * vspan()));
+  move(e);
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+function startDragKey(e, d) {
+  e.stopPropagation();
+  const lane = d.closest('.lane'), path = lane.dataset.path, track = lane.querySelector('.ktrack');
+  const keys = tl.tracks[path], key = keys.find(k => k.t === parseFloat(d.dataset.t)); if (!key) return;
+  tl.sel = { path, t: key.t }; tl.selScene = null; renderInspector();
+  let moved = false;
+  const move = ev => {
+    const t = Math.min(Math.max(snapT(tl.view.start + frac(track, ev.clientX) * vspan()), 0), tl.duration);
+    if (keys.some(k => k !== key && Math.abs(k.t - t) < 0.5 / TL_FPS) || t === key.t) return;
+    moved = true; delete key.scene; key.t = t; tl.sel.t = t; d.dataset.t = t; d.style.left = tpos(t); dirty = true;
+  };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); keys.sort((a, b) => a.t - b.t); if (moved) { renderLanes(); tlChanged(); } else setHead(key.t); renderLanes(); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+function startValueScrub(e, el) {
+  e.preventDefault();
+  const path = el.closest('.lane').dataset.path, p = PARAM[path];
+  const v0 = +valueAt(liveDoc(), path, tl.head), x0 = e.clientX, perPx = (p.max - p.min) / 320;
+  let moved = false; el.setPointerCapture(e.pointerId); tl.scrubbing = path;
+  const move = ev => {
+    const dx = ev.clientX - x0; if (!moved && Math.abs(dx) < 3) return; moved = true;
+    let v = v0 + dx * perPx * (ev.shiftKey ? 0.1 : ev.ctrlKey || ev.metaKey ? 4 : 1);
+    v = Math.min(Math.max(Math.round(v / p.step) * p.step, p.min), p.max);
+    el.textContent = fmtVal(p, v); setParam(path, p.hold ? Math.round(v) : v);
+  };
+  const up = () => {
+    el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); tl.scrubbing = null;
+    if (!moved) editValue(el, path); else renderLanes();
+  };
+  el.addEventListener('pointermove', move); el.addEventListener('pointerup', up);
+}
+function editValue(el, path) {
+  const p = PARAM[path], input = document.createElement('input');
+  input.className = 'scrub-edit'; input.value = fmtVal(p, valueAt(liveDoc(), path, tl.head));
+  el.replaceWith(input); input.focus(); input.select();
+  let done = false;
+  const commit = ok => { if (done) return; done = true; const v = parseFloat(input.value.replace(',', '.')); if (ok && isFinite(v)) setParam(path, p.hold ? Math.round(v) : Math.min(Math.max(v, p.min), p.max)); renderLanes(); };
+  input.addEventListener('keydown', ev => { if (ev.key === 'Enter') commit(true); if (ev.key === 'Escape') commit(false); ev.stopPropagation(); });
+  input.addEventListener('blur', () => commit(true));
+}
+const lanesEl = document.getElementById('tlLanes');
+lanesEl.addEventListener('pointerdown', e => {
+  const sc = e.target.closest('.scrub'); if (sc) { startValueScrub(e, sc); return; }
+  const d = e.target.closest('.kf'); if (d) { startDragKey(e, d); return; }
+  const tr = e.target.closest('.ktrack'); if (tr) startScrub(e, tr);
+});
+lanesEl.addEventListener('click', e => {
+  const g = e.target.closest('.grp'); if (g) { tl.collapsed[g.dataset.g] = !tl.collapsed[g.dataset.g]; renderLanes(); saveTimeline(); return; }
+  const lane = e.target.closest('.lane'); if (!lane) return; const path = lane.dataset.path;
+  if (e.target.closest('.sw')) toggleAnimate(path);
+  else if (e.target.closest('.kadd')) toggleKeyAtHead(path);
+  else if (e.target.closest('.kprev')) jumpKey(path, -1);
+  else if (e.target.closest('.knext')) jumpKey(path, 1);
+});
+lanesEl.addEventListener('input', e => { const c = e.target.closest('.lcolor'); if (c) setParam(c.closest('.lane').dataset.path, c.value); });
+document.getElementById('tlRuler').addEventListener('pointerdown', e => startScrub(e, e.currentTarget));
+document.getElementById('timeline').addEventListener('wheel', e => {
+  const area = e.target.closest('.ktrack, #tlRuler, #tlNav'); if (!area) return;
+  const r = (area.id === 'tlNav' ? document.getElementById('tlRuler') : area).getBoundingClientRect();
+  const atT = tl.view.start + Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) * vspan();
+  if (e.altKey || e.ctrlKey || e.metaKey) { e.preventDefault(); zoomAt(e.deltaY > 0 ? 1.25 : 0.8, atT); }
+  else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY) || area.id === 'tlNav') { e.preventDefault(); setView(tl.view.start + (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) / r.width * vspan(), vspan()); }
+}, { passive: false });
+document.getElementById('tlNav').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  const nav = e.currentTarget, r = nav.getBoundingClientRect(), th = document.getElementById('tlNavThumb');
+  const mode = e.target.classList.contains('l') ? 'l' : e.target.classList.contains('r') ? 'r' : e.target.closest('#tlNavThumb') ? 'move' : 'jump';
+  if (mode === 'jump') { setView(frac(nav, e.clientX) * tl.duration - vspan() / 2, vspan()); return; }
+  const s0 = tl.view.start, e0 = tl.view.end, x0 = e.clientX;
+  const move = ev => {
+    const dt = (ev.clientX - x0) / r.width * tl.duration;
+    if (mode === 'move') setView(s0 + dt, e0 - s0);
+    else if (mode === 'l') { const ns = Math.min(Math.max(s0 + dt, 0), e0 - MIN_SPAN); setView(ns, e0 - ns); }
+    else { const ne = Math.max(Math.min(e0 + dt, tl.duration), s0 + MIN_SPAN); setView(s0, ne - s0); }
+  };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+});
+document.getElementById('tlZoomIn').onclick = () => zoomAt(0.5);
+document.getElementById('tlZoomOut').onclick = () => zoomAt(2);
+document.getElementById('tlZoomFit').onclick = () => setView(0, tl.duration);
+document.getElementById('tlPrev').onclick = () => setView(tl.view.start - vspan() * 0.8, vspan());
+document.getElementById('tlNext').onclick = () => setView(tl.view.start + vspan() * 0.8, vspan());
+document.getElementById('toggleTl').onclick = () => openTimeline(!tl.open);
+document.getElementById('tlPlay').onclick = () => tlPlay();
+document.getElementById('tlStart').onclick = () => { tlPlay(false); setHead(0); };
+document.getElementById('tlDur').addEventListener('change', e => {
+  const d = Math.min(Math.max(parseFloat(e.target.value) || tl.duration, 1), 600);
+  tl.duration = d; e.target.value = d; if (tl.head > d) tl.head = d;
+  fitView(); renderRuler(); renderLanes(); renderNav(); onHeadChange(); tlChanged();
+});
+document.getElementById('tlOnly').onchange = e => { tl.onlyAnimated = e.target.checked; renderLanes(); };
+document.getElementById('tlClear').onclick = () => {
+  if (!Object.keys(tl.tracks).length || !confirm('¿Quitar todos los keyframes? Cada parámetro conserva su valor en el cabezal.')) return;
+  undoDoc = snapshotDoc();
+  for (const path of Object.keys(tl.tracks)) setStatic(path, valueAt(liveDoc(), path, tl.head));
+  tl.tracks = {}; tl.applyPoints = []; tl.scenes = []; tl.sel = null; tl.selScene = null; renderScenes(); renderRuler(); renderLanes(); tlChanged(); setUndo('Deshacer vaciado');
+};
+document.getElementById('tlUndo').onclick = () => {
+  if (!undoDoc) return; const u = JSON.parse(undoDoc);
+  Object.assign(config, u.config); Object.assign(tl, { tracks: u.tracks, applyPoints: u.applyPoints, duration: u.duration, startTime: u.startTime, cursor: u.cursor, scenes: u.scenes || [] }); tl.selScene = null; renderScenes();
+  undoDoc = null; document.getElementById('tlUndo').hidden = true; document.getElementById('tlDur').value = tl.duration;
+  fitView(); renderRuler(); renderLanes(); renderNav(); onHeadChange(); tlChanged(); toast('Deshecho');
+};
+const snapshotDoc = () => JSON.stringify({ config, tracks: tl.tracks, applyPoints: tl.applyPoints, duration: tl.duration, startTime: tl.startTime, cursor: tl.cursor, scenes: tl.scenes });
+function setUndo(label) { const b = document.getElementById('tlUndo'); b.textContent = label; b.hidden = false; }
+
+/* ---------- aplicar una captura en el cabezal (keyframe global) ---------- */
+function snapValue(st, path) {
+  if (path === 'time') return st.time;
+  if (path === 'cursor.x') return st.mouse ? st.mouse[0] : undefined;
+  if (path === 'cursor.y') return st.mouse ? st.mouse[1] : undefined;
+  if (path === 'cursor.presence') return st.presence;
+  return st.cfg[path];
+}
+const sameVal = (a, b, p) => TRAMA.mismoValor(a, b, { color: p.color, paso: p.step });
+function applySnapshot(st, keepUndo) {
+  previewState = null;
+  const snap = snaps.find(x => x.st === st) || { num: '?', st };
+  if (!keepUndo) undoDoc = snapshotDoc();
+  addScene(snap);
+  if (!keepUndo) setUndo('Deshacer');
+  return 1;
+}
+
+/* ---------- grabar estados: cada captura pinchada es un keyframe global ---------- */
+const stRec = { on: false, count: 0 };
+function stRecStart() {
+  if (stRec.on || tlRec.on) return;
+  if (!snaps.length) { toast('Primero captura los estados que quieras usar'); return; }
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  undoDoc = snapshotDoc(); stRec.on = true; stRec.count = 0;
+  document.body.classList.add('st-recording'); setRecBtn('tlStRec', true, 'Detener');
+  document.getElementById('tlRec').disabled = true; renderStrip();
+  if (tl.head >= tl.duration - 1e-3) tl.head = 0;
+  tlPlay(true); toast('Pincha una captura, o su número 1–9, en el momento en que quieras que llegue');
+}
+function stRecPlace(st) {
+  const snap = snaps.find(x => x.st === st) || { num: '?', st };
+  // el primer estado de la grabación rige desde el comienzo
+  if (stRec.count === 0 && !tl.scenes.some(x => x.t < tl.head - 1e-6)) addScene(snap, 0);
+  else addScene(snap);
+  stRec.count++;
+}
+function stRecStop() {
+  if (!stRec.on) return; stRec.on = false;
+  document.body.classList.remove('st-recording'); setRecBtn('tlStRec', false, 'Grabar estados');
+  document.getElementById('tlRec').disabled = false;
+  tl.playing = false; tlPlay(false); renderStrip();
+  if (stRec.count) { setUndo('Deshacer estados'); toast(`${stRec.count} estado${stRec.count > 1 ? 's' : ''} en la línea de tiempo · reproduce para ver los morfs`); }
+}
+function setRecBtn(id, on, label) { const b = document.getElementById(id); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); b.textContent = label; }
+
+/* ---------- grabar pasada: lo que haces con los valores queda en los carriles ---------- */
+const tlRec = { on: false, override: {}, buffers: {}, before: {}, cursorTarget: null, timeLock: null };
+function tlRecStart() {
+  if (tlRec.on || stRec.on) return;
+  undoDoc = snapshotDoc();
+  Object.assign(tlRec, { on: true, override: {}, buffers: {}, before: {}, cursorTarget: null, timeLock: null });
+  if (tl.head >= tl.duration - 1e-3) tl.head = 0;
+  setRecBtn('tlRec', true, 'Detener pasada'); document.getElementById('tlStRec').disabled = true;
+  tlPlay(true); toast('Grabando · arrastra los valores' + (document.getElementById('tlRecCursor').checked ? ' o mueve el cursor sobre la imagen' : ''));
+}
+function tlRecTouch(path, v) {
+  if (!(path in tlRec.buffers)) { tlRec.before[path] = { t: tl.head, v: valueAt(liveDoc(), path, tl.head) }; tlRec.buffers[path] = []; }
+  tlRec.override[path] = v; tlRec.buffers[path].push({ t: tl.head, v }); dirty = true;
+}
+function tlRecApply(st) {   // una captura pinchada durante la pasada
+  const doc = liveDoc();
+  for (const p of PARAMS) { if (p.path === 'time') continue; const v = snapValue(st, p.path); if (v !== undefined && v !== null && !sameVal(valueAt(doc, p.path, tl.head), v, p)) tlRecTouch(p.path, v); }
+  if (document.getElementById('fsTime').checked) { tlRec.timeLock = { h0: tl.head, t0: st.time }; tlRecTouch('time', st.time); }
+  tlRec.cursorTarget = null;
+}
+function tlRecSample() {
+  if (tlRec.timeLock) tlRecTouch('time', tlRec.timeLock.t0 + (tl.head - tlRec.timeLock.h0));
+  if (tlRec.cursorTarget) for (const k of ['x', 'y', 'presence']) {
+    const path = 'cursor.' + k, c = tlRec.cursorTarget[k], cur = path in tlRec.override ? tlRec.override[path] : valueAt(liveDoc(), path, tl.head);
+    tlRecTouch(path, Math.abs(cur - c) < 1e-4 ? c : cur + 0.25 * (c - cur));
+  }
+  for (const path in tlRec.buffers) { const b = tlRec.buffers[path], l = b[b.length - 1]; if (!l || tl.head - l.t > 1e-6) b.push({ t: tl.head, v: tlRec.override[path] }); }
+}
+function simplifyRecording(buf, p) {
+  const pts = [];
+  for (const s of buf) { const t = snapT(s.t); if (pts.length && pts[pts.length - 1].t === t) pts[pts.length - 1] = { t, v: s.v }; else pts.push({ t, v: s.v }); }
+  if (p.hold) { const o = []; for (const s of pts) { const v = Math.round(s.v); if (!o.length || o[o.length - 1].v !== v) o.push({ t: s.t, v, ease: 'hold' }); } return o; }
+  if (p.color) { const o = []; for (const s of pts) if (!o.length || o[o.length - 1].v !== s.v) o.push({ t: s.t, v: s.v, ease: 'linear' }); return o; }
+  if (pts.length > 4) { const sm = pts.map(q => ({ ...q })); for (let i = 1; i < pts.length - 1; i++) { let a = 0, n = 0; for (let j = Math.max(0, i - 3); j <= Math.min(pts.length - 1, i + 3); j++) { a += pts[j].v; n++; } sm[i].v = a / n; } pts.splice(0, pts.length, ...sm); }
+  const tol = Math.max((p.max - p.min) * (p.path === 'cursor.presence' ? 0.06 : 0.012), 1e-6), keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
+  const stack = [[0, pts.length - 1]];
+  while (stack.length) { const [a, b] = stack.pop(); if (b - a < 2) continue; let w = -1, wi = -1;
+    for (let i = a + 1; i < b; i++) { const u = (pts[i].t - pts[a].t) / ((pts[b].t - pts[a].t) || 1), d = Math.abs(pts[i].v - (pts[a].v + (pts[b].v - pts[a].v) * u)); if (d > w) { w = d; wi = i; } }
+    if (w > tol) { keep[wi] = 1; stack.push([a, wi], [wi, b]); } }
+  return pts.filter((_, i) => keep[i]).map(s => ({ t: s.t, v: s.v, ease: 'linear' }));
+}
+function tlRecStop() {
+  if (!tlRec.on) return; tlRec.on = false;
+  tl.playing = false; tlPlay(false);
+  const tEnd = tl.head, fr = 1 / TL_FPS; let changed = 0;
+  for (const path in tlRec.buffers) {
+    const p = PARAM[path], buf = tlRec.buffers[path]; if (!buf.length) continue;
+    const tS = snapT(buf[0].t), old = (tl.tracks[path] || []).slice(), had = old.length > 0;
+    const afterT = snapT(tEnd + 0.5), later = old.some(k => k.t > tEnd + fr), oldAfter = later ? interp(old, afterT, p) : null;
+    let keys = old.filter(k => k.t < tS - fr / 2 || k.t > tEnd + 0.5 + fr / 2);
+    if (tS >= fr) keys.push({ t: snapT(tS - fr), v: tlRec.before[path].v, ease: 'linear' });
+    for (const k of simplifyRecording(buf, p)) keys.push(k);
+    if (later && afterT <= tl.duration) keys.push({ t: afterT, v: oldAfter, ease: 'linear' });
+    keys.sort((a, b) => a.t - b.t);
+    const dd = []; for (const k of keys) { if (dd.length && Math.abs(dd[dd.length - 1].t - k.t) < fr / 2) dd[dd.length - 1] = k; else dd.push(k); }
+    if (!had && tS < fr && dd.length) dd[0].t = 0;
+    tl.tracks[path] = dd; tl.collapsed[p.g] = false; changed++;
+  }
+  tlRec.override = {}; tlRec.buffers = {}; tlRec.cursorTarget = null; tlRec.timeLock = null;
+  setRecBtn('tlRec', false, 'Grabar pasada'); document.getElementById('tlStRec').disabled = false;
+  if (changed) setUndo('Deshacer pasada');
+  renderLanes(); onHeadChange(); tlChanged();
+  toast(changed ? `Pasada grabada · ${changed} parámetro${changed > 1 ? 's' : ''} con keyframes` : 'Pasada sin cambios');
+}
+document.getElementById('tlRec').onclick = () => tlRec.on ? tlRecStop() : tlRecStart();
+document.getElementById('tlStRec').onclick = () => stRec.on ? stRecStop() : stRecStart();
+
+/* ---------- video: cada cuadro se calcula sin apuro, a la resolución final ---------- */
+let renderJob = null;
+async function pickCodec(W, H, fps, bitrate) {
+  const list = H > 1080 ? [['avc1.640033', 'avc'], ['vp09.00.51.08', 'vp9'], ['av01.0.12M.08', 'av1']] : [['avc1.640028', 'avc'], ['vp09.00.41.08', 'vp9'], ['av01.0.08M.08', 'av1']];
+  for (const [codec, mux] of list) { try { const cfg = { codec, width: W, height: H, bitrate, framerate: fps }; if ((await VideoEncoder.isConfigSupported(cfg)).supported) return { cfg, mux }; } catch (e) {} }
+  return null;
+}
+async function renderVideo() {
+  if (renderJob) return;
+  if (stRec.on) stRecStop(); if (tlRec.on) tlRecStop(); tlPlay(false);   // el video sale de lo grabado, no de una grabación en curso
+  if (!('VideoEncoder' in window) || !window.Mp4Muxer) { toast('Este navegador no puede codificar video. Usa Chrome, Edge o Safari reciente.'); return; }
+  const box = document.getElementById('tlRender');
+  const H = parseInt(box.querySelector('[data-o="h"]').value, 10), fps = parseInt(box.querySelector('[data-o="fps"]').value, 10);
+  const doc = frozenDoc(), aspect = viewW / viewH, W = Math.round(H * aspect / 2) * 2;
+  const bitrate = Math.round((H >= 2160 ? 45e6 : H >= 1080 ? 16e6 : 8e6) * (fps / 30));
+  const choice = await pickCodec(W, H, fps, bitrate);
+  if (!choice) { toast('No hay un códec de video disponible para esa resolución'); return; }
+  const go = box.querySelector('.go'), prog = box.querySelector('.progress'), fill = box.querySelector('.fill'), ptext = box.querySelector('.ptext');
+  go.hidden = true; prog.hidden = false;
+  const job = renderJob = { cancel: false };
+  const ac = await pickAudioCodec();
+  const muxer = new Mp4Muxer.Muxer({ target: new Mp4Muxer.ArrayBufferTarget(), video: { codec: choice.mux, width: W, height: H, frameRate: fps },
+    ...(ac ? { audio: { codec: ac.mux, numberOfChannels: ac.chs, sampleRate: 48000 } } : {}), fastStart: 'in-memory' });
+  if (audio.buffer && !ac) toast('Este navegador no codifica audio: el video saldrá sin sonido');
+  let encErr = null;
+  const enc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => { encErr = e; } });
+  enc.configure(choice.cfg);
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const total = Math.max(1, Math.round(tl.duration * fps)), t0 = performance.now();
+  try {
+    for (let i = 0; i < total; i++) {
+      if (job.cancel) throw new Error('cancelado'); if (encErr) throw encErr;
+      const st = evalState(i / fps, doc);
+      drawSheet(g, computeState(st, W, H, 1), st.cfg, W, H, st.render);
+      const vf = new VideoFrame(c, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
+      enc.encode(vf, { keyFrame: i % (fps * 2) === 0 }); vf.close();
+      while (enc.encodeQueueSize > 3) await new Promise(r => setTimeout(r, 4));
+      if (i % 2 === 0 || i === total - 1) {
+        const done = (i + 1) / total, el = (performance.now() - t0) / 1000, eta = el / done - el;
+        fill.style.width = (done * 100).toFixed(1) + '%';
+        ptext.textContent = `${i + 1}/${total} · ~${eta < 60 ? Math.ceil(eta) + ' s' : Math.ceil(eta / 60) + ' min'}`;
+        await new Promise(r => setTimeout(r, 0));
+      }
+    }
+    await enc.flush();
+    if (ac) { ptext.textContent = 'Agregando el audio…'; await encodeAudioInto(muxer, ac.mux, tl.duration); }
+    muxer.finalize();
+    const blob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
+    ptext.textContent = 'Listo · ' + (blob.size / 1048576).toFixed(1) + ' MB · ' + choice.mux.toUpperCase() + (ac ? ' + ' + ac.mux.toUpperCase() : '');
+    await save(`superficie-${H}p${fps}.mp4`, blob, 'video/mp4');
+  } catch (e) { ptext.textContent = e.message === 'cancelado' ? 'Cancelado' : 'Error: ' + (e.message || e); }
+  finally { try { enc.close(); } catch (e) {} renderJob = null; setTimeout(() => { go.hidden = false; prog.hidden = true; fill.style.width = '0'; }, 2500); }
+}
+document.getElementById('tlRender').addEventListener('click', e => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  if (b.dataset.a === 'go') renderVideo();
+  if (b.dataset.a === 'cancel' && renderJob) renderJob.cancel = true;
+});
+
+/* ---------- guardar y recuperar ---------- */
+let saveT = 0;
+function tlChanged() { dirty = true; clearTimeout(saveT); saveT = setTimeout(saveTimeline, 400); updateLaneValues(); }
+function saveTimeline() { try { localStorage.setItem(TL_STORE, JSON.stringify({ tl: { duration: tl.duration, startTime: tl.startTime, cursor: tl.cursor, tracks: tl.tracks, collapsed: tl.collapsed, applyPoints: tl.applyPoints, scenes: tl.scenes }, sceneDefaults })); } catch (e) {} }
+try { const d = JSON.parse(localStorage.getItem(TL_STORE) || 'null'); if (d && d.tl) Object.assign(tl, d.tl); } catch (e) {}
+if (document.fonts && document.fonts.load) {
+  document.fonts.load('17px "Material Symbols Outlined"', 'timer').then(f => { if (!f.length) document.body.classList.add('no-icons'); }).catch(() => document.body.classList.add('no-icons'));
+  setTimeout(() => { if (!document.fonts.check('17px "Material Symbols Outlined"')) document.body.classList.add('no-icons'); }, 4000);
+} else document.body.classList.add('no-icons');
+
+/* =========================================================
+   Escenas, curvas de tiempo y audio
+   ---------------------------------------------------------
+   Una ESCENA es una captura puesta en un instante de la
+   secuencia, con su transición de llegada:
+     · corte: el cambio es seco, justo en ese instante;
+     · morph: la lámina viaja desde el estado anterior durante
+       «duración» segundos y llega exacta al instante marcado,
+       con una curva de tiempo (aceleración, frenado, golpe…).
+   Las escenas generan los keyframes, y solo en los parámetros
+   que cambian. Los keyframes hechos a mano no se tocan.
+   El audio corre sincronizado con la línea de tiempo: se graba
+   escuchando, y el video sale con su sonido.
+   ========================================================= */
+
+/* ---------- curvas de tiempo (cubic-bezier, como en CSS) ---------- */
+const CURVES = Object.fromEntries(Object.entries(TRAMA.CURVAS).map(([id, v]) => [id, { label: v.etiqueta, c: v.c.slice() }]));
+const cubicBezier = TRAMA.bezierCubica;
+function easeOf(k) { return TRAMA.suavizadoDe(TRAMA.keyframeDeV7(k)); }
+EASE_LABEL.curve = 'Curva';
+function curveName(c) { for (const [id, v] of Object.entries(CURVES)) if (v.c.every((x, i) => Math.abs(x - c[i]) < 1e-3)) return id; return 'custom'; }
+
+/* editor de curva: dos asas arrastrables, como en un editor de animación */
+function curveEditor(host, curve, onChange) {
+  const W = 140, H = 96, pad = 14, cv = document.createElement('canvas');
+  cv.width = W * 2; cv.height = H * 2; cv.style.cssText = `width:${W}px;height:${H}px;cursor:crosshair;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:6px`;
+  cv.title = 'Arrastra los puntos para dar carácter al cambio: tiempo → horizontal, avance → vertical';
+  host.appendChild(cv);
+  const g = cv.getContext('2d'); g.scale(2, 2);
+  const X = x => pad + x * (W - 2 * pad), Y = y => H - pad - y * (H - 2 * pad - 10) - 5;
+  const iX = px => (px - pad) / (W - 2 * pad), iY = py => (H - pad - 5 - py) / (H - 2 * pad - 10);
+  function draw() {
+    g.clearRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(160,230,255,.15)'; g.strokeRect(X(0), Y(1), X(1) - X(0), Y(0) - Y(1));
+    g.strokeStyle = 'rgba(124,200,255,.6)'; g.beginPath(); g.moveTo(X(0), Y(0)); g.lineTo(X(curve[0]), Y(curve[1])); g.moveTo(X(1), Y(1)); g.lineTo(X(curve[2]), Y(curve[3])); g.stroke();
+    g.strokeStyle = '#3dd6c0'; g.lineWidth = 2; g.beginPath(); g.moveTo(X(0), Y(0)); g.bezierCurveTo(X(curve[0]), Y(curve[1]), X(curve[2]), Y(curve[3]), X(1), Y(1)); g.stroke(); g.lineWidth = 1;
+    for (const [x, y] of [[curve[0], curve[1]], [curve[2], curve[3]]]) { g.fillStyle = '#dff8ff'; g.beginPath(); g.arc(X(x), Y(y), 4, 0, 6.3); g.fill(); }
+  }
+  cv.addEventListener('pointerdown', e => {
+    const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    const d1 = Math.hypot(px - X(curve[0]), py - Y(curve[1])), d2 = Math.hypot(px - X(curve[2]), py - Y(curve[3]));
+    const h = d1 <= d2 ? 0 : 2; cv.setPointerCapture(e.pointerId);
+    const move = ev => {
+      const qx = ev.clientX - r.left, qy = ev.clientY - r.top;
+      curve[h] = Math.round(Math.min(Math.max(iX(qx), 0), 1) * 100) / 100;
+      curve[h + 1] = Math.round(Math.min(Math.max(iY(qy), -0.6), 1.6) * 100) / 100;
+      draw(); onChange(curve, false);
+    };
+    const up = () => { cv.removeEventListener('pointermove', move); cv.removeEventListener('pointerup', up); onChange(curve, true); };
+    cv.addEventListener('pointermove', move); cv.addEventListener('pointerup', up); move(e);
+  });
+  draw();
+  return { redraw: draw };
+}
+
+/* ---------- escenas ---------- */
+tl.scenes = tl.scenes || [];
+tl.selScene = null;
+let sceneSeq = tl.scenes.reduce((m, s) => Math.max(m, s.id), 0);
+const sceneDefaults = { type: 'morph', dur: 1.0, curve: CURVES.suave.c.slice() };
+function evoTimeAt(doc, t) { return evolutionAt(doc, t).time; }
+function regenerateScenes() {
+  const extras = PARAMS.filter(p => !TRAMA.RUTA_DE_V7[p.path]).map(p => ({ path: p.path, paso: p.step, entero: !!p.hold, color: !!p.color }));
+  tl.tracks = TRAMA.regenerarPistasV7(tl, config, extras);
+  for (const path in tl.tracks) if (PARAM[path] && PARAM[path].g && tl.tracks[path].some(k => k.scene)) tl.collapsed[PARAM[path].g] = false;
+  tl.applyPoints = tl.scenes.slice().sort((a, b) => a.t - b.t).map(s => snapT(s.t));
+}
+function addScene(snap, t = tl.head, opts = {}) {
+  const sc = { id: ++sceneSeq, t: snapT(t), snap: snap.num, st: JSON.parse(JSON.stringify(snap.st)),
+    type: opts.type || sceneDefaults.type, dur: opts.dur ?? sceneDefaults.dur, curve: (opts.curve || sceneDefaults.curve).slice(),
+    evo: document.getElementById('fsTime').checked };
+  const fr = 1 / TL_FPS, same = tl.scenes.findIndex(s => Math.abs(s.t - sc.t) < fr / 2);
+  if (same >= 0) tl.scenes[same] = { ...sc, id: tl.scenes[same].id }; else tl.scenes.push(sc);
+  regenerateScenes();
+  tl.selScene = (same >= 0 ? tl.scenes[same] : sc).id; tl.sel = null;
+  renderScenes(); renderRuler(); renderLanes(); onHeadChange(); tlChanged();
+  return sc;
+}
+function sceneById(id) { return tl.scenes.find(s => s.id === id); }
+function updateScene(sc, patch, final = true) {
+  Object.assign(sc, patch); regenerateScenes();
+  renderScenes(); renderRuler(); if (final) { renderLanes(); tlChanged(); } else { updateLaneValues(); dirty = true; }
+}
+function deleteScene(id) {
+  undoDoc = snapshotDoc();
+  tl.scenes = tl.scenes.filter(s => s.id !== id); tl.selScene = null;
+  regenerateScenes(); renderScenes(); renderRuler(); renderLanes(); onHeadChange(); tlChanged(); setUndo('Deshacer');
+}
+
+/* carril de escenas: bloques con su transición de llegada */
+function renderScenes() {
+  const host = document.getElementById('tlScenes'); if (!host) return;
+  const list = tl.scenes.slice().sort((a, b) => a.t - b.t), fr = 1 / TL_FPS;
+  let h = '', prevT = -Infinity;
+  for (const sc of list) {
+    const room = isFinite(prevT) ? Math.max(0, sc.t - prevT - fr) : sc.t, dur = sc.type === 'cut' ? 0 : Math.min(sc.dur, room);
+    if (dur > 0 && sc.t - dur <= tl.view.end && sc.t >= tl.view.start)
+      h += `<span class="scn-tr" style="left:${tpos(Math.max(sc.t - dur, tl.view.start))};width:calc(${tpos(sc.t)} - ${tpos(Math.max(sc.t - dur, tl.view.start))})"></span>`;
+    if (sc.t >= tl.view.start - 0.01 && sc.t <= tl.view.end + 0.01)
+      h += `<span class="scn${tl.selScene === sc.id ? ' sel' : ''}${sc.type === 'cut' ? ' cut' : ''}" data-id="${sc.id}" style="left:${tpos(sc.t)}" title="Captura ${sc.snap} · ${sc.t.toFixed(2)} s · ${sc.type === 'cut' ? 'corte' : 'morph ' + sc.dur + ' s'}">C${sc.snap}</span>`;
+    prevT = sc.t;
+  }
+  host.innerHTML = h || '<span class="scn-empty">Graba estados o aplica capturas para crear escenas</span>';
+}
+document.getElementById('tlScenes').addEventListener('pointerdown', e => {
+  const el = e.target.closest('.scn');
+  if (!el) { startScrub(e, e.currentTarget); return; }
+  e.preventDefault();
+  const sc = sceneById(+el.dataset.id); if (!sc) return;
+  tl.selScene = sc.id; tl.sel = null; renderScenes(); renderInspector();
+  const host = e.currentTarget, x0 = e.clientX, t0 = sc.t; let moved = false;
+  const move = ev => {
+    const t = Math.min(Math.max(snapT(tl.view.start + frac(host, ev.clientX) * vspan()), 0), tl.duration);
+    if (t === sc.t || tl.scenes.some(s => s !== sc && Math.abs(s.t - t) < 0.5 / TL_FPS)) return;
+    if (!moved && Math.abs(ev.clientX - x0) < 3) return;
+    if (!moved) undoDoc = snapshotDoc();
+    moved = true; sc.t = t; el.style.left = tpos(t);
+  };
+  const up = () => {
+    removeEventListener('pointermove', move); removeEventListener('pointerup', up);
+    if (moved) { updateScene(sc, {}); setUndo('Deshacer'); renderInspector(); } else setHead(t0);
+  };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+});
+
+/* inspector de escena: tipo de cambio, duración y curva */
+function renderSceneInspector(el, sc) {
+  const name = curveName(sc.curve);
+  el.innerHTML = `<b>Escena · C${sc.snap}</b> <span class="muted">${sc.t.toFixed(2)} s</span>
+    <select id="scType" title="Cómo llega esta escena"><option value="morph"${sc.type === 'morph' ? ' selected' : ''}>Morph</option><option value="cut"${sc.type === 'cut' ? ' selected' : ''}>Corte seco</option></select>
+    <span class="scmorph"${sc.type === 'cut' ? ' hidden' : ''}><input id="scDur" type="number" min="0.04" max="30" step="0.05" value="${sc.dur}" title="Duración de la transición (s)"> s
+    <select id="scCurve" title="Curva de tiempo">${Object.entries(CURVES).map(([id, v]) => `<option value="${id}"${name === id ? ' selected' : ''}>${v.label}</option>`).join('')}${name === 'custom' ? '<option value="custom" selected>Personalizada</option>' : ''}</select></span>
+    <button id="scDel" title="Quitar escena"><span class="ms">delete</span></button>
+    <div id="scCurveBox" class="scmorph"${sc.type === 'cut' ? ' hidden' : ''}></div>`;
+  el.querySelector('#scType').onchange = e => { undoDoc = snapshotDoc(); updateScene(sc, { type: e.target.value }); setUndo('Deshacer'); renderInspector(); };
+  const dur = el.querySelector('#scDur'); if (dur) dur.onchange = e => { const v = Math.max(0.04, parseFloat(e.target.value) || sc.dur); updateScene(sc, { dur: v }); };
+  const cs = el.querySelector('#scCurve'); if (cs) cs.onchange = e => { if (CURVES[e.target.value]) { updateScene(sc, { curve: CURVES[e.target.value].c.slice() }); renderInspector(); } };
+  el.querySelector('#scDel').onclick = () => deleteScene(sc.id);
+  const box = el.querySelector('#scCurveBox');
+  if (box && sc.type !== 'cut') curveEditor(box, sc.curve, (c, final) => { updateScene(sc, { curve: c.slice() }, final); if (final) { const s = el.querySelector('#scCurve'); if (s && curveName(c) === 'custom' && !s.querySelector('[value=custom]')) { s.insertAdjacentHTML('beforeend', '<option value="custom" selected>Personalizada</option>'); } } });
+}
+
+/* transición por defecto para las escenas nuevas (al grabar o aplicar) */
+function renderSceneDefaults() {
+  const el = document.getElementById('tlTrans');
+  el.innerHTML = `<span class="muted">Transición</span>
+    <select id="tdType"><option value="morph"${sceneDefaults.type === 'morph' ? ' selected' : ''}>Morph</option><option value="cut"${sceneDefaults.type === 'cut' ? ' selected' : ''}>Corte</option></select>
+    <input id="tdDur" type="number" min="0.04" max="30" step="0.05" value="${sceneDefaults.dur}" title="Duración (s)"${sceneDefaults.type === 'cut' ? ' hidden' : ''}>
+    <select id="tdCurve"${sceneDefaults.type === 'cut' ? ' hidden' : ''}>${Object.entries(CURVES).map(([id, v]) => `<option value="${id}"${curveName(sceneDefaults.curve) === id ? ' selected' : ''}>${v.label}</option>`).join('')}</select>`;
+  el.querySelector('#tdType').onchange = e => { sceneDefaults.type = e.target.value; renderSceneDefaults(); saveTimeline(); };
+  el.querySelector('#tdDur').onchange = e => { sceneDefaults.dur = Math.max(0.04, parseFloat(e.target.value) || 1); saveTimeline(); };
+  el.querySelector('#tdCurve').onchange = e => { sceneDefaults.curve = CURVES[e.target.value].c.slice(); saveTimeline(); };
+}
+
+/* ---------- audio sincronizado ---------- */
+const audio = { ctx: null, buffer: null, name: '', src: null, startCtx: 0, startHead: 0, playing: false, muted: false, peaks: null, gain: null };
+async function loadAudio(file) {
+  try {
+    audio.ctx = audio.ctx || new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+    audio.gain = audio.gain || audio.ctx.createGain(); audio.gain.connect(audio.ctx.destination);
+    const buf = await audio.ctx.decodeAudioData(await file.arrayBuffer());
+    audio.buffer = buf; audio.name = file.name;
+    // picos para dibujar la onda (2000 columnas)
+    const ch = buf.getChannelData(0), n = 2000, step = Math.max(1, Math.floor(ch.length / n)), peaks = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let m = 0; for (let j = i * step, e = Math.min(ch.length, j + step); j < e; j++) { const v = Math.abs(ch[j]); if (v > m) m = v; } peaks[i] = m; }
+    audio.peaks = peaks;
+    if (buf.duration > tl.duration) { tl.duration = Math.ceil(buf.duration * 10) / 10; document.getElementById('tlDur').value = tl.duration; fitView(); renderNav(); }
+    document.getElementById('tlAudioName').textContent = file.name + ' · ' + buf.duration.toFixed(1) + ' s';
+    document.body.classList.add('has-audio');
+    renderRuler(); renderScenes(); renderWave(); onHeadChange();
+    toast('Audio cargado · la línea de tiempo corre con él');
+  } catch (e) { toast('No se pudo leer ese audio'); }
+}
+function renderWave() {
+  const c = document.getElementById('tlWave'); if (!c) return;
+  const w = c.clientWidth || 200, h = c.clientHeight || 26; c.width = w * 2; c.height = h * 2;
+  const g = c.getContext('2d'); g.scale(2, 2); g.clearRect(0, 0, w, h);
+  if (!audio.peaks) return;
+  const dur = audio.buffer.duration, n = audio.peaks.length;
+  g.fillStyle = 'rgba(124,200,255,.55)';
+  for (let x = 0; x < w; x++) {
+    const t = tl.view.start + (x / w) * vspan(); if (t > dur) break;
+    const i0 = Math.floor(t / dur * n), i1 = Math.max(i0 + 1, Math.floor((tl.view.start + ((x + 1) / w) * vspan()) / dur * n));
+    let m = 0; for (let i = i0; i < Math.min(i1, n); i++) if (audio.peaks[i] > m) m = audio.peaks[i];
+    const a = Math.max(0.5, m * (h - 2)); g.fillRect(x, (h - a) / 2, 1, a);
+  }
+}
+function audioStart() {
+  if (!audio.buffer || !audio.ctx) return;
+  audioStop();
+  if (audio.ctx.state === 'suspended') audio.ctx.resume();
+  const src = audio.ctx.createBufferSource(); src.buffer = audio.buffer; src.connect(audio.gain);
+  audio.gain.gain.value = audio.muted ? 0 : 1;
+  const off = Math.min(tl.head, audio.buffer.duration);
+  if (off < audio.buffer.duration) src.start(0, off);
+  audio.src = src; audio.startCtx = audio.ctx.currentTime; audio.startHead = tl.head; audio.playing = true;
+}
+function audioStop() { if (audio.src) { try { audio.src.stop(); } catch (e) {} audio.src.disconnect(); audio.src = null; } audio.playing = false; }
+/* con audio, el reloj de la línea de tiempo es el del audio: imagen y sonido no se separan */
+function audioHead() { return audio.playing ? audio.startHead + (audio.ctx.currentTime - audio.startCtx) : null; }
+document.getElementById('tlAudioFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadAudio(f); e.target.value = ''; });
+document.getElementById('tlAudioMute').onclick = e => { audio.muted = !audio.muted; if (audio.gain) audio.gain.gain.value = audio.muted ? 0 : 1; e.currentTarget.innerHTML = `<span class="ms">${audio.muted ? 'volume_off' : 'volume_up'}</span>`; };
+document.getElementById('tlAudioDel').onclick = () => { audioStop(); Object.assign(audio, { buffer: null, peaks: null, name: '' }); document.body.classList.remove('has-audio'); document.getElementById('tlAudioName').textContent = ''; renderWave(); };
+
+/* audio del video: el mismo archivo, recortado a la duración */
+async function encodeAudioInto(muxer, mux, total) {
+  const buf = audio.buffer, sr = 48000, chs = Math.min(2, buf.numberOfChannels);
+  const frames = Math.min(buf.length, Math.round(total * sr));
+  let err = null;
+  const enc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: e => { err = e; } });
+  enc.configure({ codec: mux === 'aac' ? 'mp4a.40.2' : 'opus', sampleRate: sr, numberOfChannels: chs, bitrate: 160000 });
+  const block = 4800;
+  for (let off = 0; off < frames; off += block) {
+    if (err) throw err;
+    const n = Math.min(block, frames - off), data = new Float32Array(n * chs);
+    for (let c = 0; c < chs; c++) data.set(buf.getChannelData(Math.min(c, buf.numberOfChannels - 1)).subarray(off, off + n), c * n);
+    const ad = new AudioData({ format: 'f32-planar', sampleRate: sr, numberOfFrames: n, numberOfChannels: chs, timestamp: Math.round(off / sr * 1e6), data });
+    enc.encode(ad); ad.close();
+    while (enc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 2));
+  }
+  await enc.flush(); enc.close();
+}
+async function pickAudioCodec() {
+  if (!audio.buffer || !('AudioEncoder' in window)) return null;
+  const chs = Math.min(2, audio.buffer.numberOfChannels);
+  for (const [codec, mux] of [['opus', 'opus'], ['mp4a.40.2', 'aac']]) {
+    try { if ((await AudioEncoder.isConfigSupported({ codec, sampleRate: 48000, numberOfChannels: chs, bitrate: 160000 })).supported) return { mux, chs }; } catch (e) {}
+  }
+  return null;
+}
+
+try { const d = JSON.parse(localStorage.getItem(TL_STORE) || 'null'); if (d && d.sceneDefaults) Object.assign(sceneDefaults, d.sceneDefaults); } catch (e) {}
+
+/* =========================================================
+   Archivo de trama
+   ---------------------------------------------------------
+   El contrato con el reproductor de Publisher (formato
+   contope/trama, versión 1). Sin línea de tiempo, la trama es
+   en vivo (sin final, sigue al cursor); con keyframes o
+   escenas, es la secuencia tal como se ve en la línea de
+   tiempo. Además se copia su código CT1.
+   [ContOpe] La traducción viene de ContopeTrama (el mismo dist
+   que trae el motor). La trama lleva su nombre: el que se le
+   pasa (el de la performance) o, si no, el del preset elegido o
+   el de la trama importada. puenteDeTrama lo completa
+   el puente con el escritorio, si lo hay (colores y formato del
+   ADN; la trama exportada también le llega al escritorio).
+   ========================================================= */
+const puenteDeTrama = { nombre: null, opciones: () => ({}), exportada: () => {} };
+function estadoParaTrama(nombreDado) {
+  if (morph) finishMorphNow();
+  if (presetMorph) { Object.assign(config, presetMorph.to); presetMorph = null; syncSliders(); }
+  const pr = !modified && presetById(currentPreset), nombre = nombreDado || (pr ? pr.name : puenteDeTrama.nombre);
+  return {
+    cfg: JSON.parse(JSON.stringify(config)), render, time: r5(live.time), format,
+    tl: { duration: tl.duration, startTime: tl.startTime, cursor: { ...tl.cursor }, tracks: JSON.parse(JSON.stringify(tl.tracks)), scenes: JSON.parse(JSON.stringify(tl.scenes || [])) },
+    ...(nombre ? { nombre } : {})
+  };
+}
+async function exportTrama(nombre) {
+  let trama;
+  try { trama = TRAMA.tramaDeEstadoV7(estadoParaTrama(nombre), puenteDeTrama.opciones()); }
+  catch (e) { toast('No se pudo armar la trama: ' + (e.message || e)); return; }
+  const secuencia = trama.tiempo.modo === 'secuencia';
+  const base = nombre ? nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : 'superficie-' + (secuencia ? 'secuencia-' + String(trama.tiempo.duracion).replace('.', '_') + 's' : 'vivo');
+  await save(base + '.trama.json', JSON.stringify(trama, null, 2), 'application/json');
+  try { await navigator.clipboard.writeText(TRAMA.codificarTrama(trama)); toast((secuencia ? 'Trama de secuencia' : 'Trama en vivo') + ' guardada · código CT1 copiado'); } catch (e) {}
+  puenteDeTrama.exportada(trama);
+}
+document.getElementById('tramaExport').addEventListener('click', () => exportTrama());
+
+/* =========================================================
+   Performances
+   ---------------------------------------------------------
+   Dos capas bajo los menús: los snapshots (+ Snapshot crea
+   uno) y las performances. + Performance graba: la línea de
+   tiempo corre desde el inicio, con la pista de audio si hay,
+   y cada snapshot que pinches (o su número 1–9) entra como
+   escena en ese momento. Al detener, la performance queda en
+   su galería como una secuencia; al tocarla se abre en la
+   línea de tiempo para afinar entradas y ease, y desde ahí sale
+   como video o como trama de secuencia. Una performance nueva
+   no borra las anteriores; cada una guarda su pista de audio.
+   ========================================================= */
+const PF_STORE = 'superficie-performances-v1';
+let perfs = [], perfSel = null, perfRecording = false, perfAudioBlob = null;
+try { perfs = JSON.parse(localStorage.getItem(PF_STORE) || '[]'); } catch (e) { perfs = []; }
+const perfById = id => perfs.find(p => p.id === id);
+const persistPerfs = () => { try { localStorage.setItem(PF_STORE, JSON.stringify(perfs)); } catch (e) { toast('El navegador no tiene espacio para más performances'); } };
+
+/* pista de audio de cada performance (IndexedDB; si no está disponible, sigue sin ella) */
+const audioDB = (() => {
+  let db = null;
+  const open = () => db || (db = new Promise((res, rej) => { const r = indexedDB.open('superficie-v1', 1); r.onupgradeneeded = () => r.result.createObjectStore('audio'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const run = (mode, fn) => open().then(d => new Promise((res, rej) => { const t = d.transaction('audio', mode), q = fn(t.objectStore('audio')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }));
+  return { put: (k, v) => run('readwrite', s => s.put(v, k)).catch(() => {}), get: k => run('readonly', s => s.get(k)).catch(() => null), del: k => run('readwrite', s => s.delete(k)).catch(() => {}) };
+})();
+/* el archivo de audio cargado, para guardarlo con la performance */
+document.addEventListener('change', e => { if (e.target.id === 'tlAudioFile' && e.target.files && e.target.files[0]) perfAudioBlob = e.target.files[0]; }, true);
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#tlAudioDel')) perfAudioBlob = null; }, true);
+function clearAudio() { audioStop(); Object.assign(audio, { buffer: null, peaks: null, name: '' }); perfAudioBlob = null; document.body.classList.remove('has-audio'); document.getElementById('tlAudioName').textContent = ''; renderWave(); }
+
+const timelineDoc = () => JSON.parse(JSON.stringify({ duration: tl.duration, startTime: tl.startTime, cursor: tl.cursor, tracks: tl.tracks, scenes: tl.scenes || [], collapsed: tl.collapsed, applyPoints: tl.applyPoints }));
+const timelineHasContent = () => (tl.scenes && tl.scenes.length) || Object.values(tl.tracks).some(k => k && k.length);
+function perfThumb(doc) {
+  const list = (doc.scenes || []).slice().sort((a, b) => a.t - b.t), st = list.length ? list[0].st : null;
+  if (!st) return '';
+  const [W, H] = exportSize(), tw = 240, th = Math.round(240 * H / W);
+  const c = document.createElement('canvas'); c.width = tw; c.height = th;
+  drawSheet(c.getContext('2d'), computeState(st, tw, th, 0.5), st.blend && st.blend.e > 0.5 ? st.blend.state.cfg : st.cfg, tw, th, modeOf(st));
+  return c.toDataURL('image/png');
+}
+function refreshTimeline() {
+  document.getElementById('tlDur').value = tl.duration;
+  fitView(); renderRuler(); renderLanes(); renderNav(); renderScenes(); renderWave(); setHead(0);
+}
+/* lo que se edita en la línea de tiempo queda en la performance abierta */
+function perfStoreCurrent() {
+  const p = perfSel && perfById(perfSel); if (!p || perfRecording) return;
+  const doc = timelineDoc(), firstOld = (p.doc.scenes || []).map(s => s.t + ':' + s.snap).sort()[0], firstNew = doc.scenes.map(s => s.t + ':' + s.snap).sort()[0];
+  p.doc = doc; if (firstOld !== firstNew || !p.thumb) p.thumb = perfThumb(doc);
+  persistPerfs(); renderPerfs();
+}
+{ const save0 = saveTimeline; saveTimeline = function () { save0(); perfStoreCurrent(); }; }
+
+function perfAdd(doc, extra = {}) {
+  const num = perfs.reduce((m, p) => Math.max(m, p.num), 0) + 1;
+  const p = { id: Date.now() + Math.floor(Math.random() * 1000), num, name: 'Performance ' + num, doc, thumb: perfThumb(doc), audioName: '', ...extra };
+  perfs.unshift(p); persistPerfs(); return p;
+}
+async function perfLoad(p) {
+  if (perfRecording) return;
+  perfStoreCurrent();
+  if (stRec.on) stRecStop(); if (tlRec.on) tlRecStop(); tlPlay(false);
+  if (!tl.open) openTimeline(true);
+  Object.assign(tl, JSON.parse(JSON.stringify(p.doc))); tl.sel = null; tl.selScene = null;
+  sceneSeq = tl.scenes.reduce((m, s) => Math.max(m, s.id), 0);
+  perfSel = p.id; undoDoc = null; document.getElementById('tlUndo').hidden = true;
+  clearAudio();
+  refreshTimeline(); renderPerfs(); saveTimeline();
+  if (p.audioName) {
+    const a = await audioDB.get(p.id);
+    if (a && a.blob && perfSel === p.id) {
+      await loadAudio(new File([a.blob], a.name || p.audioName));
+      perfAudioBlob = a.blob; tl.duration = p.doc.duration; refreshTimeline();
+    } else if (perfSel === p.id) toast('La pista de audio de esta performance no está en este navegador');
+  }
+}
+function perfStart() {
+  if (!snaps.length) { toast('Primero crea los snapshots con + Snapshot (C)'); return; }
+  if (tlRec.on) tlRecStop(); tlPlay(false);
+  if (!tl.open) openTimeline(true);
+  if (!perfSel && timelineHasContent()) { const p = perfAdd(timelineDoc(), { name: 'Línea de tiempo anterior' }); toast(`Lo que había en la línea de tiempo quedó como «${p.name}»`); }
+  else perfStoreCurrent();
+  perfSel = null;
+  Object.assign(tl, { tracks: {}, scenes: [], applyPoints: [], sel: null, selScene: null, startTime: live.time, duration: audio.buffer ? Math.ceil(audio.buffer.duration * 10) / 10 : 10 });
+  refreshTimeline(); renderPerfs();
+  perfRecording = true;
+  stRecStart();
+  if (!stRec.on) { perfRecording = false; renderPerfs(); return; }
+  renderPerfs();
+}
+function perfFinish() {
+  perfRecording = false;
+  if (!tl.scenes.length) { renderPerfs(); toast('No pinchaste snapshots: la performance no se guardó'); return; }
+  const last = Math.max(...tl.scenes.map(s => s.t));
+  tl.duration = Math.min(600, Math.max(1, Math.ceil(Math.max(tl.head, last + 0.5) * 10) / 10));
+  refreshTimeline();
+  const p = perfAdd(timelineDoc(), { audioName: audio.buffer ? audio.name : '' });
+  if (audio.buffer && perfAudioBlob) audioDB.put(p.id, { blob: perfAudioBlob, name: audio.name });
+  perfSel = p.id; renderPerfs(); saveTimeline();
+  toast(`${p.name} guardada · afínala en la línea de tiempo`);
+}
+{
+  const start0 = stRecStart, stop0 = stRecStop;
+  stRecStart = function () { start0(); renderPerfs(); };
+  stRecStop = function () { const was = stRec.on; stop0(); if (was && perfRecording) perfFinish(); else renderPerfs(); };
+}
+function fmtDur(s) { return s < 60 ? s.toFixed(1).replace('.', ',') + ' s' : Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0'); }
+function renderPerfs() {
+  const host = document.getElementById('pfItems'); if (!host) return;
+  const keep = host.scrollLeft;
+  let h = perfRecording
+    ? `<button class="fs-add rec" id="perfRec" title="Detener la grabación y guardar la performance"><span>■</span>Detener</button>`
+    : `<button class="fs-add" id="perfRec" title="Grabar una performance: la línea de tiempo corre (con la pista de audio, si hay) y cada snapshot que pinches, o su número 1–9, entra como escena en ese momento"><span>+</span>Performance</button>`;
+  for (const p of perfs) {
+    const n = (p.doc.scenes || []).length;
+    h += `<figure class="fs-item pf-item${p.id === perfSel ? ' sel' : ''}" data-id="${p.id}" tabindex="0" title="Clic: abrir en la línea de tiempo">${p.thumb ? `<img alt="" src="${p.thumb}">` : '<div class="pf-blank"></div>'}<figcaption></figcaption><span class="pf-meta">${fmtDur(p.doc.duration)} · ${n} escena${n === 1 ? '' : 's'}${p.audioName ? ' · ♪' : ''}</span></figure>`;
+  }
+  if (!perfs.length && !perfRecording) h += `<p class="fs-empty">Crea snapshots arriba y graba una performance: pínchalos mientras corre el tiempo (y la música).</p>`;
+  if (perfRecording) h += `<p class="fs-empty rec-hint">Grabando · pincha los snapshots de arriba, o sus números 1–9, en el momento en que quieras que entren</p>`;
+  host.innerHTML = h; host.scrollLeft = keep;
+  perfs.forEach(p => { const f = host.querySelector(`.pf-item[data-id="${p.id}"] figcaption`); if (f) f.textContent = p.name; });
+  const info = document.getElementById('pfSelInfo'), acts = document.getElementById('pfActions'), p = perfSel && perfById(perfSel);
+  if (p && !perfRecording) {
+    info.textContent = ''; const b = document.createElement('b'); b.textContent = p.name; info.appendChild(b);
+    acts.innerHTML = `<button data-a="video">Video</button><button data-a="trama">Trama de secuencia</button><button data-a="nombre">Renombrar</button><button data-a="del">Quitar</button>`;
+  } else { info.textContent = perfRecording ? 'Grabando…' : (perfs.length ? 'Selecciona una performance' : ''); acts.innerHTML = ''; }
+}
+document.getElementById('pfItems').addEventListener('click', e => {
+  if (e.target.closest('#perfRec')) { if (perfRecording) stRecStop(); else perfStart(); return; }
+  const f = e.target.closest('.pf-item'); if (!f) return;
+  const p = perfById(+f.dataset.id); if (p) perfLoad(p);
+});
+document.getElementById('pfItems').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.closest('.pf-item')) e.target.click(); });
+document.getElementById('pfItems').addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.currentTarget.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+document.getElementById('pfActions').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-a]'), p = perfSel && perfById(perfSel); if (!b || !p) return;
+  const a = b.dataset.a;
+  if (a === 'video') { if (!tl.open) openTimeline(true); renderVideo(); }
+  if (a === 'trama') exportTrama(p.name);
+  if (a === 'nombre') { const n = prompt('Nombre de la performance', p.name); if (n && n.trim()) { p.name = n.trim().slice(0, 60); persistPerfs(); renderPerfs(); } }
+  if (a === 'del') {
+    if (!confirm(`¿Quitar «${p.name}»?`)) return;
+    perfs.splice(perfs.indexOf(p), 1); audioDB.del(p.id); perfSel = null; persistPerfs();
+    tl.tracks = {}; tl.scenes = []; tl.applyPoints = []; tl.sel = null; tl.selScene = null; clearAudio(); refreshTimeline(); saveTimeline(); renderPerfs();
+  }
+});
+document.getElementById('perfAudio').addEventListener('click', () => document.getElementById('tlAudioFile').click());
+renderPerfs();
+
+/* =========================================================
+   Espiral de Fibonacci con hilos (un estilo más)
+   ---------------------------------------------------------
+   Puntos en filotaxis de Vogel (ángulo áureo), una curva guía
+   que nace recta desde el centro y se enrolla hasta la espiral
+   áurea (r crece φ veces por cuarto de vuelta), e hilos de cada
+   punto a su lugar en la curva: el punto n va a la fracción
+   n/N del largo de la curva. Es 2D. La secuencia del video de
+   referencia está en el propio tiempo (un ciclo de 25,4 s a
+   velocidad 1): nacimiento, línea, enrollado, expansión y
+   reposo; snapshots, performances y línea de tiempo la usan
+   igual que la evolución de la superficie.
+   ========================================================= */
+/* [ContOpe] constantes y cálculo: los del motor de @contope/trama (motor/espiral.ts) */
+const PHI = TRAMA.PHI, ANG_AUREO = TRAMA.ANGULO_AUREO, B_AUREA = TRAMA.B_AUREA;
+const ESP_CICLO = TRAMA.CICLO_ESPIRAL;
+const esEspiral = cfg => !!cfg && cfg.generator === 'espiral';
+function computeEspiral(state, W, H, quality = 1) {
+  // [ContOpe] el cálculo de la espiral existe una sola vez, en el motor de @contope/trama
+  const g = TRAMA.calcularEspiral({ tiempo: state.time, configuracion: TRAMA.configuracionEspiralDeV7(state.cfg) }, W, H, quality);
+  return { espiral: true, pts: g.puntos, curva: g.curva, hilos: g.hilos, L: g.largo, px: g.px };
+}
+function espiralCols(cfg) { return { hilo: hexToRgb(cfg.colorDeep), traz: hexToRgb(cfg.colorAccent) }; }
+function drawEspiral(ctx, g, cfg, W, H) {
+  ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = cfg.colorBg || '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = inkModeOf(cfg) === 'tinta' ? 'multiply' : 'lighter';
+  const col = espiralCols(cfg), P = g.pts, C = g.curva;
+  // hilos: cada uno con su trazo, para que los cruces sumen
+  if (cfg.espOpHilo > 0.002 && g.hilos.length) {
+    ctx.lineWidth = Math.max(0.2, cfg.espGrosorHilo * g.px); ctx.lineCap = 'round';
+    for (let i = 0; i < g.hilos.length; i += 2) {
+      const n = g.hilos[i], j = g.hilos[i + 1], al = P[n * 4 + 3] * cfg.espOpHilo; if (al < 0.004) continue;
+      ctx.strokeStyle = `rgba(${col.hilo},${al})`; ctx.beginPath(); ctx.moveTo(P[n * 4], P[n * 4 + 1]); ctx.lineTo(C[j * 2], C[j * 2 + 1]); ctx.stroke();
+    }
+  }
+  if (g.L > 0 && cfg.espOpCurva > 0.002) {
+    ctx.strokeStyle = `rgba(${col.traz},${cfg.espOpCurva})`; ctx.lineWidth = Math.max(0.3, cfg.espGrosorCurva * g.px); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(C[0], C[1]); for (let j = 2; j < C.length; j += 2) ctx.lineTo(C[j], C[j + 1]); ctx.stroke();
+  }
+  if (cfg.espOpPunto > 0.002) {
+    const lv = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
+    for (let n = 0; n < P.length / 4; n++) {
+      const al = P[n * 4 + 3]; if (al < 0.02) continue;
+      const p = lv[Math.min(3, Math.floor(al * 4))], r = P[n * 4 + 2];
+      if (r < 0.9) p.rect(P[n * 4] - r, P[n * 4 + 1] - r, r * 2, r * 2); else { p.moveTo(P[n * 4] + r, P[n * 4 + 1]); p.arc(P[n * 4], P[n * 4 + 1], r, 0, Math.PI * 2); }
+    }
+    lv.forEach((p, i) => { ctx.fillStyle = `rgba(${col.traz},${cfg.espOpPunto * (i + 0.5) / 4})`; ctx.fill(p); });
+  }
+}
+function espiralSVG(g, cfg, W, H) {
+  const col = espiralCols(cfg), P = g.pts, C = g.curva, f = v => v.toFixed(1);
+  let hs = '';
+  for (let i = 0; i < g.hilos.length; i += 2) { const n = g.hilos[i], j = g.hilos[i + 1], al = P[n * 4 + 3] * cfg.espOpHilo; if (al >= 0.004) hs += `<line x1="${f(P[n * 4])}" y1="${f(P[n * 4 + 1])}" x2="${f(C[j * 2])}" y2="${f(C[j * 2 + 1])}" stroke-opacity="${Math.min(1, al).toFixed(3)}"/>`; }
+  let d = ''; if (g.L > 0) { d = 'M' + f(C[0]) + ' ' + f(C[1]); for (let j = 2; j < C.length; j += 2) d += 'L' + f(C[j]) + ' ' + f(C[j + 1]); }
+  let ps = ''; for (let n = 0; n < P.length / 4; n++) { const al = P[n * 4 + 3]; if (al >= 0.02) ps += `<circle cx="${f(P[n * 4])}" cy="${f(P[n * 4 + 1])}" r="${P[n * 4 + 2].toFixed(2)}" fill-opacity="${(cfg.espOpPunto * al).toFixed(3)}"/>`; }
+  const blend = inkModeOf(cfg) === 'tinta' ? 'multiply' : 'screen';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><style>line,path,circle{mix-blend-mode:${blend}}</style><rect width="${W}" height="${H}" fill="${cfg.colorBg || '#000000'}"/>`
+    + `<g id="hilos" stroke="rgb(${col.hilo})" stroke-width="${(cfg.espGrosorHilo * g.px).toFixed(2)}" stroke-linecap="round">${hs}</g>`
+    + (d ? `<g id="curva"><path d="${d}" fill="none" stroke="rgb(${col.traz})" stroke-opacity="${cfg.espOpCurva}" stroke-width="${(cfg.espGrosorCurva * g.px).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/></g>` : '')
+    + `<g id="puntos" fill="rgb(${col.traz})">${ps}</g></svg>`;
+}
+/* el dibujo y el cálculo existentes atienden también a la espiral */
+{
+  const cs0 = computeSheet, cst0 = computeState, dr0 = drawSheet, sv0 = toSVG;
+  computeSheet = function (state, W, H, q = 1) { return esEspiral(state.cfg) ? computeEspiral(state, W, H, q) : cs0(state, W, H, q); };
+  computeState = function (st, W, H, q) {
+    const b = st.blend, bE = b && esEspiral(b.state.cfg);
+    if (!esEspiral(st.cfg) && !bE) return cst0(st, W, H, q);
+    if (!b) return computeEspiral(st, W, H, q);
+    if (esEspiral(st.cfg) && bE) {
+      const cfg = { ...st.cfg };
+      for (const k in b.state.cfg) if (typeof b.state.cfg[k] === 'number' && typeof cfg[k] === 'number') cfg[k] = cfg[k] + (b.state.cfg[k] - cfg[k]) * b.e;
+      return computeEspiral({ time: st.time + (b.state.time - st.time) * b.e, cfg }, W, H, q);
+    }
+    return b.e < 0.5 ? computeSheet(st, W, H, q) : computeSheet(b.state, W, H, q);
+  };
+  drawSheet = function (ctx, lines, cfg, W, H, mode) { if (lines && lines.espiral) return drawEspiral(ctx, lines, esEspiral(cfg) ? cfg : { ...config, ...cfg }, W, H); return dr0(ctx, lines, cfg, W, H, mode); };
+  toSVG = function (lines, cfg, W, H, mode) { return lines && lines.espiral ? espiralSVG(lines, cfg, W, H) : sv0(lines, cfg, W, H, mode); };
+}
+/* el estilo en la lista de presets: la secuencia empieza desde el nacimiento */
+BUILTIN.push({ name: 'Espiral de Fibonacci con hilos', render: 'puntos', cfg: { generator: 'espiral', colorBg: '#121212', colorDeep: '#ffffff', colorAccent: '#ffffff', inkMode: 'luz', speed: 1 } });
+renderPresetSelect();
+{ const ap0 = applyPreset; applyPreset = function (id) { const pr = presetById(id); ap0(id); if (pr && pr.cfg && pr.cfg.generator === 'espiral' && !esEspiral(config)) live.time = 0; }; }
+/* controles propios en el panel; los de la superficie se ocultan mientras la espiral está activa */
+const ESP_CTRL = [['espPuntos','Puntos',100,1200,1],['speed','Velocidad (1 = la del video)',0,3,0.01],['espGiro','Giro del disco (°)',-180,180,1],['espEscalaPuntos','Separación de los puntos',0.3,2.5,0.01],['espExpPuntos','Expansión de los puntos (×)',1,4,0.05],
+  ['espEscalaEspiral','Tamaño de la espiral',0.3,2.5,0.01],['espExpEspiral','Expansión de la espiral (×)',1,5,0.05],['espLargo','Largo de la curva',0.2,2.5,0.01],['espEnrollado','Enrollado (0 recta · 1 áurea)',0,1.5,0.01],['espOjo','Ojo del centro',0.002,0.08,0.001],
+  ['espHilos','Hilos visibles',0,1,0.01],['espTamPunto','Tamaño de punto (px a 1080)',0.5,6,0.05],['espGrosorCurva','Grosor de la curva',0.5,8,0.05],['espGrosorHilo','Grosor del hilo',0.2,3,0.05],
+  ['espOpPunto','Opacidad de punto',0,1,0.01],['espOpCurva','Opacidad de la curva',0,1,0.01],['espOpHilo','Opacidad del hilo',0,1,0.01]];
+{
+  const panel = document.getElementById('panel'), h = document.createElement('h2'), box = document.createElement('div');
+  h.textContent = 'Espiral'; h.className = 'esp-only'; box.id = 'g-espiral'; box.className = 'esp-only';
+  panel.insertBefore(box, panel.querySelector('h2:nth-of-type(2)')); panel.insertBefore(h, box);
+  for (const [key, label, min, max, step] of ESP_CTRL) {
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `<label for="e-${key}">${label}</label><output></output><input type="range" id="e-${key}" min="${min}" max="${max}" step="${step}">`;
+    const input = row.querySelector('input'), out = row.querySelector('output');
+    input.value = config[key]; out.textContent = config[key];
+    input.addEventListener('input', e => { presetMorph = null; if (morph) finishMorphNow(); config[key] = parseFloat(e.target.value); out.textContent = config[key]; dirty = true; markModified(); if (key === 'speed') { const s = document.getElementById('s-speed'); if (s) { s.value = config.speed; s.parentNode.querySelector('output').textContent = config.speed; } } });
+    box.appendChild(row);
+  }
+  for (const h2 of panel.querySelectorAll('h2')) if (['Lámina', 'Trazo', 'Cámara'].includes(h2.textContent)) h2.classList.add('sup-only');
+  ['g-sheet', 'renderSeg', 'g-stroke', 'g-cam', 'g-light'].forEach(id => document.getElementById(id).classList.add('sup-only'));
+  const ss0 = syncSliders;
+  syncSliders = function () { ss0(); for (const [key] of ESP_CTRL) { const el = document.getElementById('e-' + key); if (el) { el.value = config[key]; el.parentNode.querySelector('output').textContent = Math.round(config[key] * 1000) / 1000; } } };
+  const marcar = () => document.body.classList.toggle('gen-espiral', esEspiral(config));
+  setInterval(marcar, 250); marcar();
+}
+/* sus parámetros, animables en la línea de tiempo */
+[['espPuntos','Puntos',100,1200,1,'scatter_plot',{ hold: true }],['espGiro','Giro del disco',-180,180,1,'rotate_right'],['espEscalaPuntos','Separación de los puntos',0.3,2.5,0.01,'blur_on'],['espExpPuntos','Expansión de los puntos',1,4,0.05,'open_with'],
+ ['espEscalaEspiral','Tamaño de la espiral',0.3,2.5,0.01,'cyclone'],['espExpEspiral','Expansión de la espiral',1,5,0.05,'zoom_out_map'],['espLargo','Largo de la curva',0.2,2.5,0.01,'straighten'],['espEnrollado','Enrollado',0,1.5,0.01,'autorenew'],
+ ['espHilos','Hilos visibles',0,1,0.01,'share'],['espTamPunto','Tamaño de punto',0.5,6,0.05,'fiber_manual_record'],['espGrosorCurva','Grosor de la curva',0.5,8,0.05,'line_weight'],['espGrosorHilo','Grosor del hilo',0.2,3,0.05,'linear_scale'],
+ ['espOpPunto','Opacidad de punto',0,1,0.01,'grain'],['espOpCurva','Opacidad de la curva',0,1,0.01,'opacity'],['espOpHilo','Opacidad del hilo',0,1,0.01,'texture']]
+  .forEach(([path, label, min, max, step, icon, extra]) => { const p = { g: 'Espiral', path, label, min, max, step, icon, ...(extra || {}) }; PARAMS.push(p); PARAM[path] = p; });
+/* el archivo de trama de la espiral necesita la próxima versión del formato */
+{ const ex0 = exportTrama; exportTrama = function (nombre) { if (esEspiral(config) || (tl.scenes || []).some(s => esEspiral(s.st && s.st.cfg))) { toast('La trama de la espiral llega con la próxima versión del formato; por ahora sale como video, PNG o SVG'); return; } return ex0(nombre); }; }
+
+
+renderStrip();
+layout();
+requestAnimationFrame(frame);
+
+renderStrip();
+layout();
+requestAnimationFrame(frame);
+</script>
+<script>
+/* =========================================================
+   [ContOpe] Puente con el escritorio
+   ---------------------------------------------------------
+   El escritorio muestra este generador en un iframe y le
+   habla con postMessage ({ fuente: 'contope-trama', tipo }).
+   Del escritorio llegan:
+     · iniciar: los colores del ADN (lejos, cerca, fondo, con
+       su origen) como valores de partida, los formatos de
+       hoja del ADN (se suman al menú de formato) y si se
+       pide quietud (prefers-reduced-motion: parte en pausa);
+     · colores: «Volver al ADN»;
+     · importar: una trama (el archivo, ya leído);
+     · pedir-trama: el escritorio quiere el estado actual
+       como archivo de trama (para la Célula Madre).
+   Al escritorio salen «listo», «trama» (la pedida) y
+   «trama-exportada» (la de «Exportar trama»).
+   La traducción entre este estado y el archivo de trama
+   está en @contope/trama (formato/generador-v7.ts).
+   ========================================================= */
+(function () {
+  const padre = window.parent !== window ? window.parent : null;
+  if (!padre) return;
+  const FUENTE = 'contope-trama';
+  let coloresAdn = {}, formatosAdn = [];
+  const enviar = m => padre.postMessage({ fuente: FUENTE, ...m }, '*');
+  const formatSel = document.getElementById('format');
+  puenteDeTrama.opciones = () => ({ colores: coloresAdn, lienzo: lienzoAdn() });
+  puenteDeTrama.exportada = trama => enviar({ tipo: 'trama-exportada', trama });
+
+  function ponerColores(colores) {
+    let alguno = false;
+    for (const k of ['lejos', 'cerca', 'fondo']) {
+      const c = colores && colores[k];
+      if (c && /^#[0-9a-fA-F]{6}$/.test(c.hex)) { config[TRAMA.COLOR_V7[k]] = c.hex.toLowerCase(); alguno = true; }
+    }
+    if (!alguno) return;
+    presetMorph = null; if (morph) finishMorphNow();
+    syncSliders(); markModified(); if (tl.open) renderLanes(); dirty = true;
+  }
+  function ponerFormatos(formatos) {
+    formatSel.querySelectorAll('option[data-adn]').forEach(o => o.remove());
+    for (const f of formatos) {
+      const o = document.createElement('option');
+      o.value = f.valor; o.textContent = f.etiqueta; o.dataset.adn = f.clave;
+      formatSel.appendChild(o);
+    }
+    formatSel.value = format;
+  }
+  function lienzoAdn() {
+    const o = formatSel.selectedOptions[0];
+    if (!o || !o.dataset.adn || o.value !== format) return undefined;
+    const f = formatosAdn.find(x => x.clave === o.dataset.adn);
+    return f ? f.lienzo : undefined;
+  }
+  function importar(trama) {
+    const e = TRAMA.estadoV7DeTrama(trama);
+    presetMorph = null; morph = null; previewState = null;
+    if (tlRec.on) tlRecStop(); if (stRec.on) stRecStop(); tlPlay(false);
+    Object.assign(config, JSON.parse(JSON.stringify(DEFAULTS)), e.cfg);
+    render = e.render; live.time = e.time;
+    if (![...formatSel.options].some(o => o.value === e.format)) {
+      const o = document.createElement('option'); o.value = e.format; o.textContent = e.format.replace('x', ' × '); formatSel.appendChild(o);
+    }
+    format = e.format; formatSel.value = format; layout();
+    undoDoc = null; document.getElementById('tlUndo').hidden = true;
+    tl.sel = null; tl.selScene = null;
+    if (e.tl) {
+      Object.assign(tl, { duration: e.tl.duration, startTime: e.tl.startTime, cursor: e.tl.cursor, tracks: e.tl.tracks, scenes: e.tl.scenes });
+      sceneSeq = tl.scenes.reduce((m, x) => Math.max(m, x.id), 0);
+      regenerateScenes();
+    } else Object.assign(tl, { tracks: {}, scenes: [], applyPoints: [] });
+    puenteDeTrama.nombre = e.nombre || null;
+    perfSel = null; renderPerfs();
+    modified = true; renderPresetSelect(); syncSliders(); syncRender(); saveTimeline();
+    if (e.tl && !tl.open) openTimeline(true);
+    else if (tl.open) { document.getElementById('tlDur').value = tl.duration; fitView(); renderRuler(); renderLanes(); renderNav(); renderScenes(); renderWave(); onHeadChange(); }
+    dirty = true;
+    toast('Trama importada' + (e.nombre ? ': ' + e.nombre : ''));
+  }
+
+  window.addEventListener('message', ev => {
+    const m = ev.data;
+    if (ev.source !== padre || !m || m.fuente !== FUENTE) return;
+    try {
+      if (m.tipo === 'iniciar') {
+        coloresAdn = m.colores || {}; formatosAdn = Array.isArray(m.formatos) ? m.formatos : [];
+        ponerFormatos(formatosAdn); ponerColores(coloresAdn);
+        if (m.quietud && !live.paused) setPaused(true);
+      } else if (m.tipo === 'colores') {
+        coloresAdn = m.colores || {}; ponerColores(coloresAdn);
+        toast('Colores del ADN');
+      } else if (m.tipo === 'importar') {
+        importar(m.trama);
+      } else if (m.tipo === 'pedir-trama') {
+        try { enviar({ tipo: 'trama', pedido: m.pedido, trama: TRAMA.tramaDeEstadoV7(estadoParaTrama(), puenteDeTrama.opciones()) }); }
+        catch (e) { enviar({ tipo: 'trama', pedido: m.pedido, error: e.message || String(e) }); }
+      }
+    } catch (e) { toast('No se pudo: ' + (e.message || e)); }
+  });
+  enviar({ tipo: 'listo' });
+})();
+</script>
+</body>
+</html>

@@ -6,7 +6,7 @@
  * volver a leer una ruta del disco).
  */
 import { configuracionVacia, validarConfiguracion, type ConfiguracionDeIA } from '../dominio/proveedores.js';
-import type { ArchivoDeInsumo, ArchivoDeSistema, EstadoDeIA, Puente, PuenteDeIA, Reciente, Vistazo } from './tipos.js';
+import type { ArchivoDeInsumo, ArchivoDeSistema, ArchivoParaGuardar, EstadoDeIA, Puente, PuenteDeIA, Reciente, Vistazo } from './tipos.js';
 
 const CLAVE_RECIENTES = 'contope.recientes';
 const MAX_RECIENTES = 6;
@@ -29,8 +29,10 @@ function elegirArchivos(opciones: { multiple: boolean; aceptar?: string }): Prom
   });
 }
 
-function descargar(nombre: string, texto: string): void {
-  const url = URL.createObjectURL(new Blob([texto], { type: 'application/json' }));
+function descargar(nombre: string, contenido: string | Uint8Array, tipo = 'application/json'): void {
+  // Se copia a un ArrayBuffer propio: Blob no acepta una vista sobre un SharedArrayBuffer.
+  const parte = typeof contenido === 'string' ? contenido : contenido.slice().buffer;
+  const url = URL.createObjectURL(new Blob([parte], { type: tipo }));
   const a = document.createElement('a');
   a.href = url;
   a.download = nombre;
@@ -167,8 +169,8 @@ export function puenteNavegador(): Puente {
       if (!archivo) return null;
       return { ruta: null, nombre: archivo.name, texto: await archivo.text() };
     },
-    async exportarCapsula(archivos) {
-      for (const a of archivos) descargar(a.nombre, a.texto);
+    async guardarArchivo(archivo: ArchivoParaGuardar) {
+      descargar(archivo.nombre, archivo.bytes, archivo.tipoMime);
       return 'descargas del navegador';
     },
     async listarRecientes(): Promise<Reciente[]> {

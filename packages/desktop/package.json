@@ -35,7 +35,9 @@
   },
   "dependencies": {
     "@contope/core": "workspace:*",
+    "@contope/trama": "workspace:*",
     "fflate": "^0.8.2",
+    "mp4-muxer": "5.2.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

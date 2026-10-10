@@ -7,6 +7,13 @@ function deBase64(texto: string): Uint8Array {
   return bytes;
 }
 
+/** Por tramos: `String.fromCharCode(...bytes)` revienta la pila con archivos grandes. */
+function aBase64(bytes: Uint8Array): string {
+  let binario = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binario += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binario);
+}
+
 export function puenteElectron(nativo: PuenteElectron): Puente {
   return {
     entorno: 'electron',
@@ -25,7 +32,7 @@ export function puenteElectron(nativo: PuenteElectron): Puente {
         bytes: deBase64(a.bytes),
       })),
     abrirPropuestas: () => nativo.abrirPropuestas(),
-    exportarCapsula: (archivos) => nativo.exportarCapsula(archivos),
+    guardarArchivo: (archivo) => nativo.guardarArchivo(archivo.nombre, aBase64(archivo.bytes)),
     listarRecientes: () => nativo.listarRecientes(),
     descargarCatalogo: () => nativo.descargarCatalogo(),
     ia: nativo.ia,

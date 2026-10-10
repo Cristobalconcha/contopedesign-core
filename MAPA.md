@@ -13,7 +13,11 @@ Todo lo que dice acá está medido contra el commit `94933d8` (207 pruebas en
 
 ```
 packages/core     @contope/core     — el núcleo: manifiesto, set, contrato. Sin React, sin disco.
-packages/desktop  @contope/desktop  — la interfaz: Electron + Vite + React. Depende de @contope/core.
+packages/desktop  @contope/desktop  — la interfaz: Electron + Vite + React. Depende de @contope/core
+                                      y de @contope/trama (la vista previa de la trama).
+packages/trama    @contope/trama    — las tramas generativas (decisión 36): motor, línea de tiempo,
+                                      archivo de trama. Puro; no depende de nadie. Ver §2.6.
+                                      @contope/core depende de él (el generador de tramas, §2.5).
 ```
 
 `packages/core/src/index.ts` es un barril puro: reexporta y no declara nada.
@@ -56,6 +60,7 @@ del §4.
 | `persistence.ts` | Exportar/importar el set con validación fail-closed. |
 | `project-to-designruleset.ts` | Proyección a las reglas del compilador del plugin. Cubre `color`, `surface` (dim1) y `typography` (dim2.req02). `spacing`/`layout` (dim3) sin proyector a propósito. Tres requisitos declarados «sin cobertura» porque piden decisión de producto (ver `pendientes-aprobacion-cristobal.md` en el vault). |
 | `dim1-fixture.ts` | Un set de ejemplo que resuelve dim1 entera; lo usan las pruebas de integración. |
+| `dim3-fixture.ts` | Un sistema editorial impreso (espacio de dim3 en mm: retículas, tres formatos de hoja, sangrado, línea base) más los colores de dim1; lo usan las pruebas de la Grilla. `buildDim3EspacioConTipografiaDesignSet` le suma la tipografía de dim2 (el cuerpo de texto en Source Serif 4, 10/12 pt) para el cálculo de texto. |
 
 ### 2.3 `nucleo/` — los núcleos por mundo
 
@@ -79,15 +84,69 @@ El escritorio los conecta en `dominio/nucleos.ts` (`nucleoDeMundo`, `enNucleo`) 
 
 Nada de esto cambia al agregar una dimensión.
 
+### 2.5 `celulas-madre/` — las Células Madre (decisión 35, 08-10-2026)
+
+Core tiene dos partes: el **ADN** (todo lo anterior: las definiciones) y las
+**Células Madre** (archivos hechos con el ADN que se importan tal cual en otra
+herramienta). Un set de generadores; cada uno es una extensión. Detalle,
+formato de la metadata y cómo se agrega uno: [`packages/core/src/celulas-madre/README.md`](packages/core/src/celulas-madre/README.md).
+
+| archivo | qué hace |
+|---|---|
+| `tipos.ts` | `Generador` (id, versión, nombre, descripción, formato, `queLee`, `lee`, `disponible`, `parametros`, `comoUsar` opcional, `generar`), `MetadataDeCelula` (kind `contope/celula-madre`, schemaVersion 1), `FichaDeCelula` (la metadata más la huella de cada archivo), `Vigencia`. |
+| `huella.ts` | SHA-256 propio y síncrono + JSON canónico → `huella(payload)`. |
+| `metadata.ts` | `metadataDeAncestro`, `fichaDe`, `vigencia` (vigente / desactualizada / huérfana), `leerMetadataDeCelula`, `leerFichaDeCelula`. |
+| `leeme.ts` | `escribirLeeme`: el `LEEME.md` para personas (con una sección propia por archivo si el generador trae `anexo`), que termina con la ficha en un bloque ```json; `leerMetadataDeLeeme` la vuelve a sacar. Nombres cortos de las preguntas y cómo se usa cada formato. |
+| `zip.ts` | `armarZip` (con `fflate`, determinista), `entradasDeCelula` (LEEME + archivos, en una carpeta si se pide), `zipDeCelula` (`<sistema>-<generador>.zip`). |
+| `registro.ts` | **`GENERADORES`: acá se registra cada generador nuevo**; `resolverParametros`, `generarCelula` (archivos, LEEME y zip). |
+| `color-del-adn.ts`, `ase.ts` | Colores de dim1 a sRGB; escritor de `.ase`. |
+| `generador-paleta-ase.ts`, `generador-degradados-svg.ts` | Paleta `.ase` y degradados `.svg` (desde la dimensión 1). |
+| `espacio-del-adn.ts`, `texto-del-adn.ts`, `generador-grilla-svg.ts` | Grilla `.svg` (desde la dimensión 3): la retícula sobre cada formato de hoja, con márgenes, sangrado y línea base, una capa por parte y las cotas, las divisiones binaria y ternaria, y el **cálculo de texto** con la familia por defecto del cuerpo de texto (rol «cuerpo» de `dim2.req02`): caracteres por línea, por columna, por página y por cm de columna (ancho medio estimado: el ADN no trae métricas de fuente). |
+| `trama-del-adn.ts`, `generador-trama.ts` | **Trama** (decisión 36), con el motor de `@contope/trama`: `armarTrama` arma una trama desde el ADN —colores por rol con `origen`/`rol`/`huella`, formatos de hoja de dim3 como lienzo— o sin él (colores del look); el generador entrega `.trama.json` (vivo, para Publisher), `.trama.txt` (código CT1) y `.trama.svg` (cuadro quieto). Disponible siempre. Una receta pegada (parámetro `texto`) manda. |
+
+Lee el DesignSet; no depende de ningún manifiesto en particular (los ids que
+lee cada generador están en su `lee`). En el escritorio: `dominio/celulas.ts`
+(correr un generador sobre el sistema, el registro y la vigencia),
+`Sistema.celulasMadre` (opcional en el archivo: uno viejo abre con `[]`),
+`puente.guardarArchivo` (un archivo con nombre sugerido: el `.zip`),
+`pantallas/CelulasMadre.tsx` (el menú; pestaña propia en la barra, separada
+de las fases porque no es una etapa del armado; la trama abre
+`pantallas/GeneradorDeTrama.tsx`, con vista previa viva, escenas, importar
+CT1/SP1/JSON y descargas zip, PNG y video `.webm`; su estado en
+`dominio/trama.ts` y el dibujo en `navegador/trama.ts`) y `dominio/exportacion.ts`
+(«Exportar ADN»: la cápsula y las Células Madre regeneradas, en un zip).
+
+### 2.6 `packages/trama` — las tramas generativas (decisión 36, 09-10-2026)
+
+Un paquete aparte, no un módulo de `core`: Publisher lo consume construido
+(`dist/`) y no debe arrastrar el manifiesto. Puro (su `tsconfig.json` no
+carga tipos de DOM ni de Node). Detalle, formato campo por campo y cómo lo
+trae Publisher: [`packages/trama/README.md`](packages/trama/README.md).
+
+| carpeta / archivo | qué hace |
+|---|---|
+| `motor/` | El motor «superficie de puntos» de v7, portado sin cambiar fórmulas: `ruido.ts` (Perlin con semilla fija), `camara.ts`, `configuracion.ts` (27 parámetros en español y `NOMBRE_V7`), `lamina.ts` (`calcularLamina` → cuadro `Float32Array` de tamaño fijo, 5 valores por punto; `cuadroDeEstado` con morf). Reproduce la huella `9c130d7e7d11640b` de Publisher. |
+| `dibujo/` | Lo que generador, SVG y reproductor dibujan igual: 12 tonos, 4 niveles de alfa, tinta luz/tinta/auto, tramos de línea, `tirasDeTramos` (líneas con grosor real para WebGL), `mezclarCuadros`, `cuadroASvg`. |
+| `linea-de-tiempo/` | `estadoEn(trama, t)`: keyframes y suavizados, enteros que saltan, colores, evolución con morf, escenas → keyframes y escena de cierre. Fiel a v7 (cruzado contra su código). |
+| `formato/` | El archivo de trama (`kind: contope/trama`, versión 1): tipos, `validarTrama` (errores en español con ruta, límites duros), `normalizarTrama`, `leerTrama` (JSON, `CT1.`, `SP1.` viejos), `codificarTrama`. |
+| `reproduccion.ts`, `worker/atendedor.ts` | El reloj común (`instanteDeCuadro`) y el protocolo del worker, puros. |
+| `scripts/construir.mjs`, `dist/` | `pnpm trama:construir`: `contope-trama.js` (IIFE, `ContopeTrama`), `contope-trama-worker.js` (worker autónomo), `MOTOR.json` (versiones y sha256). `dist/` se versiona; una prueba falla si quedó viejo. |
+
+**Quién genera tramas.** Core: `celulas-madre/generador-trama.ts` (§2.5) y la
+pantalla de la trama del escritorio, los dos con `armarTrama`. Importan este
+paquete por su fuente (`@contope/trama`, dependencia de workspace); Publisher,
+por `dist/`. El motor no se copia en ninguno.
+
 ## 3. El escritorio, módulo por módulo
 
 ```
-src/main.tsx → App.tsx → pantallas/{Inicio,Recoleccion,Definicion,Construccion}.tsx
+src/main.tsx → App.tsx → pantallas/{Inicio,Alcance,Recoleccion,Definicion,Construccion,Armonizacion,CelulasMadre,Proveedores}.tsx
+                        → pantallas/GeneradorDeTrama.tsx (desde CelulasMadre)
                         → instrumentos/{index,Ventana,Tipografia,ColorFundamento,EscalaEspacial,EditorEstructurado}.tsx
                         → componentes/Primitiva.tsx
 dominio/   — todo lo que no dibuja
 puente/    — el disco: electron.ts (IPC) o navegador.ts (File API); tipos.ts es el contrato
-navegador/ — fuentes.ts (cargar una familia de Google), imagen.ts (paleta dominante)
+navegador/ — fuentes.ts (cargar una familia de Google), imagen.ts (paleta dominante), trama.ts (dibujar una trama, PNG, video)
 electron/  — main.ts, preload.ts
 scripts/   — desarrollo.mjs, empaquetar-electron.mjs, actualizar-catalogo-tipografico.mjs
 datos/     — catalogo-google-fonts.json (1.946 familias, copia fechada)
@@ -113,6 +172,8 @@ dimensiones hay. Todo lo demás los lee.
 | `reductor.ts` | Todas las acciones sobre el archivo del taller (`Sistema`): agregar insumo, adoptar candidato, aprobar, encargar, resolver conflicto… Al primer `entry` de una dimensión escribe `manifestRefs[dim]` desde el manifiesto real. | No. |
 | `sistema.ts` | El tipo `Sistema` (el `.contope.json`) y su estado vacío. | No. |
 | `capsula.ts` | Proyecta el `Sistema` a `design-contract.json` + `DESIGN.md` con los proyectores del núcleo. | No. |
+| `celulas.ts` | Corre un generador de Células Madre sobre el sistema, el registro («Lo generado») y su vigencia. | No. |
+| `exportacion.ts` | «Exportar ADN»: un `<sistema>-adn.zip` con la cápsula, `celulas-madre/<sistema>-<generador>/` por cada Célula Madre del registro (regenerada con este ADN, con su `LEEME.md`) y un `LEEME.md` en la raíz que dice qué trae y qué quedó fuera. | No. |
 | `catalogo.ts` | El catálogo tipográfico y sus filtros. | No. |
 | `mundos.ts` | Los cuatro mundos (propuesta sin confirmar); hoy todos usan el mismo manifiesto y la pantalla lo dice. | No, hasta que exista un núcleo por mundo. |
 | `extractores/{ase,css,fuente,idml,imagen,pdf,tokens-w3c}.ts` | Cada extractor produce candidatos apuntando a ids concretos (`dim1.req01`, `dim2.req01`, `dim3.req01`…). El de PDF lee sin dibujar; la miniatura la dibuja `navegador/pdf.ts` con pdf.js. | Sólo si un insumo trae algo de la dimensión nueva. No es obligatorio. |
