@@ -16,6 +16,11 @@
  *   trama como receta (`CT1.…`).
  *
  * Sin ADN funciona igual: no se mandan colores y v7 usa los suyos.
+ *
+ * El v7 publicado, sin tocar, queda de referencia en
+ * `packages/desktop/referencia/generador-v7.original.html`: contra él se
+ * comparan los píxeles, y su diff con la copia de `public/` es la lista de
+ * lo que se le cambió adentro.
  */
 import { coloresDeTramaDelAdn, formatosParaTrama, type DesignSetV0 } from '@contope/core';
 import { codificarTrama, type ClaveDeColor, type ColorDeTrama, type Lienzo, type Trama } from '@contope/trama';
@@ -46,7 +51,13 @@ export type MensajeAlGenerador = ConFuente<
   | { tipo: 'pedir-trama'; pedido: number }
 >;
 
-export type MensajeDelGenerador = ConFuente<{ tipo: 'listo' } | { tipo: 'trama'; pedido: number; trama: Trama } | { tipo: 'trama'; pedido: number; error: string }>;
+export type MensajeDelGenerador = ConFuente<
+  | { tipo: 'listo' }
+  | { tipo: 'trama'; pedido: number; trama: Trama }
+  | { tipo: 'trama'; pedido: number; error: string }
+  /** La que se guardó con «Exportar trama» de v7: el escritorio ofrece su Célula Madre. */
+  | { tipo: 'trama-exportada'; trama: Trama }
+>;
 
 /** Los colores que el ADN da por rol. Los que no salen del ADN no se mandan: v7 conserva los suyos. */
 export function coloresParaElGenerador(designSet: DesignSetV0 | null): ColoresParaElGenerador {
@@ -70,6 +81,7 @@ export function esMensajeDelGenerador(x: unknown): x is MensajeDelGenerador {
   const m = x as Record<string, unknown>;
   if (m['fuente'] !== FUENTE_DEL_GENERADOR) return false;
   if (m['tipo'] === 'listo') return true;
+  if (m['tipo'] === 'trama-exportada') return typeof m['trama'] === 'object' && m['trama'] !== null;
   return m['tipo'] === 'trama' && typeof m['pedido'] === 'number' && (typeof m['error'] === 'string' || (typeof m['trama'] === 'object' && m['trama'] !== null));
 }
 

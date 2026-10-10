@@ -12,6 +12,8 @@
  * - le pasa al generador los colores del ADN como valores de partida y los
  *   formatos de hoja del ADN; «Volver al ADN» se los vuelve a pasar;
  * - abre una trama (archivo de trama, código CT1 o SP1) y se la pasa;
+ * - cuando v7 guarda su trama («Exportar trama»), ofrece también su Célula
+ *   Madre;
  * - pide la trama en pantalla y hace la Célula Madre (`.zip`: archivo de
  *   trama, código CT1 e imagen SVG, con su LEEME y la metadata de ancestro)
  *   por el mismo camino que los demás generadores.
@@ -47,6 +49,8 @@ export function GeneradorDeTrama(props: { volver(): void }) {
   const hayColoresDelAdn = Object.keys(colores).length > 0;
 
   const marco = useRef<HTMLIFrameElement | null>(null);
+  /** La última trama guardada con «Exportar trama» de v7: se ofrece su Célula Madre. */
+  const [exportada, setExportada] = useState<Trama | null>(null);
   const [listo, setListo] = useState(false);
   const pedidos = useRef(new Map<number, (r: { trama: Trama } | { error: string }) => void>());
   const siguiente = useRef(1);
@@ -64,6 +68,10 @@ export function GeneradorDeTrama(props: { volver(): void }) {
         setListo(true);
         enviar({ tipo: 'iniciar', colores, formatos, quietud: quiereQuietud() });
         marco.current?.contentWindow?.focus();
+        return;
+      }
+      if (m.tipo === 'trama-exportada') {
+        setExportada(m.trama);
         return;
       }
       const resolver = pedidos.current.get(m.pedido);
@@ -91,12 +99,13 @@ export function GeneradorDeTrama(props: { volver(): void }) {
 
   // El iframe llena lo que queda de la ventana bajo la cabecera.
   const [alto, setAlto] = useState(640);
+  const medir = (): void => {
+    const arriba = marco.current?.getBoundingClientRect().top ?? 0;
+    setAlto(Math.max(512, Math.round(window.innerHeight - Math.max(0, arriba) - 16)));
+  };
+  // después de cada render (un aviso arriba lo corre hacia abajo) y al cambiar la ventana
+  useEffect(medir);
   useEffect(() => {
-    const medir = (): void => {
-      const arriba = marco.current?.getBoundingClientRect().top ?? 0;
-      setAlto(Math.max(512, Math.round(window.innerHeight - Math.max(0, arriba) - 16)));
-    };
-    medir();
     window.addEventListener('resize', medir);
     return () => window.removeEventListener('resize', medir);
   }, []);
@@ -128,10 +137,10 @@ export function GeneradorDeTrama(props: { volver(): void }) {
 
   // --- la Célula Madre ----------------------------------------------------------
   const [ocupado, setOcupado] = useState(false);
-  const exportarCelula = async (): Promise<void> => {
+  const exportarCelula = async (dada?: Trama): Promise<void> => {
     setOcupado(true);
     try {
-      const trama = await pedirTrama();
+      const trama = dada ?? (await pedirTrama());
       const r = generarEnElTaller(sistema, generadorTrama, parametrosDeCelula(trama));
       if (!r.ok) {
         avisar(r.falta, 'error');
@@ -140,6 +149,7 @@ export function GeneradorDeTrama(props: { volver(): void }) {
       const destino = await puente.guardarArchivo(paraGuardar(r.zip));
       if (destino === null) return;
       despachar({ tipo: 'registrar-celula', celula: r.celula });
+      if (dada) setExportada(null);
       avisar(`Trama: ${r.zip.nombre} (${r.celula.archivos.map((a) => a.nombre).join(', ')} y su LEEME.md) en ${destino}. Guarda el sistema para que recuerde lo generado.`);
     } catch (error) {
       avisar((error as Error).message, 'error');
@@ -176,6 +186,20 @@ export function GeneradorDeTrama(props: { volver(): void }) {
         </div>
       </div>
       {errorDeAbrir ? <p className="tr-error">{errorDeAbrir}</p> : null}
+      {exportada ? (
+        <div className="tr-exportada" role="status">
+          <span>
+            Trama exportada desde el generador{exportada.nombre ? ` («${exportada.nombre}»)` : ''}, {exportada.tiempo.modo === 'secuencia' ? `secuencia de ${exportada.tiempo.duracion} s` : 'en vivo'}.
+            Puedes bajarla también como Célula Madre, con su LEEME y su procedencia.
+          </span>
+          <button className="btn chico fuerte" disabled={ocupado} onClick={() => void exportarCelula(exportada)}>
+            Célula Madre de esta trama
+          </button>
+          <button className="btn chico" onClick={() => setExportada(null)}>
+            No, gracias
+          </button>
+        </div>
+      ) : null}
       <iframe ref={marco} className="tr-generador" src={PAGINA_DEL_GENERADOR} title="Generador de tramas" style={{ height: `${alto}px` }} />
     </section>
   );

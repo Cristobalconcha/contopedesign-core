@@ -74,6 +74,8 @@ describe('La pantalla de la trama: el puente con el generador v7', () => {
     expect(esMensajeDelGenerador({ fuente: FUENTE_DEL_GENERADOR, tipo: 'listo' })).toBe(true);
     expect(esMensajeDelGenerador({ fuente: FUENTE_DEL_GENERADOR, tipo: 'trama', pedido: 1, error: 'x' })).toBe(true);
     expect(esMensajeDelGenerador({ fuente: FUENTE_DEL_GENERADOR, tipo: 'trama', pedido: 1 })).toBe(false);
+    expect(esMensajeDelGenerador({ fuente: FUENTE_DEL_GENERADOR, tipo: 'trama-exportada', trama: {} })).toBe(true);
+    expect(esMensajeDelGenerador({ fuente: FUENTE_DEL_GENERADOR, tipo: 'trama-exportada' })).toBe(false);
     expect(esMensajeDelGenerador({ fuente: 'otra', tipo: 'listo' })).toBe(false);
     expect(esMensajeDelGenerador('listo')).toBe(false);
   });
