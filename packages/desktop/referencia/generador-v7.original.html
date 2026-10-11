@@ -210,6 +210,18 @@
   body.tl-open .bar #perfAudio { display: none; }
   .bar #capSnap { display: none; }
   #tlStRec { display: none !important; }
+  body.tl-behind .bar #pause { display: none; }
+  .fs-prim { flex: 0 0 64px; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; }
+  .fs-prim i { font-style: normal; font-size: 20px; line-height: 1; color: var(--accent); }
+  .fs-prim:hover { border-color: var(--accent); }
+  .fs-sep { flex: 0 0 1px; background: var(--line); margin: 4px 2px; }
+  .bar #pause { display: none !important; }
+  .bar .tr { min-width: 44px; } .bar .tr.on { background: rgba(160,230,255,.16); border-color: var(--line); }
+  body.perf-armed .bar #trPlay { background: #ff4d5e; color: #fff; font-weight: 700; }
+  .bar #trLoop.on { background: rgba(61,214,192,.2); border-color: var(--accent); color: var(--ink); }
+  .fs-item .fs-del { position: absolute; right: 4px; bottom: 4px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); background: rgba(6,14,22,.85); color: var(--ink); cursor: pointer; font-size: 14px; line-height: 18px; padding: 0; display: none; }
+  .fs-item:hover .fs-del, .fs-item:focus-within .fs-del, .fs-item.sel .fs-del { display: block; }
+  .fs-item .fs-del:hover { background: #ff4d5e; border-color: #ff4d5e; }
   .esp-only { display: none; } body.gen-espiral .esp-only { display: block; } body.gen-espiral .sup-only { display: none !important; }
 </style>
 </head>
@@ -371,7 +383,8 @@ const config = {
   inkMode: 'auto',      // luz (los puntos suman luz) · tinta (los puntos oscurecen, como en papel) · auto según el fondo
   generator: 'superficie', // superficie · espiral (Espiral de Fibonacci con hilos)
   espPuntos: 550, espGiro: 0, espEscalaPuntos: 1, espExpPuntos: 1.7, espEscalaEspiral: 1, espExpEspiral: 2.2, espLargo: 1, espEnrollado: 1, espOjo: 0.015,
-  espHilos: 1, espTamPunto: 4.5, espGrosorCurva: 4, espGrosorHilo: 1.2, espOpPunto: 1, espOpCurva: 0.95, espOpHilo: 0.3
+  espHilos: 1, espTamPunto: 4.5, espGrosorCurva: 4, espGrosorHilo: 1.2, espOpPunto: 1, espOpCurva: 0.95, espOpHilo: 0.3,
+  primX: 0, primY: 0, primOp: 1   // primitivas: recoger hacia el eje vertical, hacia el eje horizontal, presencia de la figura
 };
 /* Modo de dibujo: puntos, líneas o ambos superpuestos. Las capturas,
    presets y documentos anteriores guardaban «dotted» (sí/no): se leen igual. */
@@ -943,7 +956,7 @@ function renderStrip() {
   const info = document.getElementById('fsSelInfo'), acts = document.getElementById('fsActions');
   if (snapSel && snaps.includes(snapSel)) {
     info.innerHTML = `<b>Captura ${snapSel.num}</b>`;
-    acts.innerHTML = (tl.open ? `<button data-a="apply" style="background:var(--accent);color:#031a14;border-color:var(--accent);font-weight:700">Aplicar en el cabezal</button>` : '') + `<button data-a="svg">SVG vectorial</button><button data-a="png">PNG 300 dpi</button><button data-a="code">Copiar código</button><button data-a="del">Quitar</button>`;
+    acts.innerHTML = (tl.open ? `<button data-a="apply" style="background:var(--accent);color:#031a14;border-color:var(--accent);font-weight:700">Aplicar en el cabezal</button>` : '') + `<button data-a="svg">SVG vectorial</button><button data-a="png">PNG 300 dpi</button><button data-a="code">Copiar código</button><button data-a="del">Eliminar</button>`;
   } else { snapSel = null; info.textContent = 'Selecciona una captura'; acts.innerHTML = ''; }
 }
 async function exportSnap(s, png) {
@@ -968,11 +981,11 @@ document.getElementById('fsItems').addEventListener('click', e => {
     if (stRec.on) { stRecPlace(snapSel.st); return; }
     if (tlRec.on) { tlRecApply(snapSel.st); toast(`Captura ${snapSel.num} aplicada en la pasada`); return; }
     if (tl.playing) { if (applySnapshot(snapSel.st)) toast(`Captura ${snapSel.num} aplicada en ${tl.head.toFixed(2)} s`); return; }
-    previewState = snapSel.st; document.getElementById('previewTag').textContent = `Vista previa · Captura ${snapSel.num} · Esc para cerrar`; dirty = true;
+    startLivePreview(snapSel.st); document.getElementById('previewTag').textContent = `Vista previa · Captura ${snapSel.num} · Esc para cerrar`; dirty = true;
     return;
   }
   applySnap(snapSel.st);
-  toast(`Captura ${snapSel.num}` + (live.paused ? '' : ' · transformándose'));
+  toast(`Captura ${snapSel.num}`);
 });
 document.getElementById('fsItems').addEventListener('dblclick', e => {
   const f = e.target.closest('.fs-item'); if (!f || !tl.open || stRec.on || tlRec.on) return;
@@ -1951,7 +1964,7 @@ async function perfLoad(p) {
   if (perfRecording) return;
   perfStoreCurrent();
   if (stRec.on) stRecStop(); if (tlRec.on) tlRecStop(); tlPlay(false);
-  if (!tl.open) openTimeline(true);
+  if (!tl.open) tlBehind(true);   // con la línea de tiempo cerrada, se reproduce sobre la imagen sin abrir nada
   Object.assign(tl, JSON.parse(JSON.stringify(p.doc))); tl.sel = null; tl.selScene = null;
   sceneSeq = tl.scenes.reduce((m, s) => Math.max(m, s.id), 0);
   perfSel = p.id; undoDoc = null; document.getElementById('tlUndo').hidden = true;
@@ -1964,11 +1977,35 @@ async function perfLoad(p) {
       perfAudioBlob = a.blob; tl.duration = p.doc.duration; refreshTimeline();
     } else if (perfSel === p.id) toast('La pista de audio de esta performance no está en este navegador');
   }
+  if (perfSel === p.id) { setHead(0); tlPlay(true); toast(`Reproduciendo ${p.name}`); }   // tocar una secuencia siempre la reproduce
 }
+/* La línea de tiempo puede correr por detrás, sin abrirse: así se graba
+   una performance o se reproduce una guardada sobre la imagen, y el panel
+   aparece solo cuando se toca «Línea de tiempo». */
+let tlHidden = false;
+function tlBehind(on) {
+  if (on) {
+    if (tl.open) return;
+    openTimeline(true); tlHidden = true; document.body.classList.add('tl-behind');
+    document.getElementById('timeline').hidden = true; document.body.classList.remove('tl-open');
+    document.getElementById('toggleTl').setAttribute('aria-pressed', 'false'); layout(); renderStrip();
+  } else if (tlHidden) { tlHidden = false; document.body.classList.remove('tl-behind'); openTimeline(false); }
+}
+function tlReveal() {
+  tlHidden = false; document.body.classList.remove('tl-behind');
+  document.getElementById('timeline').hidden = false; document.body.classList.add('tl-open');
+  document.getElementById('toggleTl').setAttribute('aria-pressed', 'true');
+  layout(); renderRuler(); renderLanes(); renderNav(); renderScenes(); renderWave(); renderSceneDefaults(); onHeadChange(); renderStrip();
+}
+document.getElementById('toggleTl').onclick = () => { if (tlHidden) { if (stRec.on) return; tlHidden = false; tlPlay(false); tlReveal(); } else openTimeline(!tl.open); };
+/* reproduciendo por detrás, pinchar un snapshot vuelve a la imagen en vivo y viaja hacia él */
+document.getElementById('filmstrip').addEventListener('click', e => { if (tlHidden && !stRec.on && e.target.closest('#fsItems .fs-item')) tlPlay(false); }, true);
+{ const play0 = tlPlay; tlPlay = function (on = !tl.playing) { play0(on); if (!tl.playing && tlHidden && !stRec.on && !perfRecording) tlBehind(false); }; }
+
 function perfStart() {
   if (!snaps.length) { toast('Primero crea los snapshots con + Snapshot (C)'); return; }
   if (tlRec.on) tlRecStop(); tlPlay(false);
-  if (!tl.open) openTimeline(true);
+  if (!tl.open) tlBehind(true);
   if (!perfSel && timelineHasContent()) { const p = perfAdd(timelineDoc(), { name: 'Línea de tiempo anterior' }); toast(`Lo que había en la línea de tiempo quedó como «${p.name}»`); }
   else perfStoreCurrent();
   perfSel = null;
@@ -1982,13 +2019,16 @@ function perfStart() {
 function perfFinish() {
   perfRecording = false;
   if (!tl.scenes.length) { renderPerfs(); toast('No pinchaste snapshots: la performance no se guardó'); return; }
+  // morph: cada snapshot se funde desde el anterior durante todo el intervalo (el primero, desde el comienzo)
+  { let prev = 0; for (const sc of tl.scenes.slice().sort((x, y) => x.t - y.t)) { if (sc.type !== 'cut') sc.dur = Math.max(0.04, Math.round((sc.t - prev) * 100) / 100); prev = sc.t; } regenerateScenes(); }
   const last = Math.max(...tl.scenes.map(s => s.t));
   tl.duration = Math.min(600, Math.max(1, Math.ceil(Math.max(tl.head, last + 0.5) * 10) / 10));
   refreshTimeline();
   const p = perfAdd(timelineDoc(), { audioName: audio.buffer ? audio.name : '' });
   if (audio.buffer && perfAudioBlob) audioDB.put(p.id, { blob: perfAudioBlob, name: audio.name });
   perfSel = p.id; renderPerfs(); saveTimeline();
-  toast(`${p.name} guardada · afínala en la línea de tiempo`);
+  if (tlHidden) tlBehind(false);
+  toast(`${p.name} guardada · para afinarla, abre la Línea de tiempo`);
 }
 {
   const start0 = stRecStart, stop0 = stRecStop;
@@ -2004,7 +2044,7 @@ function renderPerfs() {
     : `<button class="fs-add" id="perfRec" title="Grabar una performance: la línea de tiempo corre (con la pista de audio, si hay) y cada snapshot que pinches, o su número 1–9, entra como escena en ese momento"><span>+</span>Performance</button>`;
   for (const p of perfs) {
     const n = (p.doc.scenes || []).length;
-    h += `<figure class="fs-item pf-item${p.id === perfSel ? ' sel' : ''}" data-id="${p.id}" tabindex="0" title="Clic: abrir en la línea de tiempo">${p.thumb ? `<img alt="" src="${p.thumb}">` : '<div class="pf-blank"></div>'}<figcaption></figcaption><span class="pf-meta">${fmtDur(p.doc.duration)} · ${n} escena${n === 1 ? '' : 's'}${p.audioName ? ' · ♪' : ''}</span></figure>`;
+    h += `<figure class="fs-item pf-item${p.id === perfSel ? ' sel' : ''}" data-id="${p.id}" tabindex="0" title="Clic: reproducir esta secuencia">${p.thumb ? `<img alt="" src="${p.thumb}">` : '<div class="pf-blank"></div>'}<figcaption></figcaption><span class="pf-meta">${fmtDur(p.doc.duration)} · ${n} escena${n === 1 ? '' : 's'}${p.audioName ? ' · ♪' : ''}</span></figure>`;
   }
   if (!perfs.length && !perfRecording) h += `<p class="fs-empty">Crea snapshots arriba y graba una performance: pínchalos mientras corre el tiempo (y la música).</p>`;
   if (perfRecording) h += `<p class="fs-empty rec-hint">Grabando · pincha los snapshots de arriba, o sus números 1–9, en el momento en que quieras que entren</p>`;
@@ -2013,7 +2053,7 @@ function renderPerfs() {
   const info = document.getElementById('pfSelInfo'), acts = document.getElementById('pfActions'), p = perfSel && perfById(perfSel);
   if (p && !perfRecording) {
     info.textContent = ''; const b = document.createElement('b'); b.textContent = p.name; info.appendChild(b);
-    acts.innerHTML = `<button data-a="video">Video</button><button data-a="trama">Trama de secuencia</button><button data-a="nombre">Renombrar</button><button data-a="del">Quitar</button>`;
+    acts.innerHTML = `<button data-a="video">Video</button><button data-a="trama">Trama de secuencia</button><button data-a="nombre">Renombrar</button><button data-a="del">Eliminar</button>`;
   } else { info.textContent = perfRecording ? 'Grabando…' : (perfs.length ? 'Selecciona una performance' : ''); acts.innerHTML = ''; }
 }
 document.getElementById('pfItems').addEventListener('click', e => {
@@ -2026,7 +2066,7 @@ document.getElementById('pfItems').addEventListener('wheel', e => { if (Math.abs
 document.getElementById('pfActions').addEventListener('click', async e => {
   const b = e.target.closest('button[data-a]'), p = perfSel && perfById(perfSel); if (!b || !p) return;
   const a = b.dataset.a;
-  if (a === 'video') { if (!tl.open) openTimeline(true); renderVideo(); }
+  if (a === 'video') { if (tlHidden) { tlPlay(false); } if (!tl.open) openTimeline(true); else if (tlHidden) tlReveal(); renderVideo(); }
   if (a === 'trama') exportTrama(p.name);
   if (a === 'nombre') { const n = prompt('Nombre de la performance', p.name); if (n && n.trim()) { p.name = n.trim().slice(0, 60); persistPerfs(); renderPerfs(); } }
   if (a === 'del') {
@@ -2037,6 +2077,383 @@ document.getElementById('pfActions').addEventListener('click', async e => {
 });
 document.getElementById('perfAudio').addEventListener('click', () => document.getElementById('tlAudioFile').click());
 renderPerfs();
+
+/* =========================================================
+   Vista previa viva de un snapshot
+   ---------------------------------------------------------
+   Con la línea de tiempo abierta, pinchar un snapshot no
+   congela la imagen: la lámina parte de inmediato en ese
+   snapshot y sigue viva desde ahí. Esc, mover el cabezal o
+   reproducir la cierran, como antes.
+   ========================================================= */
+let previewLive = null;
+/* pinchar un snapshot lo pone de inmediato: la imagen parte desde ahí y sigue viva (la fusión se calcula al reproducir una secuencia) */
+{ const as0 = applySnap; applySnap = function (st) { const p = live.paused; live.paused = true; as0(st); live.paused = p; dirty = true; }; }
+function startLivePreview(st) {
+  const now = performance.now();
+  const from = previewLive ? livePreviewState(now) : JSON.parse(JSON.stringify(previewState || evalState(tl.head)));
+  const base = from.blend && from.blend.e > 0.5 ? { ...from.blend.state, render: modeOf(from, render) } : from;
+  previewLive = { from: base, to: JSON.parse(JSON.stringify(st)), t0: now - MORPH_MS, last: null };   // sin viaje: parte en el snapshot
+  previewState = livePreviewState(now); previewLive.last = previewState;
+}
+function livePreviewState(now) {
+  const p = previewLive, el = (now - p.t0) / 1000, d = MORPH_MS / 1000;
+  const to = p.to, toRender = modeOf(to, render);
+  if (el >= d) return { ...to, time: to.time + (el - d), render: toRender, blend: undefined };
+  const k = el / d, e = k * k * (3 - 2 * k), f = p.from;
+  return { time: f.time + el, cam: f.cam || [0, 0], mouse: f.mouse || [0.5, 0.5], presence: f.presence ?? 0, cfg: f.cfg, render: e < 0.5 ? modeOf(f, render) : toRender, format: f.format, aspect: f.aspect,
+    blend: { e, state: { time: to.time - (d - el), cam: to.cam || [0, 0], mouse: to.mouse || [0.5, 0.5], presence: to.presence ?? 0, cfg: to.cfg } } };
+}
+
+/* =========================================================
+   La performance se ve tal como va a quedar
+   ---------------------------------------------------------
+   Al grabar, pinchar un snapshot lo pone de inmediato, en el
+   instante del pinchazo, como un músico que entra en el compás.
+   La performance parte con lo que se ve al empezar a grabar.
+   La fusión entre un snapshot y otro se calcula al detener la
+   grabación: un morph que ocupa todo el intervalo, del snapshot
+   anterior al siguiente, sin acelerarse al final. Su duración y
+   su ease se afinan en la línea de tiempo.
+   ========================================================= */
+{
+  const place0 = stRecPlace;
+  stRecPlace = function (st) {
+    if (!perfRecording) return place0(st);
+    const snap = snaps.find(x => x.st === st) || { num: '?', st };
+    // la performance parte con lo que se ve al empezar a grabar; cada snapshot queda en el instante de su pinchazo
+    addScene(snap, tl.head);
+    stRec.count++;
+  };
+}
+/* =========================================================
+   Parámetros de la línea de tiempo
+   ---------------------------------------------------------
+   La línea de tiempo de una secuencia muestra los parámetros
+   de los estilos que aparecen en ella (superficie, espiral o
+   ambos); los que cambian entre snapshots llevan sus puntos.
+   ========================================================= */
+const PARAM_COMUN = new Set(['time', 'colorDeep', 'colorAccent', 'colorBg']);
+function estilosDeLaSecuencia() {
+  const g = new Set([config.generator || 'superficie']);
+  for (const sc of tl.scenes || []) g.add((sc.st && sc.st.cfg && sc.st.cfg.generator) || 'superficie');
+  return g;
+}
+{
+  const rl0 = renderLanes;
+  renderLanes = function () {
+    const g = estilosDeLaSecuencia(), todos = PARAMS.slice();
+    const ve = p => (tl.tracks[p.path] && tl.tracks[p.path].length) || (p.g !== 'Primitivas' && (PARAM_COMUN.has(p.path) || (p.g === 'Espiral' ? g.has('espiral') : g.has('superficie'))));
+    PARAMS.splice(0, PARAMS.length, ...todos.filter(ve));
+    try { rl0(); } finally { PARAMS.splice(0, PARAMS.length, ...todos); }
+  };
+}
+
+/* =========================================================
+   Morph en todos los parámetros
+   ---------------------------------------------------------
+   · Luz y tinta: con el modo automático, cuando el fondo pasa
+     de oscuro a claro el dibujo se funde de luz a tinta (antes
+     cambiaba de golpe al cruzar la mitad).
+   · Cantidad de líneas y de puntos: cambian de a poco.
+   · Puntos, líneas o ambos: si los snapshots de una secuencia
+     usan modos distintos, se dibuja con ambos y se funden sus
+     opacidades.
+   ========================================================= */
+['lineCount', 'points', 'espPuntos'].forEach(k => { if (PARAM[k]) PARAM[k].hold = false; });
+const modoDe = st => modeOf(st, render);
+const secuenciaMezclaModos = () => { const m = new Set([render]); for (const sc of tl.scenes || []) m.add(modoDe(sc.st)); return m.size > 1; };
+{
+  const sv0 = snapValue;
+  snapValue = function (st, path) {
+    if (path === 'dotAlpha' && modoDe(st) === 'lineas') return 0;
+    if (path === 'lineAlpha' && modoDe(st) === 'puntos') return 0;
+    return sv0(st, path);
+  };
+  const st0 = staticValue;
+  staticValue = function (doc, path, t) {
+    const m = modeOf(doc, render);
+    if (path === 'dotAlpha' && m === 'lineas') return 0;
+    if (path === 'lineAlpha' && m === 'puntos') return 0;
+    return st0(doc, path, t);
+  };
+  const ev0 = evalState;
+  evalState = function (t, doc) {
+    const st = doc === undefined ? ev0(t) : ev0(t, doc);
+    if (secuenciaMezclaModos()) {
+      st.render = 'mixto';
+      for (const path of ['dotAlpha', 'lineAlpha']) if (!(doc || liveDoc()).tracks[path]) st.cfg[path] = staticValue(doc || liveDoc(), path, t);
+    }
+    return st;
+  };
+}
+{
+  const capas = [document.createElement('canvas'), document.createElement('canvas')];
+  const dr1 = drawSheet;
+  drawSheet = function (ctx, lines, cfg, W, H, mode) {
+    const c = cfg || config;
+    if (c.inkMode !== 'auto') return dr1(ctx, lines, cfg, W, H, mode);
+    const lum = luminance(c.colorBg || '#000000'), w = smooth(0.28, 0.52, lum);
+    if (w <= 0 || w >= 1) return dr1(ctx, lines, { ...c, inkMode: w >= 1 ? 'tinta' : 'luz' }, W, H, mode);
+    const cw = ctx.canvas.width, ch = ctx.canvas.height, m = ctx.getTransform();
+    capas.forEach((cv, i) => {
+      if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+      const g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, ch); g.setTransform(m);
+      dr1(g, lines, { ...c, inkMode: i ? 'tinta' : 'luz' }, W, H, mode);
+    });
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1; ctx.drawImage(capas[0], 0, 0); ctx.globalAlpha = w; ctx.drawImage(capas[1], 0, 0); ctx.restore();
+  };
+}
+
+/* =========================================================
+   Primitivas de snapshot
+   ---------------------------------------------------------
+   Punto, línea horizontal, línea vertical y vacío: estados
+   discretos para empezar, terminar o intercalar un silencio en
+   una performance. Cada una toma la figura que se ve y la
+   recoge hacia el centro, la aplana en una línea o la hace
+   desaparecer sobre el fondo, así que se funde con cualquier
+   snapshot de cualquier estilo. Se pinchan como un snapshot.
+   ========================================================= */
+const PRIMITIVAS = [
+  { id: 'punto', nombre: 'Punto', icono: '•', cfg: { primX: 1, primY: 1, primOp: 1 } },
+  { id: 'lineaH', nombre: 'Línea', icono: '—', cfg: { primX: 0, primY: 1, primOp: 1 } },
+  { id: 'lineaV', nombre: 'Línea', icono: '|', cfg: { primX: 1, primY: 0, primOp: 1 } },
+  { id: 'vacio', nombre: 'Vacío', icono: '○', cfg: { primX: 0, primY: 0, primOp: 0 } }
+];
+[['primX', 'Recoger hacia el eje vertical', 'compress'], ['primY', 'Recoger hacia el eje horizontal', 'unfold_less'], ['primOp', 'Presencia de la figura', 'visibility']]
+  .forEach(([path, label, icon]) => { const p = { g: 'Primitivas', path, label, min: 0, max: 1, step: 0.01, icon }; PARAMS.push(p); PARAM[path] = p; });
+/* la figura recogida: se aplica a la geometría ya calculada de cualquier estilo */
+function recoger(g, cfg, W, H) {
+  const kx = 1 - (cfg.primX || 0), ky = 1 - (cfg.primY || 0), op = cfg.primOp ?? 1, cx = W / 2, cy = H / 2;
+  if (kx === 1 && ky === 1 && op === 1) return g;
+  if (g && g.espiral) {
+    const P = g.pts, C = g.curva;
+    for (let i = 0; i < P.length; i += 4) { P[i] = cx + (P[i] - cx) * kx; P[i + 1] = cy + (P[i + 1] - cy) * ky; P[i + 3] *= op; }
+    for (let i = 0; i < C.length; i += 2) { C[i] = cx + (C[i] - cx) * kx; C[i + 1] = cy + (C[i + 1] - cy) * ky; }
+    g.op = op; return g;
+  }
+  for (const pts of g) for (let k = 0; k < pts.length; k += 5) { if (pts[k + 2] === 0) continue; pts[k] = cx + (pts[k] - cx) * kx; pts[k + 1] = cy + (pts[k + 1] - cy) * ky; pts[k + 4] *= op; }
+  return g;
+}
+{
+  const cst1 = computeState;
+  computeState = function (st, W, H, q) { return recoger(cst1(st, W, H, q), st.cfg, W, H); };
+  const cs1 = computeSheet;   // la exportación de cuadros quietos llama directo a computeSheet
+  computeSheet = function (state, W, H, q = 1) { return recoger(cs1(state, W, H, q), state.cfg, W, H); };
+}
+/* los snapshots que no traen estos valores (anteriores a las primitivas) son la figura entera */
+const PRIM_DEF = { primX: 0, primY: 0, primOp: 1 };
+{
+  const sv1 = snapValue;
+  snapValue = function (st, path) { const v = sv1(st, path); return v === undefined && path in PRIM_DEF ? PRIM_DEF[path] : v; };
+  const as1 = applySnap;
+  applySnap = function (st) { const c = JSON.parse(JSON.stringify(st)); c.cfg = { ...PRIM_DEF, ...c.cfg }; return as1(c); };
+}
+/* el estado de una primitiva: lo que se ve, recogido */
+function estadoPrimitiva(pr) {
+  const st = snapNow(), base = st.blend && st.blend.e > 0.5 ? { ...st, ...st.blend.state, render: modeOf(st, render) } : st;
+  const out = JSON.parse(JSON.stringify({ ...base, blend: undefined }));
+  Object.assign(out.cfg, pr.cfg); out.primitiva = pr.id; return out;
+}
+function pincharPrimitiva(pr) {
+  const st = estadoPrimitiva(pr), snap = { num: pr.nombre, st };
+  if (tl.open) {
+    if (stRec.on) { stRecPlace(st, snap); return; }
+    if (tl.playing && !tlHidden) { addScene(snap); return; }
+    if (tlHidden) tlPlay(false);
+  }
+  if (tl.open && !tlHidden) { startLivePreview(st); document.getElementById('previewTag').textContent = `Vista previa · ${pr.nombre} · Esc para cerrar`; dirty = true; return; }
+  applySnap(st); toast(pr.nombre);
+}
+/* stRecPlace con un snapshot que no está en la galería (una primitiva) */
+{
+  const place1 = stRecPlace;
+  stRecPlace = function (st, snapExtra) {
+    if (snapExtra && perfRecording) { addScene(snapExtra, tl.head); stRec.count++; return; }
+    return place1(st);
+  };
+}
+{
+  const rs0 = renderStrip;
+  renderStrip = function () {
+    rs0();
+    const add = document.getElementById('fsCapture'); if (!add) return;
+    let h = '';
+    for (const pr of PRIMITIVAS) h += `<button class="fs-prim" data-prim="${pr.id}" title="${pr.nombre}${pr.id === 'lineaH' ? ' horizontal' : pr.id === 'lineaV' ? ' vertical' : ''}: para empezar, terminar o hacer un silencio"><i>${pr.icono}</i>${pr.nombre}</button>`;
+    add.insertAdjacentHTML('afterend', h + '<span class="fs-sep"></span>');
+  };
+  document.getElementById('fsItems').addEventListener('click', e => { const b = e.target.closest('.fs-prim'); if (!b) return; const pr = PRIMITIVAS.find(x => x.id === b.dataset.prim); if (pr) pincharPrimitiva(pr); });
+  renderStrip();
+}
+/* =========================================================
+   Grabar desde la pausa
+   ---------------------------------------------------------
+   Si la animación está en pausa al tocar «+ Performance», la
+   grabación queda lista sin correr: lo que se ve (por ejemplo,
+   una primitiva) es el comienzo. Play (o Espacio) la hace
+   correr con la música. Pinchar un snapshot nunca cambia si
+   está en pausa o andando.
+   ========================================================= */
+let perfArmed = false;
+function armarPerformance() {
+  stRec.on = true; stRec.count = 0; undoDoc = snapshotDoc();
+  document.body.classList.add('st-recording', 'perf-armed'); perfArmed = true;
+  renderStrip(); renderPerfs(); toast('Lista para grabar · aprieta ▶ Play (o Espacio)');
+}
+function arrancarPerformance() {
+  if (!perfArmed) return;
+  perfArmed = false; document.body.classList.remove('perf-armed');
+  tl.playing = false; tlPlay(true); document.body.classList.add('tl-recording'); renderPerfs();
+}
+{
+  const ps0 = perfStart;
+  perfStart = function () {
+    if (!live.paused || !snaps.length && false) return ps0();
+    // en pausa: preparar sin correr
+    const sr0 = stRecStart; stRecStart = armarPerformance;
+    try { ps0(); } finally { stRecStart = sr0; }
+  };
+  document.getElementById('pause').addEventListener('click', e => { if (perfArmed) { e.stopImmediatePropagation(); arrancarPerformance(); } }, true);
+  window.addEventListener('keydown', e => { if (perfArmed && e.key === ' ' && !e.target.closest('input, select')) { e.preventDefault(); e.stopImmediatePropagation(); arrancarPerformance(); } }, true);
+  const tp1 = tlPlay;
+  tlPlay = function (on = !tl.playing) { if (perfArmed && !on) { perfArmed = false; document.body.classList.remove('perf-armed'); } return tp1(on); };
+  const rp0 = renderPerfs;
+  renderPerfs = function () {
+    rp0();
+    if (perfArmed) { const t = document.getElementById('perfRec'); if (t) t.innerHTML = '<span>▶</span>Play'; const hint = document.querySelector('#pfItems .rec-hint'); if (hint) hint.textContent = 'Lista · aprieta ▶ Play (o Espacio) y empieza a pinchar tus snapshots'; }
+  };
+  document.getElementById('pfItems').addEventListener('click', e => { if (perfArmed && e.target.closest('#perfRec')) { e.stopImmediatePropagation(); arrancarPerformance(); } }, true);
+}
+
+/* =========================================================
+   Play, pausa y bucle
+   ---------------------------------------------------------
+   ▶ y ❚❚ funcionan siempre: en vivo, mientras se graba una
+   performance (pausa sin terminarla) y mientras se reproduce
+   una. ⟳ Bucle: una performance que se reproduce vuelve a
+   empezar al terminar.
+   ========================================================= */
+let bucle = false;
+try { bucle = localStorage.getItem('superficie-bucle-v1') === '1'; } catch (e) {}
+const enPerformance = () => tl.open && (tlHidden || stRec.on);
+function trPausar() {
+  if (perfArmed) return;
+  if (tl.open) { if (!tl.playing) return; tl.playing = false; audioStop(); document.body.classList.remove('tl-recording'); const b = document.getElementById('tlPlay'); b.innerHTML = '<span class="ms">play_arrow</span>'; b.setAttribute('aria-pressed', 'false'); dirty = true; }
+  else setPaused(true);
+  syncTransporte();
+}
+function trPlay() {
+  if (perfArmed) { arrancarPerformance(); syncTransporte(); return; }
+  if (tl.open) {
+    if (tl.playing) return;
+    if (tl.head >= tl.duration - 1e-3 && !stRec.on) tl.head = 0;
+    if (stRec.on || tlHidden) { previewState = null; tl.playing = true; audioStart(); if (stRec.on) document.body.classList.add('tl-recording'); const b = document.getElementById('tlPlay'); b.innerHTML = '<span class="ms">pause</span>'; b.setAttribute('aria-pressed', 'true'); dirty = true; }
+    else tlPlay(true);
+  } else setPaused(false);
+  syncTransporte();
+}
+function syncTransporte() {
+  const anda = tl.open ? tl.playing : !live.paused;
+  const p = document.getElementById('trPlay'), q = document.getElementById('trPause'), l = document.getElementById('trLoop');
+  if (!p) return;
+  p.classList.toggle('on', anda && !perfArmed); q.classList.toggle('on', !anda && !perfArmed);
+  l.classList.toggle('on', bucle); l.setAttribute('aria-pressed', String(bucle));
+}
+{
+  const bar = document.querySelector('.bar'), ref = document.getElementById('pause');
+  ref.insertAdjacentHTML('afterend', '<button id="trPlay" class="tr" title="Play (Espacio)">▶</button><button id="trPause" class="tr" title="Pausa (Espacio)">❚❚</button><button id="trLoop" class="tr" aria-pressed="false" title="Bucle: la performance vuelve a empezar al terminar">⟳ Bucle</button>');
+  document.getElementById('trPlay').onclick = trPlay;
+  document.getElementById('trPause').onclick = trPausar;
+  document.getElementById('trLoop').onclick = () => { bucle = !bucle; try { localStorage.setItem('superficie-bucle-v1', bucle ? '1' : '0'); } catch (e) {} syncTransporte(); };
+  // Espacio durante una performance (grabando o reproduciendo): pausa y sigue, sin terminarla
+  window.addEventListener('keydown', e => {
+    if (e.key !== ' ' || e.target.closest('input, select') || perfArmed) return;
+    if (enPerformance()) { e.preventDefault(); e.stopImmediatePropagation(); tl.playing ? trPausar() : trPlay(); }
+  }, true);
+  // Esc durante la reproducción de una performance: vuelve a la imagen en vivo
+  window.addEventListener('keydown', e => { if (e.key === 'Escape' && tlHidden && !stRec.on) { tlPlay(false); } });
+  setInterval(syncTransporte, 200); syncTransporte();
+}
+/* bucle: al llegar al final de una performance que se reproduce, vuelve al comienzo */
+{
+  const tick0 = tlTick;
+  tlTick = function (dt) {
+    if (bucle && tl.playing && !stRec.on && !tlRec.on) {
+      const ah = audioHead(), nh = ah != null ? ah : tl.head + dt;
+      if (nh >= tl.duration) { tl.head = 0; if (audio.playing) audioStart(); onHeadChange(); return; }
+    }
+    return tick0(dt);
+  };
+}
+/* =========================================================
+   Eliminar snapshots y performances
+   ---------------------------------------------------------
+   Cada miniatura tiene su × para eliminarla (la performance
+   pregunta antes). También queda «Eliminar» en las acciones de
+   la seleccionada.
+   ========================================================= */
+function perfEliminar(p) {
+  if (!confirm(`¿Eliminar «${p.name}»?`)) return;
+  if (perfSel === p.id && (tlHidden || stRec.on)) tlPlay(false);
+  perfs.splice(perfs.indexOf(p), 1); audioDB.del(p.id); persistPerfs();
+  if (perfSel === p.id) { perfSel = null; tl.tracks = {}; tl.scenes = []; tl.applyPoints = []; tl.sel = null; tl.selScene = null; clearAudio(); if (tl.open) refreshTimeline(); saveTimeline(); }
+  renderPerfs(); toast(`«${p.name}» eliminada`);
+}
+function snapEliminar(s) {
+  snaps.splice(snaps.indexOf(s), 1); if (snapSel === s) snapSel = null; persistSnaps(); renderStrip(); toast(`Captura ${s.num} eliminada`);
+}
+{
+  const rs1 = renderStrip;
+  renderStrip = function () { rs1(); document.querySelectorAll('#fsItems .fs-item').forEach(f => f.insertAdjacentHTML('beforeend', '<button class="fs-del" title="Eliminar este snapshot" aria-label="Eliminar">×</button>')); };
+  const rp1 = renderPerfs;
+  renderPerfs = function () { rp1(); document.querySelectorAll('#pfItems .pf-item').forEach(f => f.insertAdjacentHTML('beforeend', '<button class="fs-del" title="Eliminar esta performance" aria-label="Eliminar">×</button>')); };
+  document.getElementById('fsItems').addEventListener('click', e => { const x = e.target.closest('.fs-del'); if (!x) return; e.stopImmediatePropagation(); const s = snaps[+x.closest('.fs-item').dataset.i]; if (s) snapEliminar(s); }, true);
+  document.getElementById('pfItems').addEventListener('click', e => { const x = e.target.closest('.fs-del'); if (!x) return; e.stopImmediatePropagation(); const p = perfById(+x.closest('.pf-item').dataset.id); if (p) perfEliminar(p); }, true);
+  document.getElementById('pfActions').addEventListener('click', e => { const b = e.target.closest('button[data-a="del"]'); if (!b) return; e.stopImmediatePropagation(); const p = perfSel && perfById(perfSel); if (p) perfEliminar(p); }, true);
+  renderStrip(); renderPerfs();
+}
+/* =========================================================
+   Música en vivo
+   ---------------------------------------------------------
+   Con la pista cargada, «▶ Música» la hace sonar mientras
+   exploras y creas snapshots (en bucle, sin línea de tiempo).
+   Al grabar la performance la música parte desde el comienzo.
+   ========================================================= */
+const musica = { src: null };
+function musicaStop() { if (musica.src) { try { musica.src.stop(); } catch (e) {} musica.src.disconnect(); musica.src = null; } syncMusica(); }
+function musicaPlay() {
+  if (!audio.buffer || !audio.ctx) return;
+  musicaStop(); if (audio.ctx.state === 'suspended') audio.ctx.resume();
+  const s = audio.ctx.createBufferSource(); s.buffer = audio.buffer; s.loop = true; s.connect(audio.gain); audio.gain.gain.value = audio.muted ? 0 : 1; s.start();
+  musica.src = s; syncMusica();
+}
+function syncMusica() {
+  const b = document.getElementById('perfMusic'); if (!b) return;
+  b.hidden = !audio.buffer || tl.open;
+  b.textContent = musica.src ? '❚❚ Música' : '▶ Música'; b.setAttribute('aria-pressed', String(!!musica.src));
+}
+{
+  const bar = document.querySelector('.bar'), b = document.createElement('button');
+  b.id = 'perfMusic'; b.hidden = true; b.title = 'Escuchar la pista de audio mientras exploras y creas snapshots';
+  bar.insertBefore(b, document.getElementById('perfAudio').nextSibling);
+  b.addEventListener('click', () => musica.src ? musicaStop() : musicaPlay());
+  const start0 = audioStart; audioStart = function () { musicaStop(); start0(); };
+  const load0 = loadAudio; loadAudio = async function (f) { musicaStop(); await load0(f); syncMusica(); };
+  const ot0 = openTimeline; openTimeline = function (open) { if (open) musicaStop(); ot0(open); syncMusica(); };
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#tlAudioDel')) { musicaStop(); setTimeout(syncMusica, 0); } }, true);
+}
+{
+  const frame0 = frame;
+  frame = function (now) {
+    if (previewLive) {
+      if (previewState !== previewLive.last || !tl.open) previewLive = null;   // alguien la cerró (Esc, cabezal, reproducir)
+      else { previewState = livePreviewState(now); previewLive.last = previewState; dirty = true; }
+    }
+    frame0(now);
+  };
+}
 
 /* =========================================================
    Espiral de Fibonacci con hilos (un estilo más)
@@ -2109,7 +2526,7 @@ function drawEspiral(ctx, g, cfg, W, H) {
     }
   }
   if (g.L > 0 && cfg.espOpCurva > 0.002) {
-    ctx.strokeStyle = `rgba(${col.traz},${cfg.espOpCurva})`; ctx.lineWidth = Math.max(0.3, cfg.espGrosorCurva * g.px); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.strokeStyle = `rgba(${col.traz},${cfg.espOpCurva * (g.op ?? 1)})`; ctx.lineWidth = Math.max(0.3, cfg.espGrosorCurva * g.px); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(C[0], C[1]); for (let j = 2; j < C.length; j += 2) ctx.lineTo(C[j], C[j + 1]); ctx.stroke();
   }
   if (cfg.espOpPunto > 0.002) {
