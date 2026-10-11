@@ -12,6 +12,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },
+  "dependencies": {
+    "@contope/trama": "workspace:*",
+    "fflate": "^0.8.2"
+  },
   "devDependencies": {
     "typescript": "^5.9.2",
     "vitest": "^4.1.5"

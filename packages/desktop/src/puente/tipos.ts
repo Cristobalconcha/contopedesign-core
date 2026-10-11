@@ -1,6 +1,7 @@
 /**
  * Lo que el renderizador necesita del mundo exterior: abrir y guardar el
- * sistema, traer insumos, escribir la cápsula, recordar recientes y bajar
+ * sistema, traer insumos, guardar un archivo hecho por la app (el ADN
+ * exportado, una Célula Madre), recordar recientes y bajar
  * el catálogo. Dos implementaciones: Electron (por IPC al proceso
  * principal) y navegador (para revisar la interfaz sin ventana nativa).
  */
@@ -33,6 +34,13 @@ export interface ArchivoDeSistema {
   ruta: string | null;
   nombre: string;
   texto: string;
+}
+
+/** Un archivo que la app escribe tal cual (el `.zip` del ADN exportado o de una Célula Madre). */
+export interface ArchivoParaGuardar {
+  nombre: string;
+  tipoMime: string;
+  bytes: Uint8Array;
 }
 
 export interface ArchivoDeInsumo {
@@ -79,7 +87,12 @@ export interface Puente {
   abrirInsumos(): Promise<ArchivoDeInsumo[]>;
   /** Un archivo `*.propuestas.json` hecho por la IA para este sistema; no entra a recientes. */
   abrirPropuestas(): Promise<ArchivoDeSistema | null>;
-  exportarCapsula(archivos: Array<{ nombre: string; texto: string }>): Promise<string | null>;
+  /**
+   * Guarda un archivo (binario o de texto) con el nombre sugerido: la persona
+   * elige dónde y cómo se llama (Electron) o se descarga (navegador).
+   * Devuelve dónde quedó, o null si se canceló. El nombre no lleva carpetas.
+   */
+  guardarArchivo(archivo: ArchivoParaGuardar): Promise<string | null>;
   listarRecientes(): Promise<Reciente[]>;
   descargarCatalogo(): Promise<string>;
   ia: PuenteDeIA;
@@ -94,7 +107,8 @@ export interface PuenteElectron {
   registrarReciente(ruta: string, nombre: string, vistazo: Vistazo): Promise<void>;
   abrirInsumos(): Promise<Array<{ ruta: string; nombre: string; extension: string; bytes: string }>>;
   abrirPropuestas(): Promise<{ ruta: string; nombre: string; texto: string } | null>;
-  exportarCapsula(archivos: Array<{ nombre: string; texto: string }>): Promise<string | null>;
+  /** Los bytes viajan en base64, como los insumos al abrirlos. Devuelve la ruta elegida. */
+  guardarArchivo(sugerido: string, bytes: string): Promise<string | null>;
   listarRecientes(): Promise<Reciente[]>;
   descargarCatalogo(): Promise<string>;
   ia: PuenteDeIA;

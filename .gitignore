@@ -4,3 +4,6 @@ release/
 *.tsbuildinfo
 .DS_Store
 packages/desktop/.electron-unpacked-win-x64/
+
+# dist/ de @contope/trama se versiona: es lo que Publisher trae, verificado por sha256
+!packages/trama/dist/

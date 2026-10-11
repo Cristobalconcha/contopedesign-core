@@ -324,6 +324,9 @@ se puedan revertir sabiendo por qué existían.
 - **La cápsula** son `design-contract.json` + `DESIGN.md`, calculados por los
   proyectores del núcleo. Una entrada aprobada es `human-confirmed`; de insumo
   sin aprobar, `deterministic-extraction`; de ContOpe, `model-proposal`.
+  «Exportar ADN» la baja en un `<sistema>-adn.zip` junto con las Células
+  Madre del sistema, regeneradas con ese ADN y cada una con su `LEEME.md`
+  (decisión 35, «Exportar el ADN»).
 - **Las rectoras (descriptor, mood wall) se pasan sin restricciones**, como en
   la fixture del núcleo, porque el taller no tiene todavía dónde declararlas.
 - **El catálogo de Google Fonts viaja en el repositorio** como copia fechada

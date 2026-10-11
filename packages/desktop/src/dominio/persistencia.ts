@@ -20,8 +20,14 @@
  * al exportar. `notasDePropuesta` se completa vacío si falta. `imperativas`
  * (19-09), si falta, se deriva como lo hacía el código anterior: entradas de
  * insumo cuyo insumo sigue en la lista con carril cortapisa; si viene, se valida.
+ *
+ * `celulasMadre` (08-10, decisión 35): si falta, el archivo abre con la lista
+ * vacía (migración segura, sin subir `SCHEMA_SISTEMA`); si viene, cada
+ * registro se valida entero —su metadata con `leerMetadataDeCelula` del
+ * núcleo— y uno roto rechaza el archivo, como el resto de los campos.
  */
-import { DIMENSION_IDS, parseDesignContract, validateDesignSetShape, type DesignContractV1, type DimensionId } from '@contope/core';
+import { DIMENSION_IDS, leerMetadataDeCelula, parseDesignContract, validateDesignSetShape, type DesignContractV1, type DimensionId } from '@contope/core';
+import type { CelulaGenerada } from './celulas.js';
 import type { Alcance } from './alcance.js';
 import { armonizacionVacia, type Armonizacion, type DecisionSobreSenal } from './armonizacion.js';
 import { esMundoId } from './mundos.js';
@@ -164,6 +170,30 @@ function validarArmonizacion(valor: unknown): { ok: true; armonizacion: Armoniza
   return { ok: true, armonizacion: { pasadas, senales } };
 }
 
+function validarCelulas(valor: unknown): { ok: true; celulas: CelulaGenerada[] } | { ok: false; motivo: string } {
+  if (valor === undefined || valor === null) return { ok: true, celulas: [] };
+  if (!Array.isArray(valor)) return { ok: false, motivo: "'celulasMadre' debe ser una lista" };
+  const celulas: CelulaGenerada[] = [];
+  for (const c of valor) {
+    if (!esRecord(c) || typeof c['id'] !== 'string') return { ok: false, motivo: 'cada Célula Madre registrada necesita un id' };
+    const archivos = c['archivos'];
+    if (
+      !Array.isArray(archivos) ||
+      !archivos.every((a) => esRecord(a) && typeof a['nombre'] === 'string' && typeof a['tipoMime'] === 'string' && typeof a['huella'] === 'string')
+    ) {
+      return { ok: false, motivo: `los archivos de la Célula Madre '${c['id']}' necesitan 'nombre', 'tipoMime' y 'huella'` };
+    }
+    const metadata = leerMetadataDeCelula(c['metadata']);
+    if (!metadata.ok) return { ok: false, motivo: `Célula Madre '${c['id']}': ${metadata.motivo}` };
+    celulas.push({
+      id: c['id'],
+      archivos: archivos.map((a: Record<string, unknown>) => ({ nombre: String(a['nombre']), tipoMime: String(a['tipoMime']), huella: String(a['huella']) })),
+      metadata: metadata.metadata,
+    });
+  }
+  return { ok: true, celulas };
+}
+
 export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } | { ok: false; motivo: string } {
   if (!esRecord(valor)) return { ok: false, motivo: 'el archivo no contiene un objeto' };
   if (valor['kind'] !== KIND_SISTEMA) return { ok: false, motivo: `no es un sistema de ContOpe Design (kind '${String(valor['kind'])}')` };
@@ -186,6 +216,8 @@ export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } |
   if (!notas.ok) return { ok: false, motivo: notas.motivo };
   const imperativas = validarImperativas(valor['imperativas'], valor['designSet'], insumos.insumos);
   if (!imperativas.ok) return { ok: false, motivo: imperativas.motivo };
+  const celulas = validarCelulas(valor['celulasMadre']);
+  if (!celulas.ok) return { ok: false, motivo: celulas.motivo };
   const set = validateDesignSetShape(valor['designSet']);
   if (!set.ok) return { ok: false, motivo: `DesignSet inválido: ${set.errores.map((e) => e.mensaje).join('; ')}` };
   return {
@@ -198,6 +230,7 @@ export function validarSistema(valor: unknown): { ok: true; sistema: Sistema } |
       capsulaAnterior: capsula.capsula,
       notasDePropuesta: notas.notas,
       imperativas: imperativas.imperativas,
+      celulasMadre: celulas.celulas,
     },
   };
 }

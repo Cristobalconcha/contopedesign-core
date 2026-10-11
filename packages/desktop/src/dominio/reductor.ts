@@ -30,6 +30,10 @@
  *   persona o un insumo NO pisa: queda como conflicto de origen. Una propuesta
  *   nueva reemplaza a la anterior mientras siga siendo propuesta. Aprobarla
  *   resuelve la tarea; quitarla la rechaza.
+ * - Lo generado en Células Madre se registra con su metadata de ancestro.
+ *   «Regenerar» reemplaza el registro que se regeneró (`reemplaza`); generar
+ *   otra vez con el mismo generador y los mismos parámetros también reemplaza
+ *   al anterior; con otros parámetros se suma. Olvidar no borra archivos.
  * - La armonización es una etapa con pasadas (decisión 23): resolver una señal
  *   la marca como validada o anotada en la pasada actual; reabrirla borra esa
  *   decisión; una pasada nueva sólo sube el contador, las decisiones quedan.
@@ -47,6 +51,7 @@ import type {
 } from '@contope/core';
 import type { Alcance } from './alcance.js';
 import { apoyadasEn } from './apoyos.js';
+import { registrarCelula, type CelulaGenerada } from './celulas.js';
 import { manifiestoDe, requisito, dimensionDe } from './manifiesto.js';
 import { nuevoId, type Candidato, type Conflicto, type Insumo, type Sistema } from './sistema.js';
 import type { DesignContractV1 } from '@contope/core';
@@ -76,7 +81,9 @@ export type Accion =
   | { tipo: 'resolver-senal'; senalId: string; estado: 'validada' | 'anotada'; nota?: string }
   | { tipo: 'reabrir-senal'; senalId: string }
   | { tipo: 'nueva-pasada' }
-  | { tipo: 'traer-propuesta'; requirementId: string; payload: Record<string, unknown>; nota?: string };
+  | { tipo: 'traer-propuesta'; requirementId: string; payload: Record<string, unknown>; nota?: string }
+  | { tipo: 'registrar-celula'; celula: CelulaGenerada; reemplaza?: string }
+  | { tipo: 'olvidar-celula'; celulaId: string };
 
 function esRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -515,6 +522,12 @@ function aplicar(sistema: Sistema, accion: Accion, ahora: string): Sistema {
       const nota = accion.nota?.trim() ?? '';
       if (siguiente === sistema || nota === '') return siguiente;
       return { ...siguiente, notasDePropuesta: { ...siguiente.notasDePropuesta, [accion.requirementId]: { texto: nota, en: ahora } } };
+    }
+    case 'registrar-celula':
+      return { ...sistema, celulasMadre: registrarCelula(sistema.celulasMadre, accion.celula, accion.reemplaza) };
+    case 'olvidar-celula': {
+      const celulasMadre = sistema.celulasMadre.filter((c) => c.id !== accion.celulaId);
+      return celulasMadre.length === sistema.celulasMadre.length ? sistema : { ...sistema, celulasMadre };
     }
   }
 }
