@@ -16,7 +16,7 @@
  */
 import type { Captura, ClaveDeColor, Escena, Keyframe, Pistas, RutaAnimable, TiempoSecuencia } from '../formato/tipos.js';
 import type { ConfiguracionMotor } from '../motor/configuracion.js';
-import { evolucionEn, valorEn, type DocumentoDeLinea } from './evaluar.js';
+import { evolucionEn, interpolar, valorEn, type DocumentoDeLinea } from './evaluar.js';
 import { ajustarAGrilla, CUADROS_POR_SEGUNDO_LINEA, PARAMETROS_ANIMABLES, type ParametroAnimable } from './parametros.js';
 
 /** Id reservado de la escena de cierre. */
@@ -60,6 +60,8 @@ export interface ParametroDeEscena {
   paso: number;
   entero?: true;
   color?: true;
+  /** Las escenas le ponen siempre un corte (el «hold» de v7; ningún parámetro del formato lo tiene desde v14). */
+  salta?: true;
 }
 
 /** Lo que el aplicador necesita de una escena. */
@@ -102,7 +104,7 @@ export function aplicadorDeEscenas<E extends EscenaParaKeyframes>(
         poner({ t: 0, v: meta, ease: 'lineal', escena: sc.id });
         continue;
       }
-      if (corte || p.entero || dur < fr) {
+      if (corte || p.salta || dur < fr) {
         poner({ t: ajustarAGrilla(t - fr), v: previo, ease: 'mantener', escena: sc.id });
         poner({ t, v: meta, ease: 'lineal', escena: sc.id });
       } else {
@@ -133,7 +135,12 @@ export function regenerarPistas(tiempo: TiempoSecuencia, base: BaseDeDocumento):
   const aplicar = aplicadorDeEscenas<Escena>(
     PARAMETROS_ANIMABLES,
     pistas as Record<string, Keyframe[]>,
-    (p, t0) => (p.ruta === 'evolucion' ? evolucionEn(doc, t0).tiempo : valorEn(doc, p.ruta as RutaAnimable, t0)),
+    // el valor de partida va sin redondear, como en v14 (un entero se redondea recién al evaluarse)
+    (p, t0) => {
+      if (p.ruta === 'evolucion') return evolucionEn(doc, t0).tiempo;
+      const keys = doc.pistas[p.ruta as RutaAnimable];
+      return keys && keys.length ? interpolar(keys, t0, p.color ? { color: true } : {}) : valorEn(doc, p.ruta as RutaAnimable, t0);
+    },
     (sc, p) => valorDeCaptura(sc.captura, p.ruta as RutaAnimable),
   );
   for (const sc of lista) aplicar(sc);

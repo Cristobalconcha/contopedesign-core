@@ -185,8 +185,23 @@ documentado en `ConfiguracionMotor`.
 **Rutas animables:** `evolucion`; toda la configuración menos `velocidad` y
 `paralaje` (la evolución depende de la velocidad; el paralaje es reacción al
 cursor real); `cursor.x`, `cursor.y`, `cursor.presencia`; `color.lejos`,
-`color.cerca`, `color.fondo`. `lineas` y `puntosPorLinea` no se interpolan:
-saltan en el keyframe (y cambian el tamaño del cuadro desde ahí).
+`color.cerca`, `color.fondo`. `lineas` y `puntosPorLinea` son enteros: se
+interpolan y se redondean (el cuadro cambia de tamaño a medida que cambian);
+sólo el ease `mantener` los hace saltar en el keyframe.
+
+> **Cambio de semántica dentro del formato v1 (v14 del generador).** Hasta
+> v13, `lineas` y `puntosPorLinea` saltaban siempre en el keyframe («hold»),
+> y las escenas les ponían un corte aunque fueran `morph`. Desde v14 se
+> funden como cualquier número y se redondean; las escenas les dan el mismo
+> `morph` que al resto. Una trama v1 escrita antes se lee igual, pero entre
+> dos keyframes de esas pistas ahora se ve un paso gradual en vez de un
+> salto. Otras dos reglas de v14 que el traductor de v7 aplica al exportar:
+> un snapshot de puntos no trae líneas (su `opacidadLinea` es 0) y uno de
+> líneas no trae puntos (`opacidadPunto` 0); y si los snapshots de una
+> secuencia mezclan modos, la trama sale con `dibujo.modo: 'mixto'` y las
+> dos opacidades se funden en sus pistas. Los parámetros de la espiral y de
+> las primitivas de v14 todavía no están en el formato: `tramaDeEstadoV7` se
+> niega a exportarlos (con un aviso) en vez de dejarlos fuera.
 
 ### Cómo se evalúa en el tiempo
 

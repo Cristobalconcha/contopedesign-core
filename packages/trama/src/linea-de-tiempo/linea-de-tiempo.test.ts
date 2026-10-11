@@ -42,10 +42,14 @@ describe('interpolación de keyframes', () => {
     expect(interpolar([{ t: 0, v: 0, ease: 'suave' }, { t: 2, v: 10, ease: 'lineal' }], 0.5, p)).toBe(1.5625);
     expect(interpolar([{ t: 0, v: 0, ease: 'mantener' }, { t: 2, v: 10, ease: 'lineal' }], 1.99, p)).toBe(0);
   });
-  it('un parámetro entero salta en el keyframe («hold») aunque el ease sea lineal', () => {
+  it('un parámetro entero se interpola y se redondea (v14); sólo «mantener» lo hace saltar', () => {
     const k = [{ t: 0, v: 64, ease: 'lineal' as const }, { t: 2, v: 100, ease: 'lineal' as const }];
-    expect(interpolar(k, 1.9, PARAMETRO_ANIMABLE['lineas'])).toBe(64);
+    expect(interpolar(k, 1, PARAMETRO_ANIMABLE['lineas'])).toBe(82);
+    expect(interpolar(k, 1.9, PARAMETRO_ANIMABLE['lineas'])).toBe(98); // 98,2
+    expect(interpolar(k, 0.07, PARAMETRO_ANIMABLE['lineas'])).toBe(65); // 65,26
     expect(interpolar(k, 2, PARAMETRO_ANIMABLE['lineas'])).toBe(100);
+    const m = [{ t: 0, v: 64, ease: 'mantener' as const }, { t: 2, v: 100, ease: 'lineal' as const }];
+    expect(interpolar(m, 1.9, PARAMETRO_ANIMABLE['lineas'])).toBe(64);
   });
   it('los colores se mezclan en sRGB y se redondean', () => {
     expect(interpolar([{ t: 0, v: '#000000', ease: 'lineal' }, { t: 2, v: '#ffffff', ease: 'lineal' }], 1, PARAMETRO_ANIMABLE['color.fondo'])).toBe('#808080');
@@ -89,7 +93,7 @@ describe('estado de una trama', () => {
     } });
     const s = estadoEn(t, 1);
     expect(s.motor.configuracion.pliegues).toBe(0.5);
-    expect(s.motor.configuracion.puntosPorLinea).toBe(100);
+    expect(s.motor.configuracion.puntosPorLinea).toBe(150); // 150,2 redondeado
     expect(s.colores.cerca).toBe('#404040');
     expect(s.motor.tiempo).toBe(11);
   });

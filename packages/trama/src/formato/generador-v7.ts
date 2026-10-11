@@ -134,7 +134,14 @@ export interface LineaV7 {
 /** Todo lo que el archivo de trama necesita de v7. */
 export interface EstadoV7 {
   cfg: ConfiguracionV7;
+  /** El modo con que se ve: `mixto` si los snapshots de la secuencia mezclan modos (v14). */
   render: string;
+  /**
+   * El modo de v7 (`render`) que la línea de tiempo usa para los valores
+   * fijos: con `puntos` la opacidad de línea vale 0 y con `lineas` la de
+   * punto (v14). Si falta, el de `render`.
+   */
+  renderDeLaLinea?: string;
   /** Evolución en pantalla (`live.time`): el inicio de una trama en vivo. */
   time: number;
   /** `free` o `ANCHOxALTO`. */
@@ -166,6 +173,18 @@ export function configuracionLimpiaDeV7(cfg: ConfiguracionV7): ConfiguracionMoto
     if (typeof v === 'number' && Number.isFinite(v)) o[p] = v;
   }
   return o;
+}
+
+/**
+ * La configuración con que la línea de tiempo cuenta los valores fijos
+ * (`staticValue` de v14): con el modo `puntos` la opacidad de línea es 0, con
+ * `lineas` la de punto; así una secuencia que mezcla modos funde una capa con
+ * la otra.
+ */
+export function configuracionDeLinea<C extends Partial<ConfiguracionMotor>>(c: C, render: string | undefined): C {
+  if (render === 'lineas') return { ...c, opacidadPunto: 0 };
+  if (render === 'puntos') return { ...c, opacidadLinea: 0 };
+  return c;
 }
 
 /** Los números de la configuración con los nombres de v7. */
@@ -242,6 +261,9 @@ export function capturaDeV7(st: EstadoCapturaV7): Captura {
     const v = cfg[NOMBRE_V7[p]];
     if (typeof v === 'number' && Number.isFinite(v)) configuracion[p] = v;
   }
+  // v14: un snapshot de puntos no trae líneas y uno de líneas no trae puntos
+  if (st.render === 'lineas') configuracion.opacidadPunto = 0;
+  if (st.render === 'puntos') configuracion.opacidadLinea = 0;
   if (Object.keys(configuracion).length) c.configuracion = configuracion;
   const color: Partial<Record<ClaveDeColor, string>> = {};
   for (const k of CLAVES_DE_COLOR) {
@@ -310,9 +332,13 @@ export interface ParametroExtraV7 {
   path: string;
   /** El `step` de v7: dos valores a menos de medio paso son el mismo. */
   paso: number;
-  /** `hold` de v7: salta en el keyframe. */
+  /** Entero: se redondea al evaluarse. */
   entero?: boolean;
+  /** `hold` de v7: las escenas le ponen un corte (en v14, `espPuntos` todavía lo tiene). */
+  salta?: boolean;
   color?: boolean;
+  /** Lo que vale en un snapshot que no lo trae (los anteriores a ese parámetro): `PRIM_DEF` de v14. */
+  porDefecto?: number | string;
 }
 
 /**
@@ -321,23 +347,27 @@ export interface ParametroExtraV7 {
  * Los `extras` (parámetros de v7 fuera del formato, como los de la espiral)
  * pasan por el mismo aplicador de escenas, con sus valores de la `config`.
  */
-export function regenerarPistasV7(tl: LineaV7, cfg: ConfiguracionV7, extras: readonly ParametroExtraV7[] = []): PistasV7 {
-  const pistas = pistasAV7(regenerarPistas(secuenciaDeLinea(tl, true), { configuracion: configuracionDeV7(cfg), colores: coloresDeV7(cfg) }));
+export function regenerarPistasV7(tl: LineaV7, cfg: ConfiguracionV7, extras: readonly ParametroExtraV7[] = [], render?: string): PistasV7 {
+  const pistas = pistasAV7(regenerarPistas(secuenciaDeLinea(tl, true), { configuracion: configuracionDeLinea(configuracionDeV7(cfg), render), colores: coloresDeV7(cfg) }));
   if (!extras.length) return pistas;
   const fuera: Record<string, Keyframe[]> = {};
   for (const p of extras) {
     const manuales = (tl.tracks[p.path] ?? []).filter((k) => !k.scene).map(keyframeDeV7);
     if (manuales.length) fuera[p.path] = manuales;
   }
-  const parametros: ParametroDeEscena[] = extras.map((p) => ({ ruta: p.path, paso: p.paso, ...(p.entero ? { entero: true as const } : {}), ...(p.color ? { color: true as const } : {}) }));
+  const porDefecto = new Map(extras.map((p) => [p.path, p.porDefecto]));
+  const parametros: ParametroDeEscena[] = extras.map((p) => ({
+    ruta: p.path, paso: p.paso, ...(p.entero ? { entero: true as const } : {}), ...(p.color ? { color: true as const } : {}), ...(p.salta ? { salta: true as const } : {}),
+  }));
   const aplicar = aplicadorDeEscenas<ReturnType<typeof escenaDeV7> & { st: EstadoCapturaV7 }>(
     parametros,
     fuera,
     (p, t0) => {
       const k = fuera[p.ruta];
-      return k && k.length ? interpolar(k, t0, p) : (cfg[p.ruta] as number | string);
+      // un «hold» de v7 no se interpola: vale el keyframe anterior
+      return k && k.length ? interpolar(p.salta ? k.map((x) => ({ ...x, ease: 'mantener' as const })) : k, t0, p.color ? { color: true } : {}) : (cfg[p.ruta] as number | string);
     },
-    (sc, p) => sc.st.cfg?.[p.ruta] as number | string | undefined,
+    (sc, p) => (sc.st.cfg?.[p.ruta] ?? porDefecto.get(p.ruta)) as number | string | undefined,
   );
   for (const sc of tl.scenes.slice().sort((a, b) => a.t - b.t)) aplicar({ ...escenaDeV7(sc), st: sc.st });
   for (const [path, keys] of Object.entries(fuera)) if (keys.length) pistas[path] = keys.map(keyframeAV7);
@@ -365,6 +395,27 @@ export function configuracionEspiralDeV7(cfg: ConfiguracionV7): ConfiguracionEsp
   const o: Record<string, unknown> = {};
   for (const [k, n] of Object.entries(NOMBRE_ESPIRAL_V7)) o[k] = cfg[n];
   return o as unknown as ConfiguracionEspiral;
+}
+
+// ---------------------------------------------------------------------------
+// Las primitivas (v14)
+// ---------------------------------------------------------------------------
+
+/** Los parámetros de las primitivas de v14 y su valor neutro (la figura entera): `PRIM_DEF`. */
+export const PRIMITIVAS_V7: Readonly<Record<string, number>> = Object.freeze({ primX: 0, primY: 0, primOp: 1 });
+
+/** El aviso cuando se pide la trama de algo que usa primitivas. */
+export const AVISO_TRAMA_PRIMITIVAS = 'Las primitivas llegan con la próxima versión del formato; por ahora sale como video, PNG o SVG';
+
+/** ¿El estado usa primitivas? (la config, una escena o una pista con un valor que no es el neutro). */
+export function usaPrimitivasV7(e: Pick<EstadoV7, 'cfg' | 'tl'>): boolean {
+  const distinto = (v: unknown, k: string) => v !== undefined && v !== null && v !== PRIMITIVAS_V7[k];
+  for (const k of Object.keys(PRIMITIVAS_V7)) {
+    if (distinto(e.cfg[k], k)) return true;
+    for (const sc of e.tl?.scenes ?? []) if (distinto(sc.st?.cfg?.[k], k)) return true;
+    for (const kf of e.tl?.tracks[k] ?? []) if (distinto(kf.v, k)) return true;
+  }
+  return false;
 }
 
 /** El aviso de v10 cuando se pide la trama de la espiral. */
@@ -405,6 +456,8 @@ function recortar(ruta: RutaAnimable, keys: Keyframe[], fin: number, doc: Parame
 export function tramaDeEstadoV7(e: EstadoV7, opciones: OpcionesDeTramaV7 = {}): Trama {
   // la versión 1 del formato es sólo la superficie de puntos
   if (esEspiralV7(e.cfg) || (e.tl?.scenes ?? []).some((sc) => esEspiralV7(sc.st?.cfg))) throw new Error(AVISO_TRAMA_ESPIRAL);
+  // ni las primitivas (v14): nunca se dejan fuera en silencio
+  if (usaPrimitivasV7(e)) throw new Error(AVISO_TRAMA_PRIMITIVAS);
   const configuracion = configuracionLimpiaDeV7(e.cfg);
   const hex = coloresDeV7(e.cfg);
   const color: Record<ClaveDeColor, ColorDeTrama> = { lejos: { hex: hex.lejos, origen: 'manual' }, cerca: { hex: hex.cerca, origen: 'manual' }, fondo: { hex: hex.fondo, origen: 'manual' } };
@@ -435,6 +488,8 @@ export function tramaDeEstadoV7(e: EstadoV7, opciones: OpcionesDeTramaV7 = {}): 
   } else {
     const tl = e.tl;
     const fin = tl.duration;
+    // la línea de tiempo cuenta los valores fijos con el modo de v7 (una capa de una secuencia mixta parte en 0)
+    Object.assign(configuracion, configuracionDeLinea(configuracion, e.renderDeLaLinea ?? e.render));
     const s = secuenciaDeLinea(tl, true);
     const doc = { configuracion, colores: hex, pistas: {}, inicio: tl.startTime, cursor: s.cursor };
     const pistas: Pistas = {};

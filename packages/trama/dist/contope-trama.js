@@ -30,6 +30,7 @@ var ContopeTrama = (() => {
     ALFA_MINIMO_TRAMO: () => ALFA_MINIMO_TRAMO,
     ANGULO_AUREO: () => ANGULO_AUREO,
     AVISO_TRAMA_ESPIRAL: () => AVISO_TRAMA_ESPIRAL,
+    AVISO_TRAMA_PRIMITIVAS: () => AVISO_TRAMA_PRIMITIVAS,
     B_AUREA: () => B_AUREA,
     CICLO_ESPIRAL: () => CICLO_ESPIRAL,
     CIERRE_POR_DEFECTO: () => CIERRE_POR_DEFECTO,
@@ -67,6 +68,7 @@ var ContopeTrama = (() => {
     PHI: () => PHI,
     PREFIJO_CODIGO: () => PREFIJO_CODIGO,
     PREFIJO_SP1: () => PREFIJO_SP1,
+    PRIMITIVAS_V7: () => PRIMITIVAS_V7,
     PUNTOS_POR_TRAMO: () => PUNTOS_POR_TRAMO,
     RUTA_DE_V7: () => RUTA_DE_V7,
     RUTA_V7: () => RUTA_V7,
@@ -98,6 +100,7 @@ var ContopeTrama = (() => {
     compactarTrama: () => compactarTrama,
     conLineas: () => conLineas,
     conPuntos: () => conPuntos,
+    configuracionDeLinea: () => configuracionDeLinea,
     configuracionDeV7: () => configuracionDeV7,
     configuracionEspiralDeV7: () => configuracionEspiralDeV7,
     configuracionLimpiaDeV7: () => configuracionLimpiaDeV7,
@@ -161,6 +164,7 @@ var ContopeTrama = (() => {
     tramosDeLinea: () => tramosDeLinea,
     traslacion: () => traslacion,
     trazosDeTramo: () => trazosDeTramo,
+    usaPrimitivasV7: () => usaPrimitivasV7,
     utf8ABytes: () => utf8ABytes,
     validarTrama: () => validarTrama,
     valorDeCaptura: () => valorDeCaptura,
@@ -866,9 +870,11 @@ var ContopeTrama = (() => {
     let i = 0;
     while (i < keys.length - 2 && keys[i + 1].t <= t) i++;
     const a = keys[i], b = keys[i + 1];
-    if (a.ease === "mantener" || (p == null ? void 0 : p.entero)) return a.v;
+    if (a.ease === "mantener") return a.v;
     const u = suavizadoDe(a)((t - a.t) / (b.t - a.t));
-    return (p == null ? void 0 : p.color) ? mezclarHex(String(a.v), String(b.v), u) : a.v + (b.v - a.v) * u;
+    if (p == null ? void 0 : p.color) return mezclarHex(String(a.v), String(b.v), u);
+    const v = a.v + (b.v - a.v) * u;
+    return (p == null ? void 0 : p.entero) ? Math.round(v) : v;
   }
   function valorEn(doc, ruta, t) {
     const k = doc.pistas[ruta];
@@ -973,7 +979,7 @@ var ContopeTrama = (() => {
           poner({ t: 0, v: meta, ease: "lineal", escena: sc.id });
           continue;
         }
-        if (corte || p.entero || dur < fr) {
+        if (corte || p.salta || dur < fr) {
           poner({ t: ajustarAGrilla(t - fr), v: previo, ease: "mantener", escena: sc.id });
           poner({ t, v: meta, ease: "lineal", escena: sc.id });
         } else {
@@ -999,7 +1005,12 @@ var ContopeTrama = (() => {
     const aplicar = aplicadorDeEscenas(
       PARAMETROS_ANIMABLES,
       pistas,
-      (p, t0) => p.ruta === "evolucion" ? evolucionEn(doc, t0).tiempo : valorEn(doc, p.ruta, t0),
+      // el valor de partida va sin redondear, como en v14 (un entero se redondea recién al evaluarse)
+      (p, t0) => {
+        if (p.ruta === "evolucion") return evolucionEn(doc, t0).tiempo;
+        const keys = doc.pistas[p.ruta];
+        return keys && keys.length ? interpolar(keys, t0, p.color ? { color: true } : {}) : valorEn(doc, p.ruta, t0);
+      },
       (sc, p) => valorDeCaptura(sc.captura, p.ruta)
     );
     for (const sc of lista) aplicar(sc);
@@ -1745,6 +1756,11 @@ var ContopeTrama = (() => {
     }
     return o;
   }
+  function configuracionDeLinea(c, render) {
+    if (render === "lineas") return { ...c, opacidadPunto: 0 };
+    if (render === "puntos") return { ...c, opacidadLinea: 0 };
+    return c;
+  }
   function cfgV7DeConfiguracion(c) {
     const o = {};
     for (const p of PARAMETROS_MOTOR) if (c[p] !== void 0) o[NOMBRE_V7[p]] = c[p];
@@ -1808,6 +1824,8 @@ var ContopeTrama = (() => {
       const v = cfg[NOMBRE_V7[p]];
       if (typeof v === "number" && Number.isFinite(v)) configuracion[p] = v;
     }
+    if (st.render === "lineas") configuracion.opacidadPunto = 0;
+    if (st.render === "puntos") configuracion.opacidadLinea = 0;
     if (Object.keys(configuracion).length) c.configuracion = configuracion;
     const color2 = {};
     for (const k of CLAVES_DE_COLOR) {
@@ -1866,26 +1884,33 @@ var ContopeTrama = (() => {
       alTerminar: "repetir"
     };
   }
-  function regenerarPistasV7(tl, cfg, extras = []) {
+  function regenerarPistasV7(tl, cfg, extras = [], render) {
     var _a;
-    const pistas = pistasAV7(regenerarPistas(secuenciaDeLinea(tl, true), { configuracion: configuracionDeV7(cfg), colores: coloresDeV7(cfg) }));
+    const pistas = pistasAV7(regenerarPistas(secuenciaDeLinea(tl, true), { configuracion: configuracionDeLinea(configuracionDeV7(cfg), render), colores: coloresDeV7(cfg) }));
     if (!extras.length) return pistas;
     const fuera = {};
     for (const p of extras) {
       const manuales = ((_a = tl.tracks[p.path]) != null ? _a : []).filter((k) => !k.scene).map(keyframeDeV7);
       if (manuales.length) fuera[p.path] = manuales;
     }
-    const parametros = extras.map((p) => ({ ruta: p.path, paso: p.paso, ...p.entero ? { entero: true } : {}, ...p.color ? { color: true } : {} }));
+    const porDefecto = new Map(extras.map((p) => [p.path, p.porDefecto]));
+    const parametros = extras.map((p) => ({
+      ruta: p.path,
+      paso: p.paso,
+      ...p.entero ? { entero: true } : {},
+      ...p.color ? { color: true } : {},
+      ...p.salta ? { salta: true } : {}
+    }));
     const aplicar = aplicadorDeEscenas(
       parametros,
       fuera,
       (p, t0) => {
         const k = fuera[p.ruta];
-        return k && k.length ? interpolar(k, t0, p) : cfg[p.ruta];
+        return k && k.length ? interpolar(p.salta ? k.map((x) => ({ ...x, ease: "mantener" })) : k, t0, p.color ? { color: true } : {}) : cfg[p.ruta];
       },
       (sc, p) => {
-        var _a2;
-        return (_a2 = sc.st.cfg) == null ? void 0 : _a2[p.ruta];
+        var _a2, _b;
+        return (_b = (_a2 = sc.st.cfg) == null ? void 0 : _a2[p.ruta]) != null ? _b : porDefecto.get(p.ruta);
       }
     );
     for (const sc of tl.scenes.slice().sort((a, b) => a.t - b.t)) aplicar({ ...escenaDeV7(sc), st: sc.st });
@@ -1914,6 +1939,18 @@ var ContopeTrama = (() => {
     for (const [k, n] of Object.entries(NOMBRE_ESPIRAL_V7)) o[k] = cfg[n];
     return o;
   }
+  var PRIMITIVAS_V7 = Object.freeze({ primX: 0, primY: 0, primOp: 1 });
+  var AVISO_TRAMA_PRIMITIVAS = "Las primitivas llegan con la próxima versión del formato; por ahora sale como video, PNG o SVG";
+  function usaPrimitivasV7(e) {
+    var _a, _b, _c, _d, _e, _f;
+    const distinto = (v, k) => v !== void 0 && v !== null && v !== PRIMITIVAS_V7[k];
+    for (const k of Object.keys(PRIMITIVAS_V7)) {
+      if (distinto(e.cfg[k], k)) return true;
+      for (const sc of (_b = (_a = e.tl) == null ? void 0 : _a.scenes) != null ? _b : []) if (distinto((_d = (_c = sc.st) == null ? void 0 : _c.cfg) == null ? void 0 : _d[k], k)) return true;
+      for (const kf of (_f = (_e = e.tl) == null ? void 0 : _e.tracks[k]) != null ? _f : []) if (distinto(kf.v, k)) return true;
+    }
+    return false;
+  }
   var AVISO_TRAMA_ESPIRAL = "La trama de la espiral llega con la próxima versión del formato; por ahora sale como video, PNG o SVG";
   function lineaEnUso(tl) {
     return !!tl && (Object.values(tl.tracks).some((k) => k.length > 0) || tl.scenes.length > 0);
@@ -1926,11 +1963,12 @@ var ContopeTrama = (() => {
     return dentro;
   }
   function tramaDeEstadoV7(e, opciones = {}) {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e;
     if (esEspiralV7(e.cfg) || ((_b = (_a = e.tl) == null ? void 0 : _a.scenes) != null ? _b : []).some((sc) => {
       var _a2;
       return esEspiralV7((_a2 = sc.st) == null ? void 0 : _a2.cfg);
     })) throw new Error(AVISO_TRAMA_ESPIRAL);
+    if (usaPrimitivasV7(e)) throw new Error(AVISO_TRAMA_PRIMITIVAS);
     const configuracion = configuracionLimpiaDeV7(e.cfg);
     const hex = coloresDeV7(e.cfg);
     const color2 = { lejos: { hex: hex.lejos, origen: "manual" }, cerca: { hex: hex.cerca, origen: "manual" }, fondo: { hex: hex.fondo, origen: "manual" } };
@@ -1961,6 +1999,7 @@ var ContopeTrama = (() => {
     } else {
       const tl = e.tl;
       const fin = tl.duration;
+      Object.assign(configuracion, configuracionDeLinea(configuracion, (_e = e.renderDeLaLinea) != null ? _e : e.render));
       const s = secuenciaDeLinea(tl, true);
       const doc = { configuracion, colores: hex, pistas: {}, inicio: tl.startTime, cursor: s.cursor };
       const pistas = {};

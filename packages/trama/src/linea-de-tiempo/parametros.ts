@@ -1,6 +1,7 @@
 /**
  * Qué se puede animar y cómo (`PARAMS` de v7, en su mismo orden).
- * `entero`: no se interpola, salta en el keyframe y se redondea («hold»).
+ * `entero`: se interpola y se redondea (sólo el ease `mantener` lo hace
+ * saltar; hasta v13 del generador saltaba siempre, «hold»).
  * `color`: se mezcla en sRGB. `paso`: la precisión con que dos valores se
  * consideran iguales al generar keyframes desde escenas (la mitad del paso).
  * La velocidad y el paralaje no son animables: la evolución depende de la

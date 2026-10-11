@@ -14,6 +14,8 @@ import {
   RUTA_DE_V7,
   RUTA_V7,
   tramaDeEstadoV7,
+  usaPrimitivasV7,
+  AVISO_TRAMA_PRIMITIVAS,
   type EstadoV7,
   type LineaV7,
 } from './generador-v7.js';
@@ -195,7 +197,9 @@ describe('v7 → archivo de trama → v7', () => {
     expect(v.tl!.scenes[2]!.st.time).toBe(4);
     v.tl!.tracks = regenerarPistasV7(v.tl!, v.cfg);
     const otra = tramaDeEstadoV7(v);
-    for (const s of [0, 1, 2, 3, 3.5, 4]) expect(estadoEn(otra, s).motor).toEqual(estadoEn(t, s).motor);
+    // de vuelta, la trama cuenta con el modo de v7 (puntos): la opacidad de línea, que no se dibuja, queda en 0
+    const sinLinea = (m: ReturnType<typeof estadoEn>['motor']) => JSON.parse(JSON.stringify(m, (k, v) => (k === 'opacidadLinea' ? 0 : v)));
+    for (const s of [0, 1, 2, 3, 3.5, 4]) expect(sinLinea(estadoEn(otra, s).motor)).toEqual(sinLinea(estadoEn(t, s).motor));
   });
 });
 
@@ -215,8 +219,8 @@ describe('la espiral de v10 en la línea de tiempo', () => {
 
   it('sus parámetros (fuera del formato) también reciben los keyframes de las escenas, como en v7; los hechos a mano quedan', () => {
     const p = regenerarPistasV7(tl(), cfg, ESP);
-    // entero: mantener hasta un cuadro antes y saltar
-    expect(p['espPuntos']).toEqual([{ t: 4 - 1 / 24, v: 550, ease: 'hold', scene: 1 }, { t: 4, v: 900, ease: 'linear', scene: 1 }]);
+    // entero: desde v14 también se funde (morph con la curva de la escena)
+    expect(p['espPuntos']).toEqual([{ t: 3, v: 550, ease: 'curve', curve: [0.42, 0, 0.58, 1], scene: 1 }, { t: 4, v: 900, ease: 'linear', scene: 1 }]);
     // numérico: morph con la curva de la escena desde el valor que traía la pista en t0
     expect(p['espGiro']).toEqual([
       { t: 0.5, v: -20, ease: 'linear' }, { t: 1.5, v: 10, ease: 'linear' },
@@ -229,5 +233,64 @@ describe('la espiral de v10 en la línea de tiempo', () => {
   it('la trama de la espiral todavía no está en el formato: se avisa', () => {
     expect(() => tramaDeEstadoV7({ cfg, render: 'puntos', time: 0, format: 'free', tl: null })).toThrow(/próxima versión del formato/);
     expect(() => tramaDeEstadoV7({ cfg: CONFIG_V7, render: 'puntos', time: 0, format: 'free', tl: tl() })).toThrow(/próxima versión del formato/);
+  });
+});
+
+describe('v14: modos mezclados, enteros que se funden y primitivas', () => {
+  const sc = (id: number, t: number, render: string, cfg: Record<string, unknown> = {}) =>
+    ({ id, t, snap: id, st: { ...st(10 + t, cfg), render }, type: 'morph' as const, dur: 1, curve: [0.42, 0, 0.58, 1] as [number, number, number, number], evo: false });
+  const mixta = (): LineaV7 => ({ duration: 6, startTime: 6, cursor: { x: 0.5, y: 0.5, presence: 0 }, tracks: {}, scenes: [sc(1, 0, 'puntos'), sc(2, 3, 'lineas', { lineCount: 120 })] });
+
+  it('una captura de puntos no trae líneas y una de líneas no trae puntos', () => {
+    expect(capturaDeV7({ ...st(1, {}), render: 'puntos' }).configuracion).toMatchObject({ opacidadLinea: 0, opacidadPunto: 1 });
+    expect(capturaDeV7({ ...st(1, {}), render: 'lineas' }).configuracion).toMatchObject({ opacidadPunto: 0, opacidadLinea: 0.4 });
+    expect(capturaDeV7({ ...st(1, {}), render: 'mixto' }).configuracion).toMatchObject({ opacidadPunto: 1, opacidadLinea: 0.4 });
+  });
+
+  it('una secuencia que mezcla modos sale como mixto, con las opacidades fundiéndose y las líneas que crecen de a poco', () => {
+    const tl = mixta();
+    tl.tracks = regenerarPistasV7(tl, CONFIG_V7, [], 'puntos');
+    expect(tl.tracks['dotAlpha']).toEqual([{ t: 2, v: 1, ease: 'curve', curve: [0.42, 0, 0.58, 1], scene: 2 }, { t: 3, v: 0, ease: 'linear', scene: 2 }]);
+    expect(tl.tracks['lineAlpha']).toEqual([{ t: 2, v: 0, ease: 'curve', curve: [0.42, 0, 0.58, 1], scene: 2 }, { t: 3, v: 0.4, ease: 'linear', scene: 2 }]);
+    expect(tl.tracks['lineCount']![0]!.ease).toBe('curve');
+    const t = tramaDeEstadoV7({ cfg: CONFIG_V7, render: 'mixto', renderDeLaLinea: 'puntos', time: 0, format: 'free', tl });
+    expect(t.dibujo.modo).toBe('mixto');
+    expect(t.configuracion.opacidadLinea).toBe(0);
+    if (t.tiempo.modo !== 'secuencia') throw new Error();
+    expect(t.tiempo.pistas.opacidadPunto).toEqual(tl.tracks['dotAlpha']!.map(keyframeDeV7));
+    expect(t.tiempo.pistas.opacidadLinea).toEqual(tl.tracks['lineAlpha']!.map(keyframeDeV7));
+    const e = estadoEn(t, 2.5).motor.configuracion;
+    expect(e.opacidadPunto).toBeCloseTo(0.5, 6);
+    expect(e.opacidadLinea).toBeCloseTo(0.2, 6);
+    expect(e.lineas).toBe(92); // 64 → 120, a mitad de camino y redondeado
+  });
+
+  it('los parámetros fuera del formato toman su valor por defecto en los snapshots que no lo traen (PRIM_DEF)', () => {
+    const tl: LineaV7 = { ...mixta(), scenes: [sc(1, 0, 'puntos'), sc(2, 3, 'puntos', { primX: 1, primY: 1 })] };
+    const p = regenerarPistasV7(tl, { ...CONFIG_V7, primX: 0, primY: 0, primOp: 1 }, [{ path: 'primX', paso: 0.01, porDefecto: 0 }, { path: 'primOp', paso: 0.01, porDefecto: 1 }], 'puntos');
+    expect(p['primX']!.map((k) => [k.t, k.v])).toEqual([[2, 0], [3, 1]]);
+    expect(p['primOp']).toBeUndefined();
+  });
+
+  it('una trama con primitivas se rechaza con su aviso (nunca se dejan fuera en silencio)', () => {
+    const base = { cfg: { ...CONFIG_V7, primX: 0, primY: 0, primOp: 1 }, render: 'puntos', time: 0, format: 'free' };
+    expect(usaPrimitivasV7({ ...base, tl: mixta() })).toBe(false);
+    expect(() => tramaDeEstadoV7({ ...base, tl: mixta() })).not.toThrow();
+    expect(() => tramaDeEstadoV7({ ...base, cfg: { ...base.cfg, primOp: 0 }, tl: null })).toThrow(AVISO_TRAMA_PRIMITIVAS);
+    expect(() => tramaDeEstadoV7({ ...base, tl: { ...mixta(), scenes: [sc(1, 0, 'puntos', { primX: 1, primY: 1 })] } })).toThrow(AVISO_TRAMA_PRIMITIVAS);
+    expect(() => tramaDeEstadoV7({ ...base, tl: { ...mixta(), tracks: { primY: [{ t: 1, v: 0.5, ease: 'linear' }] } } })).toThrow(AVISO_TRAMA_PRIMITIVAS);
+    expect(AVISO_TRAMA_PRIMITIVAS).toBe('Las primitivas llegan con la próxima versión del formato; por ahora sale como video, PNG o SVG');
+  });
+});
+
+describe('un «hold» de v7 fuera del formato (espPuntos en v14)', () => {
+  it('las escenas le ponen un corte y su valor de partida no se interpola', () => {
+    const tl: LineaV7 = {
+      duration: 8, startTime: 0, cursor: { x: 0.5, y: 0.5, presence: 0 },
+      tracks: { espPuntos: [{ t: 0, v: 500, ease: 'linear' }, { t: 4, v: 700, ease: 'linear' }] },
+      scenes: [{ id: 1, t: 3, snap: 1, st: st(3, { espPuntos: 900 }), type: 'morph', dur: 1, curve: [0.42, 0, 0.58, 1], evo: false }],
+    };
+    const p = regenerarPistasV7(tl, { ...CONFIG_V7, espPuntos: 550 }, [{ path: 'espPuntos', paso: 1, salta: true }]);
+    expect(p['espPuntos']!.filter((k) => k.scene)).toEqual([{ t: 3 - 1 / 24, v: 500, ease: 'hold', scene: 1 }, { t: 3, v: 900, ease: 'linear', scene: 1 }]);
   });
 });

@@ -55,7 +55,10 @@ export function valorFijo(doc: DocumentoDeLinea, ruta: RutaAnimable, t: number):
   return doc.configuracion[ruta];
 }
 
-/** Interpola keyframes ordenados en t (`interp`). Un parámetro entero salta. */
+/**
+ * Interpola keyframes ordenados en t (`interp`). Un parámetro entero se
+ * interpola y se redondea (desde v14 del generador): sólo `mantener` salta.
+ */
 export function interpolar(keys: readonly Keyframe[], t: number, p: Pick<ParametroAnimable, 'entero' | 'color'> | undefined): number | string {
   const primero = keys[0]!;
   if (t <= primero.t) return primero.v;
@@ -64,9 +67,11 @@ export function interpolar(keys: readonly Keyframe[], t: number, p: Pick<Paramet
   let i = 0;
   while (i < keys.length - 2 && keys[i + 1]!.t <= t) i++;
   const a = keys[i]!, b = keys[i + 1]!;
-  if (a.ease === 'mantener' || p?.entero) return a.v;
+  if (a.ease === 'mantener') return a.v;
   const u = suavizadoDe(a)((t - a.t) / (b.t - a.t));
-  return p?.color ? mezclarHex(String(a.v), String(b.v), u) : (a.v as number) + ((b.v as number) - (a.v as number)) * u;
+  if (p?.color) return mezclarHex(String(a.v), String(b.v), u);
+  const v = (a.v as number) + ((b.v as number) - (a.v as number)) * u;
+  return p?.entero ? Math.round(v) : v;
 }
 
 /** El valor de una ruta en t (`valueAt`). */

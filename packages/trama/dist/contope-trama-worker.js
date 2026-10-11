@@ -526,9 +526,11 @@
     let i = 0;
     while (i < keys.length - 2 && keys[i + 1].t <= t) i++;
     const a = keys[i], b = keys[i + 1];
-    if (a.ease === "mantener" || (p == null ? void 0 : p.entero)) return a.v;
+    if (a.ease === "mantener") return a.v;
     const u = suavizadoDe(a)((t - a.t) / (b.t - a.t));
-    return (p == null ? void 0 : p.color) ? mezclarHex(String(a.v), String(b.v), u) : a.v + (b.v - a.v) * u;
+    if (p == null ? void 0 : p.color) return mezclarHex(String(a.v), String(b.v), u);
+    const v = a.v + (b.v - a.v) * u;
+    return (p == null ? void 0 : p.entero) ? Math.round(v) : v;
   }
   function valorEn(doc, ruta, t) {
     const k = doc.pistas[ruta];
@@ -633,7 +635,7 @@
           poner({ t: 0, v: meta, ease: "lineal", escena: sc.id });
           continue;
         }
-        if (corte || p.entero || dur < fr) {
+        if (corte || p.salta || dur < fr) {
           poner({ t: ajustarAGrilla(t - fr), v: previo, ease: "mantener", escena: sc.id });
           poner({ t, v: meta, ease: "lineal", escena: sc.id });
         } else {
@@ -659,7 +661,12 @@
     const aplicar = aplicadorDeEscenas(
       PARAMETROS_ANIMABLES,
       pistas,
-      (p, t0) => p.ruta === "evolucion" ? evolucionEn(doc, t0).tiempo : valorEn(doc, p.ruta, t0),
+      // el valor de partida va sin redondear, como en v14 (un entero se redondea recién al evaluarse)
+      (p, t0) => {
+        if (p.ruta === "evolucion") return evolucionEn(doc, t0).tiempo;
+        const keys = doc.pistas[p.ruta];
+        return keys && keys.length ? interpolar(keys, t0, p.color ? { color: true } : {}) : valorEn(doc, p.ruta, t0);
+      },
       (sc, p) => valorDeCaptura(sc.captura, p.ruta)
     );
     for (const sc of lista) aplicar(sc);
